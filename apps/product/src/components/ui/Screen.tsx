@@ -13,11 +13,9 @@ type Props = {
 export function Screen({ children, width = "content", center, style }: Props) {
   return (
     <SafeAreaView style={s.safe}>
-      <ScrollView
-        contentContainerStyle={[s.scroll, center && s.center]}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={[s.column, { maxWidth: layout[width] }, style]}>{children}</View>
+      <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+        {/* auto vertical margins center short content without clipping tall content */}
+        <View style={[s.column, { maxWidth: layout[width] }, center && s.center, style]}>{children}</View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -26,6 +24,6 @@ export function Screen({ children, width = "content", center, style }: Props) {
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { flexGrow: 1, paddingHorizontal: space.xl, paddingVertical: space.xxl, alignItems: "center" },
-  center: { justifyContent: "center" },
+  center: { marginVertical: "auto" },
   column: { width: "100%", gap: space.xl },
 });
