@@ -190,7 +190,7 @@ Done this week and reusable as-is:
 - Coming-soon page live over HTTPS with the countdown to November 10. Source and logo crop in `FLP/site/`.
 - The client's brand mockups and pilot page as design references.
 
-Not yet done, held for your go: git repository, CLAUDE.md with the isolation rule, memory entry.
+Done 2026-09-18: git repository (main + dev), CLAUDE.md with the isolation rule, memory entry, decisions D1–D10 recorded in `docs/DECISIONS.md`.
 
 ---
 
