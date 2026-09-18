@@ -8,7 +8,7 @@ create extension if not exists pgcrypto;
 -- Enums
 -- ---------------------------------------------------------------------------
 create type public.user_role      as enum ('parent', 'athlete', 'admin');
-create type public.position       as enum ('forward', 'defense', 'goalie');
+create type public.hockey_position       as enum ('forward', 'defense', 'goalie');
 create type public.athlete_status as enum ('applied', 'approved', 'suspended');
 create type public.order_status   as enum ('draft', 'paid', 'assigned', 'in_review', 'delivered', 'closed', 'refunded');
 create type public.job_status     as enum ('open', 'claimed', 'delivered', 'closed', 'expired');
@@ -67,7 +67,7 @@ create table public.players (
   first_name   text not null,
   last_name    text not null default '',
   age_group    text not null,            -- e.g. 14U; list supplied by FLP
-  position     public.position not null,
+  position     public.hockey_position not null,
   skill_level  text not null,            -- e.g. AAA; list supplied by FLP
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
@@ -83,7 +83,7 @@ create table public.athletes (
   bio                text not null default '',
   credentials        jsonb not null default '[]'::jsonb,   -- [{label, org, years}]
   specialties        text[] not null default '{}',
-  positions          public.position[] not null default '{}',
+  positions          public.hockey_position[] not null default '{}',
   status             public.athlete_status not null default 'applied',
   stripe_account_id  text unique,
   payouts_enabled    boolean not null default false,
@@ -126,7 +126,7 @@ create table public.orders (
   id                          uuid primary key default gen_random_uuid(),
   parent_id                   uuid not null references public.profiles (id) on delete restrict,
   player_id                   uuid not null references public.players (id) on delete restrict,
-  position                    public.position not null,
+  position                    public.hockey_position not null,
   age_group                   text not null,
   skill_level                 text not null,
   focus_areas                 text[] not null default '{}',
