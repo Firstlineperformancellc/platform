@@ -26,6 +26,8 @@ One Expo app (Expo Router, TypeScript) shipping to web, iOS, and Android. Admin 
 
 ## Layout
 
+- `apps/product/` — the product app (Expo SDK 57, Expo Router, TypeScript; `src/app` routes, `src/components/ui` kit, `src/theme/tokens.ts`, `src/lib/supabase.ts` + `auth.tsx`). Own `node_modules` and `.env` (copy `.env.example`). Run the web build with `npm --prefix apps/product run web` (port 8081) or the `product-web` launch config. Typecheck: `./node_modules/.bin/tsc --noEmit` inside the app. Laptop-first, phone second.
+- `supabase/` — migrations and the CLI config linked to the dev project.
 - `site/` — the live marketing/coming-soon page at firstlineperform.com (nginx on droplet `flp-web-01`).
 - `deck/` — the client communications deck at comms.firstlineperform.com. Separate git repo, deploy with `deck/deploy/deploy.sh`. Frozen except for fixes.
 - `docs/` — spec, decisions, and the handover package as it grows.
