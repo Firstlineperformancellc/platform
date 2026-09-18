@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+
+# the deck is its own git repository (see CLAUDE.md)
+deck/
+
+# client-supplied reference material: mockups, video, signed agreement
+Current Landscape/
+
+# secrets and local env
+.env
+.env.*
+!.env.example
+
+# dependencies and build output (for packages added later)
+node_modules/
+.next/
+.expo/
+dist/
+build/

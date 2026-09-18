@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>First Line Performance</title>
+<meta name="description" content="Personalized video breakdowns from current and former college, junior, and pro players. Coming soon to the App Store and Google Play.">
+<meta property="og:title" content="First Line Performance">
+<meta property="og:description" content="Personalized feedback from high-level athletes. Coming soon.">
+<meta property="og:image" content="https://firstlineperform.com/logo.png">
+<link rel="icon" href="logo.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,700;1,800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#000;
+    --panel:#0c0c0c;
+    --line:#1f1f1f;
+    --gold:#d4a32c;
+    --gold-dim:#8a6a1c;
+    --white:#fff;
+    --muted:#b5b5b5;
+    --faint:#6f6f6f;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--white);font-family:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+  body{min-height:100vh;display:flex;flex-direction:column;
+    background:
+      radial-gradient(ellipse 70% 45% at 50% 0%, rgba(212,163,44,.10), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 50% 100%, rgba(212,163,44,.05), transparent 60%),
+      var(--bg);}
+  /* frost on the edges */
+  body::before,body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0}
+  body::before{
+    background:
+      radial-gradient(ellipse 30% 24% at 0% 0%,   rgba(220,238,255,.30), rgba(215,236,255,0) 70%),
+      radial-gradient(ellipse 30% 24% at 100% 0%, rgba(220,238,255,.27), rgba(215,236,255,0) 70%),
+      radial-gradient(ellipse 30% 24% at 0% 100%, rgba(220,238,255,.27), rgba(215,236,255,0) 70%),
+      radial-gradient(ellipse 30% 24% at 100% 100%,rgba(220,238,255,.30), rgba(215,236,255,0) 70%),
+      linear-gradient(to right,  rgba(205,230,255,.14), transparent 7%, transparent 93%, rgba(205,230,255,.14)),
+      linear-gradient(to bottom, rgba(205,230,255,.12), transparent 6%, transparent 94%, rgba(205,230,255,.12));
+    mix-blend-mode:screen}
+  body::after{
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='420' height='420'><filter id='f'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' seed='7' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .85  0 0 0 0 .93  0 0 0 0 1  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23f)'/></svg>");
+    background-size:420px 420px;opacity:.48;mix-blend-mode:screen;
+    -webkit-mask-image:radial-gradient(ellipse 88% 86% at 50% 50%, transparent 64%, #000 100%);
+            mask-image:radial-gradient(ellipse 88% 86% at 50% 50%, transparent 64%, #000 100%)}
+  main,footer{position:relative;z-index:1}
+  main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:56px 24px 32px;text-align:center}
+  .logo{width:min(240px,58vw);height:auto;display:block;margin:0 auto 28px}
+  .rule{width:64px;height:2px;background:var(--gold);margin:0 auto 22px}
+  h1{font-family:"Barlow Condensed","Barlow",sans-serif;font-style:italic;font-weight:800;text-transform:uppercase;
+     font-size:clamp(44px,8.6vw,92px);line-height:.94;letter-spacing:.005em;margin:0 0 24px;max-width:20ch;
+     text-shadow:0 2px 0 #000,0 10px 30px rgba(0,0,0,.8)}
+  h1 .gold{color:var(--gold);text-shadow:none;display:inline-block;padding:.04em .06em 0 0;
+     background:linear-gradient(180deg,#f0c75e 0%,var(--gold) 55%,#b8891f 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+     filter:drop-shadow(0 0 10px rgba(212,163,44,.28))}
+  .tag{font-size:clamp(15px,1.7vw,18px);font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--white);margin:0 0 14px}
+  .tag .gold{color:var(--gold)}
+  .desc{max-width:40ch;font-size:clamp(18px,2vw,22px);line-height:1.5;font-weight:500;letter-spacing:.04em;color:var(--muted);margin:0 auto 40px}
+  .soon{display:inline-block;background:var(--gold);color:#000;font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:clamp(26px,3.6vw,38px);letter-spacing:.08em;text-transform:uppercase;padding:12px 44px;
+        clip-path:polygon(2% 0,100% 0,98% 100%,0 100%);margin-bottom:22px}
+  .board{margin-bottom:34px;display:inline-flex;align-items:stretch;gap:8px;background:#050505;border:2px solid var(--gold);border-radius:14px;padding:14px 18px;
+         box-shadow:0 0 0 4px #000,0 0 0 5px #2a2a2a,0 18px 40px rgba(0,0,0,.7),inset 0 0 40px rgba(212,163,44,.06)}
+  .cell{display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0e0e0e;border:1px solid #262626;border-radius:8px;padding:10px 12px 8px;min-width:clamp(64px,10vw,104px)}
+  .cell span{font-family:"Barlow Condensed",sans-serif;font-weight:800;font-style:italic;font-size:clamp(40px,7vw,72px);line-height:1;color:var(--gold);font-variant-numeric:tabular-nums;text-shadow:0 0 12px rgba(212,163,44,.55)}
+  .cell small{margin-top:6px;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--muted)}
+  .sep{align-self:center;font-family:"Barlow Condensed",sans-serif;font-weight:800;font-size:clamp(32px,5vw,56px);color:var(--gold);line-height:1;padding-bottom:18px}
+  .date{margin:18px 0 34px;font-size:15px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+  .date strong{color:var(--white);font-weight:600}
+  .stores{display:flex;flex-wrap:wrap;justify-content:center;gap:18px;margin-bottom:8px}
+  .store{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .badge{display:flex;align-items:center;gap:12px;background:#0a0a0a;border:1.5px solid #3a3a3a;border-radius:12px;padding:10px 18px 10px 14px;min-width:200px;color:var(--white);text-align:left;opacity:.9}
+  .badge svg{width:30px;height:30px;flex:0 0 30px}
+  .badge small{display:block;font-size:11px;letter-spacing:.04em;color:var(--muted);line-height:1}
+  .badge strong{display:block;font-size:20px;font-weight:600;line-height:1.1;letter-spacing:-.01em}
+  .store em{font-style:normal;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold)}
+  footer{border-top:1px solid var(--line);padding:26px 24px 34px;text-align:center;color:var(--faint);font-size:14px;line-height:1.7}
+  footer a{color:var(--gold);text-decoration:none;font-weight:500}
+  footer a:hover{text-decoration:underline}
+  footer .copy{margin-top:6px;letter-spacing:.06em;text-transform:uppercase;font-size:12px}
+  @media (max-width:560px){
+    h1{max-width:none;font-size:clamp(38px,11.5vw,50px)}
+    .tag{letter-spacing:.1em}
+    .board{gap:4px;padding:10px}
+    .cell{padding:8px 6px 6px;min-width:0;flex:1}
+    .sep{font-size:26px;padding-bottom:14px}
+    .badge{min-width:0;width:100%}
+    .stores{width:100%;max-width:300px}
+    .store{width:100%}
+  }
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="logo.png" alt="First Line Performance" width="800" height="810">
+  <div class="rule"></div>
+  <p class="tag">Real insight. <span class="gold">Real athletes.</span> Real development.</p>
+  <h1>Personalized feedback from <span class="gold">high‑level athletes</span></h1>
+  <p class="desc">Position specific insight. Experienced interactive mentoring.</p>
+
+  <div class="soon">Coming on or before</div>
+  <div class="board" aria-label="Countdown to launch">
+    <div class="cell"><span id="d">00</span><small>Days</small></div>
+    <div class="sep">:</div>
+    <div class="cell"><span id="h">00</span><small>Hrs</small></div>
+    <div class="sep">:</div>
+    <div class="cell"><span id="m">00</span><small>Min</small></div>
+    <div class="sep">:</div>
+    <div class="cell"><span id="s">00</span><small>Sec</small></div>
+  </div>
+
+  <div class="stores">
+    <div class="store">
+      <div class="badge" aria-label="App Store, coming soon">
+        <svg viewBox="0 0 24 24" fill="#fff"><path d="M16.37 12.6c-.02-2.3 1.88-3.4 1.96-3.45-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.48.83-.72 0-1.83-.81-3.01-.79-1.55.02-2.98.9-3.78 2.29-1.61 2.8-.41 6.94 1.16 9.21.77 1.11 1.68 2.36 2.87 2.32 1.15-.05 1.59-.75 2.98-.75s1.79.75 3.01.72c1.24-.02 2.03-1.13 2.79-2.25.88-1.29 1.24-2.54 1.26-2.6-.03-.01-2.42-.93-2.44-3.73zM14.09 5.87c.63-.77 1.06-1.84.94-2.9-.91.04-2.02.61-2.67 1.37-.58.68-1.1 1.77-.96 2.81 1.02.08 2.05-.52 2.69-1.28z"/></svg>
+        <div><small>Download on the</small><strong>App Store</strong></div>
+      </div>
+      <em>Coming soon</em>
+    </div>
+    <div class="store">
+      <div class="badge" aria-label="Google Play, coming soon">
+        <svg viewBox="0 0 24 24"><path d="M4 3.5v17c0 .4.45.65.8.45l9.2-8.5L4.8 3.05c-.35-.2-.8.05-.8.45z" fill="#4285f4"/><path d="M14 12.45l2.9 2.7 3.3-1.9c.6-.35.6-1.15 0-1.5l-3.3-1.9z" fill="#fbbc04"/><path d="M4.8 3.05L14 12.45l2.9-2.6z" fill="#34a853"/><path d="M4.8 20.95l9.2-8.5 2.9 2.7z" fill="#ea4335"/></svg>
+        <div><small>Get it on</small><strong>Google Play</strong></div>
+      </div>
+      <em>Coming soon</em>
+    </div>
+  </div>
+</main>
+<footer>
+  <div>Questions or comments? Please contact <a href="mailto:team@firstlineperform.com">team@firstlineperform.com</a></div>
+  <div class="copy">&copy; 2026 First Line Performance LLC. All rights reserved.</div>
+</footer>
+<script>
+(function(){
+  var target = new Date("2026-11-10T12:00:00-05:00").getTime();
+  var el = {d:document.getElementById("d"),h:document.getElementById("h"),m:document.getElementById("m"),s:document.getElementById("s")};
+  function pad(n){return (n<10?"0":"")+n;}
+  function tick(){
+    var diff = Math.max(0, target - Date.now());
+    var sec = Math.floor(diff/1000);
+    el.d.textContent = pad(Math.floor(sec/86400));
+    el.h.textContent = pad(Math.floor(sec%86400/3600));
+    el.m.textContent = pad(Math.floor(sec%3600/60));
+    el.s.textContent = pad(sec%60);
+  }
+  tick(); setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>
