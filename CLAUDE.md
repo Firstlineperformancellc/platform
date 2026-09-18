@@ -33,7 +33,7 @@ One Expo app (Expo Router, TypeScript) shipping to web, iOS, and Android. Admin 
 
 ## Infrastructure
 
-DigitalOcean account admin@firstlineperform.com, doctl context `flp` (default). Droplet `flp-web-01` (Ubuntu 26.04, NYC3, 157.245.213.222), `ssh flp-web` as user `flp`, SSH key `~/.ssh/flp_do`. Cloud firewall `flp-web` by tag `flp`. Let's Encrypt with auto-renew. DNS at GoDaddy. Google Workspace with admin@ and aliases.
+GitHub: github.com/Firstlineperformancellc with repos `platform` (this repo, `main` + `dev`) and `deck` (`dev`). Push through the SSH host alias `github.com-flp`, key `~/.ssh/flp_github`, which is registered on the FLP GitHub account; Scott's personal GitHub login is never used for FLP. DigitalOcean account admin@firstlineperform.com, doctl context `flp` (default). Droplet `flp-web-01` (Ubuntu 26.04, NYC3, 157.245.213.222), `ssh flp-web` as user `flp`, SSH key `~/.ssh/flp_do`. Cloud firewall `flp-web` by tag `flp`. Let's Encrypt with auto-renew. DNS at GoDaddy. Google Workspace with admin@ and aliases.
 
 ## Ways of working
 
