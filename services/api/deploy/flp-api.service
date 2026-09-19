@@ -1,0 +1,16 @@
+[Unit]
+Description=FLP API (Hono on Node) · api-dev.firstlineperform.com
+After=network.target
+
+[Service]
+Type=simple
+User=flp
+WorkingDirectory=/var/www/flp-api/current
+EnvironmentFile=/var/www/flp-api/.env
+Environment=NODE_ENV=production
+ExecStart=/usr/local/bin/node dist/index.js
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
