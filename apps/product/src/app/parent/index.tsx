@@ -1,3 +1,4 @@
+import { Link } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { Brand } from "@/components/Brand";
 import { Button } from "@/components/ui/Button";
@@ -35,6 +36,16 @@ export default function ParentHome() {
           </Body>
           <Button title="Order a breakdown" disabled />
           <Pill tone="muted">Coming next</Pill>
+        </Card>
+        <Card style={s.cell}>
+          <H3>Upload test</H3>
+          <Body style={{ color: colors.muted }}>
+            Try the game-film upload: chunked, resumable, streams back when processed.
+          </Body>
+          <Link href="/parent/upload" asChild>
+            <Button title="Test an upload" variant="secondary" />
+          </Link>
+          <Pill tone="gold">Week 1 spike</Pill>
         </Card>
       </View>
     </Screen>
