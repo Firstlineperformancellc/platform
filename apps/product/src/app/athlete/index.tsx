@@ -67,7 +67,7 @@ export default function AthleteHome() {
   const done = jobs.filter((j) => j.status === "delivered" || j.status === "closed");
 
   return (
-    <Screen width="page">
+    <Screen title="Your jobs" width="page">
       <View style={s.topbar}>
         <Brand size={44} />
         <View style={{ flexDirection: "row", gap: space.sm }}>

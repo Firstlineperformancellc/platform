@@ -41,7 +41,7 @@ export default function SignIn() {
   }
 
   return (
-    <Screen width="form" center>
+    <Screen title="Sign in" width="form" center>
       <Brand size={96} />
       <H1 center>Sign in</H1>
       <Card>

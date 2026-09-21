@@ -38,7 +38,7 @@ export default function JobScreen() {
   if (job === undefined) return <Loading />;
   if (!job)
     return (
-      <Screen width="form" center>
+      <Screen title="Breakdown job" width="form" center>
         <H1 center>Job not found</H1>
         <Link href="/athlete" asChild>
           <Button title="Back to your jobs" variant="secondary" />
@@ -72,7 +72,7 @@ export default function JobScreen() {
   }
 
   return (
-    <Screen width="content">
+    <Screen title="Breakdown job" width="content">
       <View style={s.topbar}>
         <Brand size={44} />
         <Link href="/athlete" asChild>

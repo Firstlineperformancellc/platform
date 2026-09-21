@@ -28,7 +28,7 @@ export default function OrderPage() {
   if (order === undefined || !settings) return <Loading />;
   if (!order)
     return (
-      <Screen width="form" center>
+      <Screen title="Your breakdown" width="form" center>
         <H1 center>Order not found</H1>
         <Link href="/parent" asChild>
           <Button title="Dashboard" variant="secondary" />
@@ -42,7 +42,7 @@ export default function OrderPage() {
   const tone = order.status === "delivered" ? "ok" : order.status === "unassigned" ? "warn" : order.status === "refunded" ? "danger" : "gold";
 
   return (
-    <Screen width="content">
+    <Screen title="Your breakdown" width="content">
       <View style={s.topbar}>
         <Brand size={44} />
         <Link href="/parent" asChild>

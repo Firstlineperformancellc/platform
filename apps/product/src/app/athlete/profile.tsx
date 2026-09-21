@@ -42,7 +42,7 @@ export default function MentorProfileScreen() {
   if (p === undefined || !settings) return <Loading />;
   if (!p)
     return (
-      <Screen width="form" center>
+      <Screen title="Your profile" width="form" center>
         <H1 center>No mentor profile yet</H1>
         <Link href="/apply" asChild>
           <Button title="Apply as a mentor" />
@@ -97,7 +97,7 @@ export default function MentorProfileScreen() {
   const setWindow = (i: number, patch: Partial<AvailabilityWindow>) => set({ availability: windows.map((w, j) => (j === i ? { ...w, ...patch } : w)) });
 
   return (
-    <Screen width="content">
+    <Screen title="Your profile" width="content">
       <View style={s.topbar}>
         <Brand size={44} />
         <Link href="/athlete" asChild>

@@ -8,7 +8,7 @@ import { colors, space } from "@/theme/tokens";
 
 export default function Welcome() {
   return (
-    <Screen width="form" center>
+    <Screen title="Welcome" width="form" center>
       <Brand size={140} caption="Real insight. Real athletes. Real development." />
       <Display center>
         Personalized feedback from <Display gold>high-level athletes</Display>

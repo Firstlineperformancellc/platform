@@ -26,7 +26,7 @@ export default function Marketplace() {
   }, [position]);
 
   return (
-    <Screen width="page">
+    <Screen title="FLP Mentors" width="page">
       <View style={s.topbar}>
         <Link href="/" asChild>
           <Brand size={44} />

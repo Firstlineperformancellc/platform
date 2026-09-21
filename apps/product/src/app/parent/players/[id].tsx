@@ -50,7 +50,7 @@ export default function PlayerForm() {
   }
 
   return (
-    <Screen width="form">
+    <Screen title="Youth athlete" width="form">
       <View style={s.topbar}>
         <Brand size={44} />
         <Link href="/parent/players" asChild>

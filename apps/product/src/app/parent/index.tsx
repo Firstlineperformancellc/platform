@@ -13,7 +13,7 @@ import { colors, space } from "@/theme/tokens";
 export default function ParentHome() {
   const { profile, signOut } = useAuth();
   return (
-    <Screen width="page">
+    <Screen title="Dashboard" width="page">
       <View style={s.topbar}>
         <Brand size={44} />
         <Button title="Sign out" variant="ghost" small onPress={signOut} />
@@ -40,6 +40,9 @@ export default function ParentHome() {
           </Link>
           <Link href="/mentors" asChild>
             <Button title="Browse FLP Mentors" variant="ghost" small />
+          </Link>
+          <Link href="/parent/orders" asChild>
+            <Button title="Your breakdowns" variant="ghost" small />
           </Link>
         </Card>
         <Card style={s.cell}>

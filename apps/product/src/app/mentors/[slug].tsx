@@ -31,7 +31,7 @@ export default function MentorProfile() {
   if (mentor === undefined || !settings) return <Loading />;
   if (!mentor)
     return (
-      <Screen width="form" center>
+      <Screen title="FLP Mentor" width="form" center>
         <H1 center>Mentor not found</H1>
         <Link href="/mentors" asChild>
           <Button title="Back to mentors" variant="secondary" />
@@ -45,7 +45,7 @@ export default function MentorProfile() {
   const canOrder = !session || profile?.role === "parent";
 
   return (
-    <Screen width="content">
+    <Screen title="FLP Mentor" width="content">
       <View style={s.topbar}>
         <Link href="/mentors" asChild>
           <Brand size={44} />

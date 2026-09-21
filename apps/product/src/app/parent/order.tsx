@@ -127,7 +127,7 @@ export default function OrderWizard() {
   const stepIndex = STEPS.findIndex((s) => s.key === step);
 
   return (
-    <Screen width="content">
+    <Screen title="Order a breakdown" width="content">
       <View style={s.topbar}>
         <Brand size={44} />
         <Link href="/parent" asChild>

@@ -67,7 +67,7 @@ export default function Apply() {
   }
 
   return (
-    <Screen width="form" center>
+    <Screen title="Apply as a mentor" width="form" center>
       <Brand size={96} />
       <H1 center>Apply as an athlete</H1>
       <Body center style={{ color: colors.muted }}>

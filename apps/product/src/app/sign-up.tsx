@@ -37,7 +37,7 @@ export default function SignUp() {
   }
 
   return (
-    <Screen width="form" center>
+    <Screen title="Create an account" width="form" center>
       <Brand size={96} />
       <H1 center>Create a parent account</H1>
       <Body center style={{ color: colors.muted }}>

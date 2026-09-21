@@ -20,7 +20,7 @@ export default function Players() {
   );
 
   return (
-    <Screen width="page">
+    <Screen title="Your youth athletes" width="page">
       <View style={s.topbar}>
         <Brand size={44} />
         <Link href="/parent" asChild>
@@ -61,6 +61,9 @@ export default function Players() {
               <View style={s.row}>
                 <Link href={{ pathname: "/parent/order", params: { player: p.id } }} asChild>
                   <Button title="Order a breakdown" small />
+                </Link>
+                <Link href={{ pathname: "/parent/players/[id]/log", params: { id: p.id } }} asChild>
+                  <Button title="Development Log" variant="secondary" small />
                 </Link>
                 <Link href={{ pathname: "/parent/players/[id]", params: { id: p.id } }} asChild>
                   <Button title="Edit" variant="ghost" small />
