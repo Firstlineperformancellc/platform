@@ -39,6 +39,8 @@ uploads.post("/", async (c) => {
       video_quality: "basic",
       max_resolution_tier: "1080p",
       meta: { title: title ?? purpose, external_id: media.id },
+      // Game film gets an MP4 rendition so the mentor can download it for their own screen recorder.
+      ...(purpose === "game_film" ? { static_renditions: [{ resolution: "highest" as const }] } : {}),
     },
   });
 

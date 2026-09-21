@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { useFocusEffect } from "expo-router";
+import { Link, useFocusEffect } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { Brand } from "@/components/Brand";
 import { Button } from "@/components/ui/Button";
@@ -130,8 +130,9 @@ export default function AthleteHome() {
               <Small>
                 Film: {j.orders?.film_youtube_url ? "YouTube link" : j.orders?.media?.status === "ready" ? "ready to watch" : j.orders?.film_media_id ? "processing" : "not uploaded yet"}
               </Small>
-              <Button title="Open the job" variant="secondary" small disabled />
-              <Small>Film review and the worksheet form land next.</Small>
+              <Link href={{ pathname: "/athlete/jobs/[id]", params: { id: j.id } }} asChild>
+                <Button title="Open the job" variant="secondary" small />
+              </Link>
             </Card>
           ))}
 
@@ -139,7 +140,9 @@ export default function AthleteHome() {
             <View>
               <H2>Completed</H2>
               {done.map((j) => (
-                <Small key={j.id}>{who(j.orders)}</Small>
+                <Link key={j.id} href={{ pathname: "/athlete/jobs/[id]", params: { id: j.id } }}>
+                  <Small style={{ color: colors.gold }}>{who(j.orders)} · delivered</Small>
+                </Link>
               ))}
             </View>
           ) : null}

@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { Link, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Platform, StyleSheet, View } from "react-native";
 import { Brand } from "@/components/Brand";
+import { BreakdownPanel } from "@/components/BreakdownPanel";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
@@ -89,6 +90,8 @@ export default function OrderPage() {
           ) : null}
         </Card>
       )}
+
+      {job && ["delivered", "closed"].includes(order.status) ? <BreakdownPanel jobId={job.id} /> : null}
 
       <Card>
         <H3>Where it stands</H3>
