@@ -66,7 +66,7 @@ export default function Orders() {
                 <Link href={{ pathname: "/parent/orders/[id]", params: { id: o.id } }} asChild>
                   <Button title={o.status === "delivered" || o.status === "closed" ? "Watch the breakdown" : "Open"} variant="secondary" small />
                 </Link>
-                {!o.film_media_id && !o.film_youtube_url && o.paid_at ? (
+                {!o.film_media_id && !o.film_youtube_url && ["paid", "offered", "accepted", "unassigned"].includes(o.status) ? (
                   <Link href={{ pathname: "/parent/upload", params: { order: o.id } }} asChild>
                     <Button title="Upload film" small />
                   </Link>
