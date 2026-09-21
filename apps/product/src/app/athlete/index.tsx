@@ -14,7 +14,8 @@ import { money, TIER_LABEL, useSettings, type Tier } from "@/lib/settings";
 import { firstName, type Athlete } from "@/lib/types";
 import { colors, space } from "@/theme/tokens";
 
-function who(o: { players: { first_name: string; last_name: string } | null; age_group: string; position: string; skill_level: string }) {
+function who(o: { players: { first_name: string; last_name: string } | null; age_group: string; position: string; skill_level: string } | null) {
+  if (!o) return "Youth athlete";
   const p = o.players;
   const name = p ? `${p.first_name}${p.last_name ? ` ${p.last_name[0]}.` : ""}` : "Youth athlete";
   return `${name} · ${o.age_group} ${o.position} · ${o.skill_level}`;
@@ -99,11 +100,11 @@ export default function AthleteHome() {
                 <H3>{who(o.jobs.orders)}</H3>
                 <Pill tone={o.rank === 1 ? "gold" : "muted"}>{o.rank === 1 ? "First choice" : "Second choice"}</Pill>
               </View>
-              <Body>{o.jobs.orders.focus_areas.join(", ")}</Body>
-              {o.jobs.orders.notes ? <Body style={{ color: colors.muted }}>{o.jobs.orders.notes}</Body> : null}
+              <Body>{o.jobs.orders?.focus_areas.join(", ")}</Body>
+              {o.jobs.orders?.notes ? <Body style={{ color: colors.muted }}>{o.jobs.orders.notes}</Body> : null}
               <View style={s.row}>
                 <Small>
-                  You earn {o.jobs.orders.mentor_share_cents != null ? money(o.jobs.orders.mentor_share_cents) : ""} · {hoursLeft(o.expires_at)}h left to accept ·{" "}
+                  You earn {o.jobs.orders?.mentor_share_cents != null ? money(o.jobs.orders.mentor_share_cents) : ""} · {hoursLeft(o.expires_at)}h left to accept ·{" "}
                   {settings?.rules.turnaround_hours ?? 72}h turnaround once you do
                 </Small>
               </View>
@@ -125,9 +126,9 @@ export default function AthleteHome() {
                 <H3>{who(j.orders)}</H3>
                 <Pill tone={(hoursLeft(j.due_at) ?? 0) < 12 ? "danger" : "gold"}>{`${hoursLeft(j.due_at) ?? 0}h left`}</Pill>
               </View>
-              <Body>{j.orders.focus_areas.join(", ")}</Body>
+              <Body>{j.orders?.focus_areas.join(", ")}</Body>
               <Small>
-                Film: {j.orders.film_youtube_url ? "YouTube link" : j.orders.media?.status === "ready" ? "ready to watch" : j.orders.film_media_id ? "processing" : "not uploaded yet"}
+                Film: {j.orders?.film_youtube_url ? "YouTube link" : j.orders?.media?.status === "ready" ? "ready to watch" : j.orders?.film_media_id ? "processing" : "not uploaded yet"}
               </Small>
               <Button title="Open the job" variant="secondary" small disabled />
               <Small>Film review and the worksheet form land next.</Small>

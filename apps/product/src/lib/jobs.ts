@@ -14,7 +14,7 @@ export type Offer = {
     status: string;
     accepted_at: string | null;
     due_at: string | null;
-    orders: {
+    orders: null | {
       id: string;
       position: string;
       age_group: string;
@@ -48,6 +48,7 @@ export type MyJob = {
   delivered_at: string | null;
   orders: Offer["jobs"]["orders"];
 };
+
 
 export async function listMyJobs(): Promise<MyJob[]> {
   const { data: auth } = await supabase.auth.getUser();
