@@ -9,6 +9,7 @@ import { webhooks } from "./routes/webhooks.js";
 import { orders } from "./routes/orders.js";
 import { internal, jobs } from "./routes/jobs.js";
 import { breakdowns } from "./routes/breakdowns.js";
+import { adminRoutes } from "./routes/admin.js";
 
 const app = new Hono();
 
@@ -26,7 +27,7 @@ app.use(
   cors({
     origin: (origin) => (ORIGINS.includes(origin) ? origin : ""),
     allowHeaders: ["authorization", "content-type"],
-    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowMethods: ["GET", "POST", "PATCH", "OPTIONS"],
     maxAge: 600,
   }),
 );
@@ -44,6 +45,7 @@ app.route("/uploads", uploads);
 app.route("/orders", orders);
 app.route("/jobs", jobs);
 app.route("/breakdowns", breakdowns);
+app.route("/admin", adminRoutes);
 app.route("/internal", internal);
 app.route("/webhooks", webhooks);
 

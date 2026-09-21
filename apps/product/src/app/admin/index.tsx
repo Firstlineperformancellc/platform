@@ -1,47 +1,47 @@
+import { useCallback, useState } from "react";
+import { Link, useFocusEffect } from "expo-router";
 import { StyleSheet, View } from "react-native";
-import { Brand } from "@/components/Brand";
+import { AdminShell } from "@/components/AdminShell";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Screen } from "@/components/ui/Screen";
-import { Body, H1, H3, Label } from "@/components/ui/Text";
-import { useAuth } from "@/lib/auth";
+import { Body, Display, H3 } from "@/components/ui/Text";
+import { counts } from "@/lib/admin";
 import { colors, space } from "@/theme/tokens";
 
-const AREAS = [
-  ["Athletes", "Approve applications, suspend, review profiles."],
-  ["Orders", "Every order, its job, and its state."],
-  ["Jobs", "Reassign, extend deadlines, close."],
-  ["Sessions", "Recordings and who joined."],
-  ["Refunds", "Issue and track."],
-  ["Settings", "Prices, payout amounts, assignment mode."],
-] as const;
-
 export default function AdminHome() {
-  const { signOut } = useAuth();
+  const [c, setC] = useState<Awaited<ReturnType<typeof counts>> | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      counts().then(setC);
+    }, []),
+  );
+  const tiles = [
+    { n: c?.applications, label: "Mentor applications", blurb: "Waiting for approval.", href: "/admin/mentors" as const },
+    { n: c?.needsAssignment, label: "Jobs needing a mentor", blurb: "Unassigned or waiting on a waitlist.", href: "/admin/jobs" as const },
+    { n: c?.openAudits, label: "Open audits", blurb: "Quality Control Audits to resolve.", href: "/admin/audits" as const },
+    { n: c?.owedPayouts, label: "Payouts owed", blurb: "Mentors waiting to be paid.", href: "/admin/ledger" as const },
+    { n: c?.pendingReviews, label: "Reviews to moderate", blurb: "Ratings under 3 stars.", href: "/admin/audits" as const },
+  ];
   return (
-    <Screen width="page">
-      <View style={s.topbar}>
-        <Brand size={44} />
-        <Button title="Sign out" variant="ghost" small onPress={signOut} />
-      </View>
-      <View>
-        <Label>FLP admin</Label>
-        <H1>Control center</H1>
-      </View>
+    <AdminShell title="Control center">
       <View style={s.grid}>
-        {AREAS.map(([title, blurb]) => (
-          <Card key={title} style={s.cell}>
-            <H3>{title}</H3>
-            <Body style={{ color: colors.muted }}>{blurb}</Body>
+        {tiles.map((t) => (
+          <Card key={t.label} style={[s.cell, (t.n ?? 0) > 0 && s.hot]}>
+            <Display style={{ color: (t.n ?? 0) > 0 ? colors.gold : colors.faint }}>{c ? String(t.n) : "–"}</Display>
+            <H3>{t.label}</H3>
+            <Body style={{ color: colors.muted }}>{t.blurb}</Body>
+            <Link href={t.href} asChild>
+              <Button title="Open" variant="secondary" small />
+            </Link>
           </Card>
         ))}
       </View>
-    </Screen>
+    </AdminShell>
   );
 }
 
 const s = StyleSheet.create({
-  topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: space.lg },
-  cell: { flexGrow: 1, flexBasis: 300 },
+  cell: { flexGrow: 1, flexBasis: 240, maxWidth: 360 },
+  hot: { borderColor: colors.goldDim },
 });
