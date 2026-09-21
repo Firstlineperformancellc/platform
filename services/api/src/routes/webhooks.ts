@@ -107,13 +107,21 @@ webhooks.post("/stripe", async (c) => {
 
 // Daily: HMAC-signed (X-Webhook-Signature = hex hmac(secret, `${timestamp}.${body}`)).
 webhooks.post("/daily", async (c) => {
-  const secret = process.env.DAILY_WEBHOOK_SECRET;
-  if (!secret) return c.json({ error: "daily webhook not configured" }, 503);
   const raw = await c.req.text();
   const ts = c.req.header("x-webhook-timestamp") ?? "";
   const sig = c.req.header("x-webhook-signature") ?? "";
-  const expected = createHmac("sha256", Buffer.from(secret, "base64")).update(`${ts}.${raw}`).digest("hex");
-  const ok = sig.length === expected.length && timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
+  // Daily verifies a new webhook with a ping signed by the secret it only reveals afterwards.
+  // Until the secret is configured, acknowledge and process nothing; after that, every event
+  // must carry a valid signature.
+  const secret = process.env.DAILY_WEBHOOK_SECRET;
+  if (!secret) {
+    console.log("daily webhook: secret not configured, acknowledged without processing");
+    return c.json({ received: true, processed: false });
+  }
+  if (!sig) return c.json({ error: "missing signature" }, 400);
+  // Daily signs `${timestamp}.${body}` with the base64 secret; accept base64 or hex digests.
+  const mac = createHmac("sha256", Buffer.from(secret, "base64")).update(`${ts}.${raw}`).digest();
+  const ok = [mac.toString("base64"), mac.toString("hex")].some((e) => e.length === sig.length && timingSafeEqual(Buffer.from(sig), Buffer.from(e)));
   if (!ok) return c.json({ error: "bad signature" }, 400);
   const evt = JSON.parse(raw) as { type: string; payload: Record<string, unknown> };
   const room = (evt.payload.room_name ?? evt.payload.room) as string | undefined;
