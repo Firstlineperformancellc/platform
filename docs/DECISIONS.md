@@ -20,3 +20,41 @@ Dated, with who decided and why. Newest at the bottom. Verbal agreements get wri
 ## 2026-09-18 — Deck folder moved into FLP (Scott)
 
 `~/Desktop/FLP DECK` moved to `~/Desktop/FLP/deck` per the isolation rule. Remains its own git repository; ignored by the FLP repo.
+
+## 2026-09-21 — Product decisions from the Alex meeting (Scott's notes, Sept 20) and follow-ups
+
+**Naming.** The customer-side player is the **youth athlete**. Reviewers are **FLP Mentors** ("FLP Mentor" in all screen text). The parent is the account holder: warm copy calls them the **Original Coach (OC)**; forms, receipts, legal text, and admin say **Parent / Guardian** (hybrid, Scott 2026-09-21).
+
+**Breakdown pricing and splits.** Three mentor tiers, priced by the tier, always the same price for every mentor in a tier:
+
+| Tier | Breakdown price | Split (mentor / FLP) |
+|---|---|---|
+| Pro (NHL, AHL, ECHL, European pro leagues) | $1,000 | 70 / 30 |
+| PWHL | $250 | 60 / 40 |
+| NCAA (D1, D3, U Sports) | $175 | 60 / 40 |
+
+Junior levels (OHL/WHL/QMJHL, USHL/NAHL/BCHL) are selectable as "highest level played" but **not offered as mentors at launch**. A mentor's tier is the **highest level they ever played**; they may explain a current lower level in their bio. National team / national champion credentials are a **profile badge, no price change**. Tier claims are **unverified but accepted**; admin holds a **verified / unverified** flag, not shown publicly.
+
+**Deliverable.** The recorded breakdown plus the **Player Development Worksheet** (Alex's sample, `docs/reference/FLP Player Development Worksheet.docx`): strengths, areas to improve, game-situations table (clip time, situation, what happened, what to improve, key takeaway), recommended workouts and drills table (area, drill, description, frequency, notes), next steps, additional notes. Built as an in-app form; header auto-filled; **minimum one clip row and one drill row**, form nudges toward three clips; youth athlete gets a **branded PDF** (Scott delegated both calls to Claude).
+
+**Turnaround and acceptance.** A mentor has **48 hours to accept** an offered job (nudged at 24). The **72-hour turnaround starts at acceptance**. Mentor reminders at **24 and 48 hours** after acceptance, email now, push once apps ship. Admin sees a metered view of outstanding work.
+
+**Assignment model.** **Parent picks the mentor** from the marketplace. Each mentor profile is also their advertising: bio, optional video (**no length cap**), specialties. Mentors set capacity as **jobs on deck** (unfinished jobs), **default 3, mentor may raise to 5**. Marketplace shows available / unavailable and each mentor's **average turnaround** ("New" until they've delivered). Parent names a **second choice** (optional, strongly suggested — default). If the first choice is unavailable, the parent is asked **how many days to wait** before the job goes to the second choice (prompt suggests a default). If both fail: **admin queue** to assign or refund (default).
+
+**Charging.** Parent is **charged at checkout**, including when joining a waitlist. Noted: Stripe keeps its fee on refunds; authorize-then-capture was offered and not taken.
+
+**Reviews.** 1–5 stars plus testimonial after delivery. **3 stars and above publish automatically; below 3 goes to admin review** before it appears.
+
+**Quality Control Audit (QCA).** A dissatisfied parent may file within **7 days** of delivery. Admin (Alex/Bryan) reviews the video, worksheet, and reason; outcomes: refund, reassign to another mentor, or other; notes and action taken recorded; audit opened and closed. Applies to mentoring sessions too. Payout hold while an audit is open: **default yes** pending the payout decision.
+
+**Mentor scorecard (admin only).** Average turnaround, on-time %, ratings, jobs completed, acceptance rate, declines and expired offers, QCA count and outcomes, worksheet completeness, last active, verified flag. Admin actions: **suspend / unsuspend**, **deactivate and block**, **deactivate and delete**.
+
+**Mentor payouts.** Timing **undecided**. Default: **manual from admin** — per-mentor and per-job ledger (owed, held, paid), date filters, Stripe reconciliation view, Pay per job or batch via Stripe Connect. When a rule is chosen it becomes an automatic trigger on the same plumbing.
+
+**Mentoring = Film Room** (Scott's structure sent to Alex 2026-09-21; long-form research in `docs/MENTORING_PROPOSAL.md`). Recorded live call where mentor and youth athlete watch the athlete's own film; starts from the worksheet, ends with a mentor recap (three takeaways, one or two drills, one next step) within 24 hours that appends to the **Development Log**; parent rates with the same 3-star gate. Two doors: the delivered-breakdown offer and the marketplace (marketplace bookings must attach film). Prep screen for the mentor. Same mentor by default, one-tap rebook, same wait-or-second-choice prompt. Mentors set **recurring weekly windows** plus a sessions-on-deck cap. Parent picks a slot, **pays at booking**, calendar invite, reminders at 24h and 1h. Recordings locked on, notice on join, **kept 90 days** for admin, then a family prompt to download or pay to keep (**keepsake storage — Phase 2, price and free allowance TBD**). QCA applies. **Pricing: Alex to decide**; Claude's proposed table stays as reference. **Session rules to be added later; built as settings** with these defaults: 24-hour cancellation, 10-minute grace, one courtesy rebook per family, mentor no-show refunds and marks the scorecard, mentors accept or decline a session like a breakdown, "parent present" is the family's choice.
+
+**Taxonomy.** Alex's lists pending. Starter lists in settings, editable in admin: age groups 8U–18U; positions forward / defense / goalie; skill levels House, A, AA, AAA; skater focus areas hockey IQ, skating, shooting, passing, positioning, defensive play, game awareness, other; goalie focus areas rebound control, positioning, angle play, puck tracking, odd-man rushes, game IQ, communication, mental game.
+
+**Profiles.** Rudimentary fields now (youth athlete: first name, last initial, age group, position, skill level, current team, parent behind it; mentor: display name, photo, tier and highest level, current team/status, positions reviewed, specialties, bio, optional video, admin-only verified flag, computed stats). Depth to be discussed around week 3.
+
+**Scope note.** The mentor marketplace with capacity, availability, second choice, waitlist, and acceptance window, and the worksheet deliverable, are additions to the contract's thirteen items. Scott chose to absorb them (2026-09-21). Junior mentor tier and keepsake recordings are parked.

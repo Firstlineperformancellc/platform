@@ -4,6 +4,9 @@
 **Date:** 2026-09-08
 **Status:** PROPOSAL. Nothing in this document has been implemented. It exists to be read, marked up, and approved or changed before any build work starts.
 
+
+> **Amended 2026-09-21.** The product model below was refined in the Sept 20 meeting with Alex. The decisions log (`docs/DECISIONS.md`, entry 2026-09-21) is authoritative where it differs from this document. Headline changes: the parent picks the mentor from a marketplace (not an open pool); three mentor tiers with tier pricing (Pro $1,000 at 70/30, PWHL $250 and NCAA $175 at 60/40); a 48-hour acceptance window and a 72-hour turnaround from acceptance; the Player Development Worksheet as part of every breakdown; reviews gated at 3 stars; the Quality Control Audit; the mentor scorecard; mentoring as the Film Room with a Development Log; naming: youth athlete, FLP Mentor, Original Coach / Parent-Guardian.
+
 ---
 
 ## 0. How to read this
