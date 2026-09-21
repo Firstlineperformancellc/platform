@@ -30,6 +30,14 @@ export type Settings = {
     payout_hold_during_qca: boolean;
     mentors_may_decline_sessions: boolean;
     parent_present_default: boolean;
+    session_slot_minutes?: number;
+    session_min_lead_hours?: number;
+    session_accept_hours?: number;
+    session_book_ahead_days?: number;
+    addon_window_days?: number;
+    season_arc_sessions?: number;
+    season_arc_weeks?: number;
+    session_reminder_hours?: number[];
   };
   taxonomy: {
     age_groups: string[];

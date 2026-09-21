@@ -128,13 +128,13 @@ export default function AdminAudits() {
           <View style={s.head}>
             <View style={{ flex: 1 }}>
               <H3>
-                {r.rating}★ for {r.jobs?.athletes?.display_name ?? "?"}
+                {r.rating}★ for {r.mentor} · {r.kind === "session" ? "Film Room" : "breakdown"}
               </H3>
               {r.review ? <Body style={{ color: colors.muted }}>{r.review}</Body> : <Small>No testimonial text.</Small>}
             </View>
             <View style={s.row}>
-              <Button title="Publish" small loading={busy === r.id} onPress={() => run(r.id, () => moderateReview(r.id, "published"))} />
-              <Button title="Hide" variant="ghost" small onPress={() => run(r.id, () => moderateReview(r.id, "hidden"))} />
+              <Button title="Publish" small loading={busy === r.id} onPress={() => run(r.id, () => moderateReview(r.id, "published", r.kind))} />
+              <Button title="Hide" variant="ghost" small onPress={() => run(r.id, () => moderateReview(r.id, "hidden", r.kind))} />
             </View>
           </View>
         </Card>

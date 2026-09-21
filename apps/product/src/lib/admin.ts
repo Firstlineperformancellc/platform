@@ -127,12 +127,13 @@ export type AdminPayout = {
   stripe_transfer_id: string | null;
   athletes: { display_name: string; stripe_account_id: string | null; payouts_enabled: boolean } | null;
   jobs: { id: string; delivered_at: string | null; orders: { players: { first_name: string; last_name: string } | null } } | null;
+  sessions: { id: string; scheduled_at: string | null; players: { first_name: string; last_name: string } | null } | null;
 };
 
 export async function listPayouts(): Promise<AdminPayout[]> {
   const { data, error } = await supabase
     .from("payouts")
-    .select("id, status, amount_cents, currency, held_reason, note, created_at, paid_at, stripe_transfer_id, athletes(display_name, stripe_account_id, payouts_enabled), jobs(id, delivered_at, orders(players(first_name, last_name)))")
+    .select("id, status, amount_cents, currency, held_reason, note, created_at, paid_at, stripe_transfer_id, athletes(display_name, stripe_account_id, payouts_enabled), jobs(id, delivered_at, orders(players(first_name, last_name))), sessions(id, scheduled_at, players(first_name, last_name))")
     .order("created_at", { ascending: false })
     .limit(300);
   if (error) throw new Error(error.message);
@@ -142,23 +143,35 @@ export async function listPayouts(): Promise<AdminPayout[]> {
 export const payPayout = (id: string, method: "stripe" | "manual", note?: string) => api<{ ok: true; transferId: string | null }>(`/admin/payouts/${id}/pay`, { method: "POST", body: JSON.stringify({ method, note }) });
 export const holdPayout = (id: string, hold: boolean, reason?: string) => api<{ ok: true }>(`/admin/payouts/${id}/hold`, { method: "POST", body: JSON.stringify({ hold, reason }) });
 
-export type PendingReview = { id: string; rating: number; review: string | null; reviewed_at: string; jobs: { athletes: { display_name: string } | null } | null };
+export type PendingReview = { id: string; kind: "breakdown" | "session"; rating: number; review: string | null; reviewed_at: string; mentor: string };
 export async function listPendingReviews(): Promise<PendingReview[]> {
-  const { data } = await supabase.from("breakdowns").select("id, rating, review, reviewed_at, jobs(athletes(display_name))").eq("review_status", "pending_admin").order("reviewed_at");
-  return (data ?? []) as unknown as PendingReview[];
+  const [b, s] = await Promise.all([
+    supabase.from("breakdowns").select("id, rating, review, reviewed_at, jobs(athletes(display_name))").eq("review_status", "pending_admin").order("reviewed_at"),
+    supabase.from("sessions").select("id, rating, review, reviewed_at, athletes(display_name)").eq("review_status", "pending_admin").order("reviewed_at"),
+  ]);
+  type B = { id: string; rating: number; review: string | null; reviewed_at: string; jobs: { athletes: { display_name: string } | null } | null };
+  type S = { id: string; rating: number; review: string | null; reviewed_at: string | null; athletes: { display_name: string } | null };
+  const rows: PendingReview[] = [
+    ...((b.data ?? []) as unknown as B[]).map((r) => ({ id: r.id, kind: "breakdown" as const, rating: r.rating, review: r.review, reviewed_at: r.reviewed_at, mentor: r.jobs?.athletes?.display_name ?? "?" })),
+    ...((s.data ?? []) as unknown as S[]).map((r) => ({ id: r.id, kind: "session" as const, rating: r.rating, review: r.review, reviewed_at: r.reviewed_at ?? "", mentor: r.athletes?.display_name ?? "?" })),
+  ];
+  return rows.sort((x, y) => x.reviewed_at.localeCompare(y.reviewed_at));
 }
-export const moderateReview = (id: string, status: "published" | "hidden") => api<{ ok: true }>(`/admin/reviews/${id}`, { method: "POST", body: JSON.stringify({ status }) });
+export const moderateReview = (id: string, status: "published" | "hidden", kind: "breakdown" | "session" = "breakdown") =>
+  api<{ ok: true }>(`/admin/reviews/${id}`, { method: "POST", body: JSON.stringify({ status, kind }) });
 
 export const patchSettings = (patch: Record<string, unknown>) => api<{ ok: true }>("/admin/settings", { method: "PATCH", body: JSON.stringify(patch) });
 export const grantAdmin = (email: string) => api<{ ok: true }>("/admin/admins", { method: "POST", body: JSON.stringify({ email }) });
 
 export async function counts() {
-  const [mentors, jobs, audits, payouts, reviews] = await Promise.all([
+  const [mentors, jobs, audits, payouts, reviews, sessions, sessionReviews] = await Promise.all([
     supabase.from("athletes").select("status", { count: "exact", head: true }).eq("status", "applied"),
     supabase.from("jobs").select("status", { count: "exact", head: true }).in("status", ["unassigned", "waiting"]),
     supabase.from("quality_audits").select("id", { count: "exact", head: true }).eq("status", "open"),
     supabase.from("payouts").select("id", { count: "exact", head: true }).eq("status", "owed"),
     supabase.from("breakdowns").select("id", { count: "exact", head: true }).eq("review_status", "pending_admin"),
+    supabase.from("sessions").select("id", { count: "exact", head: true }).in("status", ["requested", "scheduled", "in_progress"]),
+    supabase.from("sessions").select("id", { count: "exact", head: true }).eq("review_status", "pending_admin"),
   ]);
-  return { applications: mentors.count ?? 0, needsAssignment: jobs.count ?? 0, openAudits: audits.count ?? 0, owedPayouts: payouts.count ?? 0, pendingReviews: reviews.count ?? 0 };
+  return { applications: mentors.count ?? 0, needsAssignment: jobs.count ?? 0, openAudits: audits.count ?? 0, owedPayouts: payouts.count ?? 0, pendingReviews: (reviews.count ?? 0) + (sessionReviews.count ?? 0), liveSessions: sessions.count ?? 0 };
 }

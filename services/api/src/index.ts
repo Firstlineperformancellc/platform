@@ -11,6 +11,7 @@ import { internal, jobs } from "./routes/jobs.js";
 import { breakdowns } from "./routes/breakdowns.js";
 import { adminRoutes } from "./routes/admin.js";
 import { mentors } from "./routes/mentors.js";
+import { sessions } from "./routes/sessions.js";
 
 const app = new Hono();
 
@@ -48,6 +49,7 @@ app.route("/jobs", jobs);
 app.route("/breakdowns", breakdowns);
 app.route("/admin", adminRoutes);
 app.route("/mentors", mentors);
+app.route("/sessions", sessions);
 app.route("/internal", internal);
 app.route("/webhooks", webhooks);
 

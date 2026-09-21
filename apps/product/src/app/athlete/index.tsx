@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { Link, useFocusEffect } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { Brand } from "@/components/Brand";
+import { MentorSessions } from "@/components/MentorSessions";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
@@ -120,6 +121,8 @@ export default function AthleteHome() {
             </Card>
           ))}
           {error ? <Body style={{ color: colors.danger }}>{error}</Body> : null}
+
+          <MentorSessions />
 
           <View>
             <H2>On deck</H2>

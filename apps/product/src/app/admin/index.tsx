@@ -20,6 +20,7 @@ export default function AdminHome() {
     { n: c?.needsAssignment, label: "Jobs needing a mentor", blurb: "Unassigned or waiting on a waitlist.", href: "/admin/jobs" as const },
     { n: c?.openAudits, label: "Open audits", blurb: "Quality Control Audits to resolve.", href: "/admin/audits" as const },
     { n: c?.owedPayouts, label: "Payouts owed", blurb: "Mentors waiting to be paid.", href: "/admin/ledger" as const },
+    { n: c?.liveSessions, label: "Film Rooms upcoming", blurb: "Requested, scheduled, or live right now.", href: "/admin/sessions" as const },
     { n: c?.pendingReviews, label: "Reviews to moderate", blurb: "Ratings under 3 stars.", href: "/admin/audits" as const },
   ];
   return (

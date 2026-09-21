@@ -7,7 +7,9 @@ import { TextField } from "./ui/TextField";
 import { Body, H3, Label, Small } from "./ui/Text";
 import { WorksheetView } from "./WorksheetView";
 import { fileAudit, getBreakdownForJob, openAuditFor, reviewBreakdown, worksheetPdfUrl, type Breakdown } from "@/lib/breakdowns";
+import { mentorSlugForJob } from "@/lib/sessions";
 import { useSettings } from "@/lib/settings";
+import { Link } from "expo-router";
 import { colors, fonts, radius, space } from "@/theme/tokens";
 
 // The parent's view of a delivered breakdown: video, worksheet, PDF, rating, and the audit path.
@@ -22,8 +24,10 @@ export function BreakdownPanel({ jobId }: { jobId: string }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mentorSlug, setMentorSlug] = useState<string | null>(null);
 
   useEffect(() => {
+    mentorSlugForJob(jobId).then(setMentorSlug);
     getBreakdownForJob(jobId).then(async (b) => {
       setBd(b);
       if (b) setAudit((await openAuditFor(b.id)) as typeof audit);
@@ -35,6 +39,7 @@ export function BreakdownPanel({ jobId }: { jobId: string }) {
 
   const daysSince = (Date.now() - new Date(bd.delivered_at).getTime()) / 86400000;
   const canAudit = settings ? daysSince <= settings.rules.qca_window_days : false;
+  const canAddon = settings ? daysSince <= (settings.rules.addon_window_days ?? 14) : false;
 
   async function submitReview() {
     if (!rating) return setError("Pick a star rating.");
@@ -98,6 +103,21 @@ export function BreakdownPanel({ jobId }: { jobId: string }) {
         <Button title="Download PDF" variant="secondary" small loading={busy === "pdf"} onPress={downloadPdf} />
       </View>
       <WorksheetView w={bd.worksheet} />
+
+      {canAddon && mentorSlug ? (
+        <View style={s.addon}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Label>Go through this live</Label>
+            <Small>
+              Book a 30-minute Film Room with the same mentor within {settings?.rules.addon_window_days ?? 14} days of delivery at the add-on price. They pull up this film and walk your
+              youth athlete through it.
+            </Small>
+          </View>
+          <Link href={{ pathname: "/mentors/[slug]", params: { slug: mentorSlug, addon: bd.id } }} asChild>
+            <Button title="Book the add-on" variant="secondary" small />
+          </Link>
+        </View>
+      ) : null}
 
       <View style={s.divider} />
 
@@ -163,6 +183,7 @@ function Stars({ value, onChange }: { value: number; onChange?: (v: number) => v
 }
 
 const s = StyleSheet.create({
+  addon: { flexDirection: "row", alignItems: "center", gap: space.md, flexWrap: "wrap", padding: space.md, borderRadius: radius.md, backgroundColor: colors.goldSoft },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.md, flexWrap: "wrap" },
   divider: { height: 1, backgroundColor: colors.line, marginVertical: space.sm },
   multi: { height: 84, paddingTop: space.sm, textAlignVertical: "top" },

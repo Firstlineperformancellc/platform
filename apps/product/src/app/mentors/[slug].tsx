@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocalSearchParams } from "expo-router";
 import { Platform, StyleSheet, View } from "react-native";
 import { Brand } from "@/components/Brand";
+import { BookSession } from "@/components/BookSession";
 import { MentorCard } from "@/components/MentorCard";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -14,7 +15,7 @@ import { colors, radius, space } from "@/theme/tokens";
 
 // Public profile and booking link: /mentors/<slug>. This is the mentor's advertising deck.
 export default function MentorProfile() {
-  const { slug } = useLocalSearchParams<{ slug: string }>();
+  const { slug, addon } = useLocalSearchParams<{ slug: string; addon?: string }>();
   const { session, profile } = useAuth();
   const { settings } = useSettings();
   const [mentor, setMentor] = useState<MarketplaceMentor | null | undefined>(undefined);
@@ -87,18 +88,19 @@ export default function MentorProfile() {
         ) : (
           <Small>Sign in with a parent account to order.</Small>
         )}
-        <Small>Film Room mentoring sessions with {first} open once pricing is set.</Small>
       </Card>
+
+      <BookSession mentor={mentor} settings={settings} addonBreakdownId={addon ?? null} />
 
       {reviews.length > 0 ? (
         <Card>
           <H3>What parents say</H3>
           {reviews.map((r) => (
-            <View key={r.breakdown_id} style={s.review}>
+            <View key={r.session_id ?? r.breakdown_id ?? r.reviewed_at} style={s.review}>
               <View style={s.row}>
                 <Body style={{ color: colors.gold }}>{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</Body>
                 <Small>
-                  {r.parent_first_name}, parent of a {r.age_group} {r.position} · {new Date(r.reviewed_at).toLocaleDateString()}
+                  {r.parent_first_name}, parent of a {r.age_group} {r.position} · {r.kind === "session" ? "Film Room" : "breakdown"} · {new Date(r.reviewed_at).toLocaleDateString()}
                 </Small>
               </View>
               {r.review ? <Body>{r.review}</Body> : null}

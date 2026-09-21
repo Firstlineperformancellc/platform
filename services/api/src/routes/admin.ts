@@ -216,10 +216,13 @@ adminRoutes.post("/payouts/:id/hold", async (c) => {
 adminRoutes.post("/reviews/:id", async (c) => {
   const me = await requireAdmin(c.req.header("authorization"));
   if (!me) return c.json({ error: "admin only" }, 403);
-  const { status } = (await c.req.json().catch(() => ({}))) as { status?: string };
+  const body = (await c.req.json().catch(() => ({}))) as { status?: string; kind?: string };
+  const { status } = body;
   if (status !== "published" && status !== "hidden") return c.json({ error: "status must be published or hidden" }, 400);
-  await admin.from("breakdowns").update({ review_status: status }).eq("id", c.req.param("id"));
-  await audit(me.id, "review.moderate", "breakdown", c.req.param("id"), { status });
+  const { kind } = body;
+  const table = kind === "session" ? "sessions" : "breakdowns";
+  await admin.from(table).update({ review_status: status }).eq("id", c.req.param("id"));
+  await audit(me.id, "review.moderate", kind === "session" ? "session" : "breakdown", c.req.param("id"), { status });
   return c.json({ ok: true });
 });
 

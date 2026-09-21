@@ -82,7 +82,8 @@ export default function AdminLedger() {
       {error ? <Body style={{ color: colors.danger }}>{error}</Body> : null}
       {!rows ? <Loading /> : shown.length === 0 ? <Body style={{ color: colors.muted }}>Nothing in this view.</Body> : null}
       {shown.map((r) => {
-        const player = r.jobs?.orders.players ? `${r.jobs.orders.players.first_name} ${r.jobs.orders.players.last_name?.[0] ?? ""}.` : "";
+        const pl = r.jobs?.orders.players ?? r.sessions?.players ?? null;
+        const player = pl ? `${pl.first_name} ${pl.last_name?.[0] ?? ""}.` : "";
         const stripeReady = Boolean(r.athletes?.stripe_account_id && r.athletes.payouts_enabled);
         return (
           <Card key={r.id}>
@@ -92,7 +93,7 @@ export default function AdminLedger() {
                   {r.athletes?.display_name ?? "?"} · {money(r.amount_cents)}
                 </H3>
                 <Small>
-                  Breakdown for {player} · delivered {r.jobs?.delivered_at ? new Date(r.jobs.delivered_at).toLocaleDateString() : "–"} · ledger {new Date(r.created_at).toLocaleDateString()}
+                  {r.sessions ? `Film Room for ${player} · held ${r.sessions.scheduled_at ? new Date(r.sessions.scheduled_at).toLocaleDateString() : "–"}` : `Breakdown for ${player} · delivered ${r.jobs?.delivered_at ? new Date(r.jobs.delivered_at).toLocaleDateString() : "–"}`}{r.note ? ` · ${r.note}` : ""} · ledger {new Date(r.created_at).toLocaleDateString()}
                   {r.paid_at ? ` · paid ${new Date(r.paid_at).toLocaleDateString()}${r.stripe_transfer_id ? " via Stripe" : " manually"}` : ""}
                 </Small>
                 {r.held_reason ? <Small style={{ color: colors.warn }}>Held: {r.held_reason}</Small> : null}

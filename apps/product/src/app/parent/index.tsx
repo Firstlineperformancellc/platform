@@ -3,7 +3,6 @@ import { StyleSheet, View } from "react-native";
 import { Brand } from "@/components/Brand";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Pill } from "@/components/ui/Pill";
 import { Screen } from "@/components/ui/Screen";
 import { Body, H1, H3, Label, Small } from "@/components/ui/Text";
 import { useAuth } from "@/lib/auth";
@@ -46,14 +45,16 @@ export default function ParentHome() {
           </Link>
         </Card>
         <Card style={s.cell}>
-          <H3>Upload test</H3>
+          <H3>Film Room</H3>
           <Body style={{ color: colors.muted }}>
-            Try the game-film upload: chunked, resumable, streams back when processed.
+            A live, recorded video session with an FLP Mentor. Book from any mentor's profile; the recap lands in the Development Log.
           </Body>
-          <Link href="/parent/upload" asChild>
-            <Button title="Test an upload" variant="secondary" />
+          <Link href="/mentors" asChild>
+            <Button title="Book a Film Room" variant="secondary" />
           </Link>
-          <Pill tone="gold">Week 1 spike</Pill>
+          <Link href="/parent/sessions" asChild>
+            <Button title="Your sessions" variant="ghost" small />
+          </Link>
         </Card>
       </View>
     </Screen>

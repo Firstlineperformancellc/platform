@@ -48,8 +48,8 @@ export function turnaroundLabel(hours: number | null | undefined) {
   return `Typically ${Math.round(hours / 24)} day${Math.round(hours / 24) === 1 ? "" : "s"}`;
 }
 
-export type MentorReview = { breakdown_id: string; rating: number; review: string | null; reviewed_at: string; parent_first_name: string; age_group: string; position: string };
+export type MentorReview = { kind: "breakdown" | "session"; breakdown_id: string | null; session_id: string | null; rating: number; review: string | null; reviewed_at: string; parent_first_name: string; age_group: string; position: string };
 export async function listReviews(athleteId: string): Promise<MentorReview[]> {
-  const { data } = await supabase.from("mentor_reviews").select("breakdown_id, rating, review, reviewed_at, parent_first_name, age_group, position").eq("athlete_id", athleteId).order("reviewed_at", { ascending: false }).limit(20);
+  const { data } = await supabase.from("mentor_reviews").select("kind, breakdown_id, session_id, rating, review, reviewed_at, parent_first_name, age_group, position").eq("athlete_id", athleteId).order("reviewed_at", { ascending: false }).limit(20);
   return (data ?? []) as MentorReview[];
 }

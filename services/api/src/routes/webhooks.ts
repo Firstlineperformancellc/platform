@@ -4,6 +4,8 @@ import { mux } from "../mux.js";
 import { env } from "../env.js";
 import { stripe } from "../stripe.js";
 import { openJobForOrder } from "../jobs.js";
+import { afterPayment, completeSession } from "./sessions.js";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 // Inbound webhooks. Each provider is verified by signature before anything is written.
 //   Mux    (live):   upload.asset_created / asset.ready / asset.errored -> media status
@@ -79,6 +81,16 @@ webhooks.post("/stripe", async (c) => {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
     const orderId = session.metadata?.orderId;
+    const sessionId = session.metadata?.sessionId;
+    const packId = session.metadata?.packId;
+    const pi = typeof session.payment_intent === "string" ? session.payment_intent : null;
+    if (sessionId && session.payment_status === "paid") {
+      await admin.from("sessions").update({ stripe_payment_intent_id: pi }).eq("id", sessionId).is("paid_at", null);
+      await afterPayment(sessionId);
+    }
+    if (packId && session.payment_status === "paid") {
+      await admin.from("session_packs").update({ paid_at: new Date().toISOString(), stripe_payment_intent_id: pi }).eq("id", packId).is("paid_at", null);
+    }
     if (orderId && session.payment_status === "paid") {
       const { data: o } = await admin.from("orders").select("id, status").eq("id", orderId).maybeSingle();
       if (o && o.status === "draft") {
@@ -93,7 +105,25 @@ webhooks.post("/stripe", async (c) => {
   return c.json({ received: true, type: event.type });
 });
 
+// Daily: HMAC-signed (X-Webhook-Signature = hex hmac(secret, `${timestamp}.${body}`)).
 webhooks.post("/daily", async (c) => {
-  console.log("daily webhook received (not yet verified)");
-  return c.json({ received: true });
+  const secret = process.env.DAILY_WEBHOOK_SECRET;
+  if (!secret) return c.json({ error: "daily webhook not configured" }, 503);
+  const raw = await c.req.text();
+  const ts = c.req.header("x-webhook-timestamp") ?? "";
+  const sig = c.req.header("x-webhook-signature") ?? "";
+  const expected = createHmac("sha256", Buffer.from(secret, "base64")).update(`${ts}.${raw}`).digest("hex");
+  const ok = sig.length === expected.length && timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
+  if (!ok) return c.json({ error: "bad signature" }, 400);
+  const evt = JSON.parse(raw) as { type: string; payload: Record<string, unknown> };
+  const room = (evt.payload.room_name ?? evt.payload.room) as string | undefined;
+  const { data: sess } = room ? await admin.from("sessions").select("id, status").eq("daily_room_name", room).maybeSingle() : { data: null };
+  if (sess) {
+    if (evt.type === "recording.started") await admin.from("sessions").update({ recording_status: "recording" }).eq("id", sess.id);
+    if (evt.type === "recording.ready-to-download") {
+      await admin.from("sessions").update({ recording_daily_id: evt.payload.recording_id as string, recording_status: "ready" }).eq("id", sess.id);
+    }
+    if (evt.type === "meeting.ended" && ["scheduled", "in_progress"].includes(sess.status)) await completeSession(sess.id);
+  }
+  return c.json({ received: true, type: evt.type });
 });

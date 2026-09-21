@@ -24,5 +24,6 @@ export const env = {
   stripeSecretKey: optional("STRIPE_SECRET_KEY"),
   stripeWebhookSecret: optional("STRIPE_WEBHOOK_SECRET"),
   dailyApiKey: optional("DAILY_API_KEY"),
+  dailyWebhookSecret: optional("DAILY_WEBHOOK_SECRET"),
   resendApiKey: optional("RESEND_API_KEY"),
 };
