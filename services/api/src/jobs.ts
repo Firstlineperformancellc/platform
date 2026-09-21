@@ -11,9 +11,10 @@ import { alreadySent, appUrl, notify } from "./notify.js";
 const hours = (h: number) => h * 3600 * 1000;
 const iso = (t: number) => new Date(t).toISOString();
 
-async function mentorAvailable(athleteId: string) {
+// listed: on the marketplace at all (approved, tiered, not blocked or deleted); available: under capacity
+async function mentorState(athleteId: string) {
   const { data } = await admin.from("marketplace_mentors").select("available").eq("user_id", athleteId).maybeSingle();
-  return Boolean(data?.available);
+  return { listed: Boolean(data), available: Boolean(data?.available) };
 }
 
 async function orderOf(jobId: string) {
@@ -73,9 +74,10 @@ export async function openJobForOrder(orderId: string) {
   const { data: job } = await admin.from("jobs").insert({ order_id: orderId, status: "waiting" }).select("id").single();
   if (!job) throw new Error("could not create job");
   const first = o.first_choice_athlete_id;
-  if (first && (await mentorAvailable(first))) {
+  const state = first ? await mentorState(first) : { listed: false, available: false };
+  if (first && state.available) {
     await offerJob(job.id, first, 1);
-  } else if (first) {
+  } else if (first && state.listed) {
     const waitDays = o.wait_days ?? s.rules.wait_days_default;
     await admin.from("orders").update({ waitlisted_at: new Date().toISOString(), wait_days: waitDays, status: "paid" }).eq("id", orderId);
     await admin.from("jobs").update({ status: "waiting" }).eq("id", job.id);
@@ -145,9 +147,10 @@ export async function tick() {
     const first = w.orders.first_choice_athlete_id;
     const startedAt = w.orders.waitlisted_at ? new Date(w.orders.waitlisted_at).getTime() : now;
     const waitMs = (w.orders.wait_days ?? s.rules.wait_days_default) * 24 * 3600 * 1000;
-    if (first && (await mentorAvailable(first))) {
+    const state = first ? await mentorState(first) : { listed: false, available: false };
+    if (first && state.available) {
       await offerJob(w.id, first, 1);
-    } else if (now - startedAt >= waitMs) {
+    } else if (!state.listed || now - startedAt >= waitMs) {
       await nextOffer(w.id);
       report.waitedOut++;
     }

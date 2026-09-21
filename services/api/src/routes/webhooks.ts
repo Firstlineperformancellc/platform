@@ -36,10 +36,12 @@ webhooks.post("/mux", async (c) => {
       break;
     }
     case "video.asset.ready": {
-      const playback = (data.playback_ids as { id: string }[] | undefined)?.[0]?.id ?? null;
+      const pb = (data.playback_ids as { id: string; policy?: string }[] | undefined)?.[0];
+      const playback = pb?.id ?? null;
       const patch = {
         mux_asset_id: data.id as string,
         mux_playback_id: playback,
+        mux_playback_policy: pb?.policy === "signed" ? "signed" : "public",
         duration_seconds: (data.duration as number | undefined) ?? null,
         status: "ready" as const,
       };

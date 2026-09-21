@@ -11,7 +11,7 @@ export async function sessionsTick() {
   const s = await getSettings();
   const r = s.rules as Record<string, number | number[]>;
   const now = Date.now();
-  const report = { expiredRequests: 0, reminders: 0, autoCompleted: 0, recordingsDeleted: 0 };
+  const report = { expiredRequests: 0, reminders: 0, autoCompleted: 0, mentorNoShows: 0, recordingsDeleted: 0 };
 
   // Requested sessions the mentor never answered.
   const { data: stale } = await admin.from("sessions").select("id").eq("status", "requested").not("accept_by", "is", null).lt("accept_by", iso(now));
@@ -40,13 +40,25 @@ export async function sessionsTick() {
   }
 
   // Sessions past their end that nobody closed: complete them so the recap clock and payout start.
-  const { data: ended } = await admin.from("sessions").select("id, scheduled_at, duration_minutes, athlete_joined_at").in("status", ["scheduled", "in_progress"]).lt("scheduled_at", iso(now - 3 * 3600000));
+  const { data: ended } = await admin.from("sessions").select("id, athlete_id, scheduled_at, duration_minutes, athlete_joined_at").in("status", ["scheduled", "in_progress"]).lt("scheduled_at", iso(now - 3 * 3600000));
   for (const x of ended ?? []) {
     if (x.athlete_joined_at) {
       await completeSession(x.id);
       report.autoCompleted++;
+      continue;
     }
-    // If the mentor never joined, leave it for the parent's no-show report or admin.
+    // The mentor never joined. A day after the booked end it becomes a mentor no-show: the family is
+    // refunded, the scorecard records it, admin hears about it.
+    const ends = new Date(x.scheduled_at!).getTime() + (x.duration_minutes ?? 30) * 60000;
+    if (now >= ends + 24 * 3600000) {
+      await cancelAndRefund(x.id, "no_show_mentor", "Your FLP Mentor didn't join", null);
+      await admin.from("audit_log").insert({ actor_id: null, action: "session.no_show_mentor", target_type: "session", target_id: x.id, meta: { auto: true } });
+      await notify(x.athlete_id, "session.no_show", "You missed a Film Room",
+        `<p>A booked Film Room passed without you joining. The family has been refunded and this is on your scorecard. If something went wrong, reply to this email.</p>`, { targetId: x.id });
+      const { data: admins } = await admin.from("profiles").select("id").eq("role", "admin");
+      for (const a of admins ?? []) await notify(a.id, "session.no_show.admin", "Mentor no-show on a Film Room", `<p>A mentor never joined a booked session; the family was refunded automatically.</p><p><a href="${appUrl("/admin/sessions")}" style="color:#d4a32c">Film Room sessions</a></p>`, { targetId: x.id });
+      report.mentorNoShows++;
+    }
   }
 
   // Recording retention.

@@ -44,7 +44,7 @@ export async function listMentors(): Promise<AdminMentor[]> {
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  const { data: stats } = await supabase.from("mentor_stats").select("*");
+  const { data: stats } = await supabase.from("mentor_stats_admin").select("*");
   const byId = new Map((stats ?? []).map((s: MentorStats & { athlete_id: string }) => [s.athlete_id, s]));
   return (data ?? []).map((m) => ({ ...(m as unknown as AdminMentor), stats: byId.get((m as { user_id: string }).user_id) ?? null }));
 }

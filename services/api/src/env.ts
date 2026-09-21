@@ -21,6 +21,8 @@ export const env = {
   muxTokenId: optional("MUX_TOKEN_ID"),
   muxTokenSecret: optional("MUX_TOKEN_SECRET"),
   muxWebhookSecret: optional("MUX_WEBHOOK_SECRET"),
+  muxSigningKeyId: optional("MUX_SIGNING_KEY_ID"),
+  muxSigningKeyPrivate: optional("MUX_SIGNING_KEY_PRIVATE"),
   stripeSecretKey: optional("STRIPE_SECRET_KEY"),
   stripeWebhookSecret: optional("STRIPE_WEBHOOK_SECRET"),
   dailyApiKey: optional("DAILY_API_KEY"),

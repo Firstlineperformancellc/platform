@@ -4,6 +4,7 @@ import { Platform, StyleSheet, View } from "react-native";
 import { Brand } from "@/components/Brand";
 import { VideoUpload } from "@/components/VideoUpload";
 import { WorksheetView } from "@/components/WorksheetView";
+import { MuxPlayer } from "@/components/MuxPlayer";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
@@ -108,23 +109,8 @@ export default function JobScreen() {
               {o.film_youtube_url}
             </Body>
           </Body>
-        ) : filmPlayback && Platform.OS === "web" ? (
-          <>
-            <iframe
-              src={`https://player.mux.com/${filmPlayback}?primary-color=%23d4a32c&accent-color=%23000000`}
-              style={{ border: 0, width: "100%", aspectRatio: "16 / 9", borderRadius: radius.md }}
-              allow="fullscreen"
-              allowFullScreen
-              title="Game film"
-            />
-            <Small>
-              To record with your own screen recorder, play it here or{" "}
-              <Small style={{ color: colors.gold }} onPress={() => window.open(`https://stream.mux.com/${filmPlayback}/highest.mp4?download=game-film.mp4`, "_blank")}>
-                download the MP4
-              </Small>
-              . The download becomes available a few minutes after the film finishes processing.
-            </Small>
-          </>
+        ) : filmPlayback && o?.film_media_id ? (
+          <MuxPlayer mediaId={o.film_media_id} title="Game film" downloadLabel="download the MP4" />
         ) : (
           <Body style={{ color: colors.muted }}>The film shows here as soon as the parent's upload finishes processing.</Body>
         )}
@@ -134,9 +120,7 @@ export default function JobScreen() {
         <Card>
           <Pill tone="ok">Delivered</Pill>
           <H3>Your breakdown</H3>
-          {existing.media?.mux_playback_id && Platform.OS === "web" ? (
-            <iframe src={`https://player.mux.com/${existing.media.mux_playback_id}`} style={{ border: 0, width: "100%", aspectRatio: "16 / 9", borderRadius: radius.md }} allow="fullscreen" allowFullScreen title="Breakdown" />
-          ) : null}
+          <MuxPlayer mediaId={existing.media_id} title="Breakdown" />
           <WorksheetView w={existing.worksheet} />
         </Card>
       ) : job.status === "accepted" ? (

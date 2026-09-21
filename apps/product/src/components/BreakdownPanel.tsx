@@ -6,6 +6,7 @@ import { Pill } from "./ui/Pill";
 import { TextField } from "./ui/TextField";
 import { Body, H3, Label, Small } from "./ui/Text";
 import { WorksheetView } from "./WorksheetView";
+import { MuxPlayer } from "./MuxPlayer";
 import { fileAudit, getBreakdownForJob, openAuditFor, reviewBreakdown, worksheetPdfUrl, type Breakdown } from "@/lib/breakdowns";
 import { mentorSlugForJob } from "@/lib/sessions";
 import { useSettings } from "@/lib/settings";
@@ -86,17 +87,7 @@ export function BreakdownPanel({ jobId }: { jobId: string }) {
         <H3>Your breakdown</H3>
         <Pill tone="ok">{`Delivered ${new Date(bd.delivered_at).toLocaleDateString()}`}</Pill>
       </View>
-      {bd.media?.mux_playback_id && Platform.OS === "web" ? (
-        <iframe
-          src={`https://player.mux.com/${bd.media.mux_playback_id}?primary-color=%23d4a32c&accent-color=%23000000`}
-          style={{ border: 0, width: "100%", aspectRatio: "16 / 9", borderRadius: radius.md }}
-          allow="fullscreen"
-          allowFullScreen
-          title="Breakdown"
-        />
-      ) : bd.media?.status !== "ready" ? (
-        <Body style={{ color: colors.muted }}>The video is still processing. Check back in a few minutes.</Body>
-      ) : null}
+      <MuxPlayer mediaId={bd.media_id} title="Breakdown" />
 
       <View style={s.row}>
         <Label>Player Development Worksheet</Label>

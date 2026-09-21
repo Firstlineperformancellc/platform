@@ -4,6 +4,7 @@ import { Platform, StyleSheet, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { createUpload, type UpChunk } from "@mux/upchunk";
 import { Brand } from "@/components/Brand";
+import { MuxPlayer } from "@/components/MuxPlayer";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
@@ -179,20 +180,9 @@ export default function UploadSpike() {
             {order ? (
               <Button title="Back to your order" small onPress={() => router.replace({ pathname: "/parent/orders/[id]", params: { id: order } })} />
             ) : null}
-            {Platform.OS === "web" ? (
-              <View style={s.player}>
-                {/* Mux's hosted player: adaptive HLS, no bundling risk. Signed playback lands in week 2. */}
-                <iframe
-                  src={`https://player.mux.com/${media.mux_playback_id}?primary-color=%23d4a32c&accent-color=%23000000`}
-                  style={{ border: 0, width: "100%", aspectRatio: "16 / 9", borderRadius: radius.md }}
-                  allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
-                  allowFullScreen
-                  title="Game film"
-                />
-              </View>
-            ) : (
-              <Body style={{ color: colors.muted }}>Playback in the app arrives with the native build.</Body>
-            )}
+            <View style={s.player}>
+              <MuxPlayer mediaId={media.id} title="Game film" />
+            </View>
           </View>
         ) : null}
 

@@ -26,6 +26,7 @@ export type Breakdown = {
   job_id: string;
   worksheet: Worksheet;
   worksheet_pdf_path: string | null;
+  media_id: string;
   rating: number | null;
   review: string | null;
   review_status: string;
@@ -36,7 +37,7 @@ export type Breakdown = {
 export async function getBreakdownForJob(jobId: string): Promise<Breakdown | null> {
   const { data } = await supabase
     .from("breakdowns")
-    .select("id, job_id, worksheet, worksheet_pdf_path, rating, review, review_status, delivered_at, media:media_id(status, mux_playback_id)")
+    .select("id, job_id, worksheet, worksheet_pdf_path, media_id, rating, review, review_status, delivered_at, media:media_id(status, mux_playback_id)")
     .eq("job_id", jobId)
     .maybeSingle();
   return (data as unknown as Breakdown | null) ?? null;

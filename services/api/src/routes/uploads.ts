@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { admin, userFromBearer } from "../supabase.js";
-import { mux, muxConfigured } from "../mux.js";
+import { mux, muxConfigured, muxSigningConfigured } from "../mux.js";
 
 // POST /uploads — a signed-in user asks for somewhere to put a video.
 // We create the media row first (so the file is owned before a byte moves), then ask Mux for a
@@ -28,14 +28,16 @@ uploads.post("/", async (c) => {
     .single();
   if (error || !media) return c.json({ error: error?.message ?? "could not create media" }, 500);
 
-  // TODO(week 2): switch playback_policies to ['signed'] with a signing key before any real family
-  // film is uploaded. Public playback ids are unguessable but are still URLs anyone holding them can open.
+  // Family film and breakdowns are signed (the API mints playback tokens for people on the order);
+  // intro videos are public because the marketplace embeds them for visitors.
+  const signed = purpose !== "intro_video" && muxSigningConfigured;
+  if (purpose !== "intro_video" && !muxSigningConfigured) console.warn("mux signing key missing: uploading with public playback");
   const upload = await mux.video.uploads.create({
     cors_origin: c.req.header("origin") ?? "*",
     timeout: DAY,
     new_asset_settings: {
       passthrough: media.id,
-      playback_policies: ["public"],
+      playback_policies: [signed ? "signed" : "public"],
       video_quality: "basic",
       max_resolution_tier: "1080p",
       meta: { title: title ?? purpose, external_id: media.id },

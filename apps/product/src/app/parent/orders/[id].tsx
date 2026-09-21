@@ -1,8 +1,9 @@
 import { useCallback, useState } from "react";
 import { Link, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { Platform, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Brand } from "@/components/Brand";
 import { BreakdownPanel } from "@/components/BreakdownPanel";
+import { MuxPlayer } from "@/components/MuxPlayer";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
@@ -12,7 +13,7 @@ import { Loading } from "@/lib/auth";
 import { getOrder, orderJob, statusLabel, type Order } from "@/lib/orders";
 import { playerName } from "@/lib/players";
 import { money, TIER_LABEL, useSettings } from "@/lib/settings";
-import { colors, radius, space } from "@/theme/tokens";
+import { colors, space } from "@/theme/tokens";
 
 export default function OrderPage() {
   const { id, paid } = useLocalSearchParams<{ id: string; paid?: string }>();
@@ -79,15 +80,7 @@ export default function OrderPage() {
             <H3>Game film</H3>
             {order.film_youtube_url ? <Pill tone="gold">YouTube</Pill> : filmReady ? <Pill tone="ok">Ready</Pill> : <Pill tone="warn">Processing</Pill>}
           </View>
-          {filmReady && order.media?.mux_playback_id && Platform.OS === "web" ? (
-            <iframe
-              src={`https://player.mux.com/${order.media.mux_playback_id}?primary-color=%23d4a32c&accent-color=%23000000`}
-              style={{ border: 0, width: "100%", aspectRatio: "16 / 9", borderRadius: radius.md }}
-              allow="fullscreen"
-              allowFullScreen
-              title="Game film"
-            />
-          ) : null}
+          {filmReady && order.film_media_id ? <MuxPlayer mediaId={order.film_media_id} title="Game film" /> : null}
         </Card>
       )}
 
