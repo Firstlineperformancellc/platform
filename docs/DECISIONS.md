@@ -74,3 +74,14 @@ Junior levels (OHL/WHL/QMJHL, USHL/NAHL/BCHL) are selectable as "highest level p
 - **Applications start plain.** Whatever a client sends, a new mentor row is stored as an unverified, untiered applicant with no payout account. Admin sets tier at approval, and approval without a tier is refused (the marketplace only lists tiered mentors).
 - **Prices and lists are public.** Signed-out visitors read the settings row so the marketplace and profiles render with prices. Nothing sensitive lives there.
 - **Film Room prices and session rules are editable in /admin/settings** (they were documented as editable before this pass but the screen lacked them).
+
+## 2026-09-21 — Audit follow-ups (Scott: all but the late-cancel rule)
+
+- **Admins have no direct database writes.** Every admin action goes through the API and lands in `audit_log`. Admin accounts read everything.
+- **Offer visibility is scoped to the offer.** A mentor sees an order and the youth athlete's name while their offer is open and after they accept; a declined or expired offer takes that access away.
+- **Capacity counts open offers.** A mentor holding three accepted jobs and two unanswered offers is at five on deck.
+- **The full scorecard is admin-only.** The public marketplace keeps rating, count, turnaround and completed jobs.
+- **Mentor no-show is automatic.** A booked Film Room the mentor never joins becomes a mentor no-show 24 hours after its end: full refund, scorecard mark, mentor and admin notified.
+- **A first choice who is no longer listed is skipped**, not waited for; the order goes to the second choice or the admin queue at once.
+- **Family video is signed.** Game film and breakdowns are uploaded with Mux signed playback; the API issues two-hour tokens only to the owner, the mentor on the accepted job, the parent the breakdown was delivered to, or an admin. Intro videos stay public for the marketplace. Pending: a Mux access token with System scope so the signing key can be created (`services/api/deploy/mux-signing-key.sh`).
+- **Kept:** a mentor cancelling an unconfirmed request inside the 24-hour window still counts as a late cancel on their scorecard (Scott, 2026-09-21).
