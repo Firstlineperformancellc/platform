@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { admin } from "../supabase.js";
 import { mux } from "../mux.js";
 import { env } from "../env.js";
+import { stripe } from "../stripe.js";
+import { openJobForOrder } from "../jobs.js";
 
 // Inbound webhooks. Each provider is verified by signature before anything is written.
 //   Mux    (live):   upload.asset_created / asset.ready / asset.errored -> media status
@@ -62,9 +64,33 @@ webhooks.post("/mux", async (c) => {
   return c.json({ received: true, type: event.type });
 });
 
+// Stripe: verified by signature; checkout.session.completed marks the order paid and opens the job.
 webhooks.post("/stripe", async (c) => {
-  console.log("stripe webhook received (not yet verified)");
-  return c.json({ received: true });
+  if (!stripe || !env.stripeWebhookSecret) return c.json({ error: "stripe not configured" }, 503);
+  const sig = c.req.header("stripe-signature");
+  const raw = await c.req.text();
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(raw, sig ?? "", env.stripeWebhookSecret);
+  } catch (err) {
+    console.warn("stripe webhook rejected:", (err as Error).message);
+    return c.json({ error: "bad signature" }, 400);
+  }
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+    const orderId = session.metadata?.orderId;
+    if (orderId && session.payment_status === "paid") {
+      const { data: o } = await admin.from("orders").select("id, status").eq("id", orderId).maybeSingle();
+      if (o && o.status === "draft") {
+        await admin.from("orders").update({
+          status: "paid", paid_at: new Date().toISOString(),
+          stripe_payment_intent_id: typeof session.payment_intent === "string" ? session.payment_intent : null,
+        }).eq("id", orderId);
+        await openJobForOrder(orderId);
+      }
+    }
+  }
+  return c.json({ received: true, type: event.type });
 });
 
 webhooks.post("/daily", async (c) => {

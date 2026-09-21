@@ -6,6 +6,8 @@ import { env } from "./env.js";
 import { admin } from "./supabase.js";
 import { uploads } from "./routes/uploads.js";
 import { webhooks } from "./routes/webhooks.js";
+import { orders } from "./routes/orders.js";
+import { internal, jobs } from "./routes/jobs.js";
 
 const app = new Hono();
 
@@ -38,6 +40,9 @@ app.get("/health", async (c) => {
 });
 
 app.route("/uploads", uploads);
+app.route("/orders", orders);
+app.route("/jobs", jobs);
+app.route("/internal", internal);
 app.route("/webhooks", webhooks);
 
 app.notFound((c) => c.json({ error: "not found" }, 404));

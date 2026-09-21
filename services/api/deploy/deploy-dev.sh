@@ -29,7 +29,11 @@ if [ ! -f /etc/systemd/system/flp-api.service ]; then
   sudo cp deploy/flp-api.service /etc/systemd/system/flp-api.service
   sudo systemctl daemon-reload && sudo systemctl enable flp-api >/dev/null
 fi
-sudo systemctl restart flp-api && sleep 2 && systemctl is-active flp-api
+if [ ! -f /etc/systemd/system/flp-api-tick.timer ]; then
+  sudo cp deploy/flp-api-tick.service deploy/flp-api-tick.timer /etc/systemd/system/
+  sudo systemctl daemon-reload && sudo systemctl enable --now flp-api-tick.timer >/dev/null
+fi
+sudo systemctl restart flp-api && sleep 2 && systemctl is-active flp-api && systemctl is-active flp-api-tick.timer
 curl -s -o /dev/null -w 'local health %{http_code}\n' http://127.0.0.1:3200/health
 REMOTE
 echo "▸ live: https://api-dev.firstlineperform.com/health"

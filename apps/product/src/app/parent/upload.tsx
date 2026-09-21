@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "expo-router";
+import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { Platform, StyleSheet, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { createUpload, type UpChunk } from "@mux/upchunk";
@@ -25,6 +25,8 @@ function fmtBytes(n: number) {
 // Week-1 upload spike: pick a game file, upload it straight to Mux in resumable chunks,
 // survive a dropped connection, then stream it back. This screen becomes step 2 of the order wizard.
 export default function UploadSpike() {
+  const { order } = useLocalSearchParams<{ order?: string }>();
+  const router = useRouter();
   const [phase, setPhase] = useState<Phase>("idle");
   const [file, setFile] = useState<{ name: string; size: number } | null>(null);
   const [progress, setProgress] = useState(0);
@@ -90,9 +92,16 @@ export default function UploadSpike() {
         setPhase("error");
         setError(e.detail?.message ?? "Upload failed.");
       });
-      up.on("success", () => {
+      up.on("success", async () => {
         setProgress(100);
         setPhase("processing");
+        if (order) {
+          try {
+            await api("/orders/" + order + "/film", { method: "POST", body: JSON.stringify({ mediaId }) });
+          } catch (err) {
+            setError("Uploaded, but attaching it to the order failed: " + (err as Error).message);
+          }
+        }
       });
     } catch (err) {
       setPhase("error");
@@ -115,12 +124,12 @@ export default function UploadSpike() {
     <Screen width="content">
       <View style={s.topbar}>
         <Brand size={44} />
-        <Link href="/parent" asChild>
+        <Link href={order ? { pathname: "/parent/orders/[id]", params: { id: order } } : "/parent"} asChild>
           <Button title="Back" variant="ghost" small />
         </Link>
       </View>
       <View>
-        <Label>Upload test</Label>
+        <Label>{order ? "Step 2 of your order" : "Upload test"}</Label>
         <H1>Game film upload</H1>
         <Body style={{ color: colors.muted }}>
           Pick a full game file. It uploads straight to the video service in chunks, pauses if the connection drops,
@@ -167,6 +176,9 @@ export default function UploadSpike() {
             <Small>
               {media.duration_seconds ? `${Math.round(media.duration_seconds / 60)} min` : ""} · media {media.id.slice(0, 8)}
             </Small>
+            {order ? (
+              <Button title="Back to your order" small onPress={() => router.replace({ pathname: "/parent/orders/[id]", params: { id: order } })} />
+            ) : null}
             {Platform.OS === "web" ? (
               <View style={s.player}>
                 {/* Mux's hosted player: adaptive HLS, no bundling risk. Signed playback lands in week 2. */}

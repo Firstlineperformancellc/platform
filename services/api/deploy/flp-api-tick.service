@@ -1,0 +1,7 @@
+[Unit]
+Description=FLP API tick (offers, waitlists, reminders)
+
+[Service]
+Type=oneshot
+EnvironmentFile=/var/www/flp-api/.env
+ExecStart=/usr/bin/curl -sS -f -H "x-tick-secret: ${TICK_SECRET}" http://127.0.0.1:3200/internal/tick

@@ -24,18 +24,23 @@ export default function ParentHome() {
       </View>
       <View style={s.grid}>
         <Card style={s.cell}>
-          <H3>Your players</H3>
-          <Body style={{ color: colors.muted }}>No players yet. Add your player to order their first breakdown.</Body>
-          <Button title="Add a player" variant="secondary" disabled />
-          <Small>Opens with the order flow.</Small>
+          <H3>Your youth athletes</H3>
+          <Body style={{ color: colors.muted }}>Add your player once. Every breakdown and Film Room session is filed under them.</Body>
+          <Link href="/parent/players" asChild>
+            <Button title="Your youth athletes" variant="secondary" />
+          </Link>
         </Card>
         <Card style={s.cell}>
           <H3>Order a breakdown</H3>
           <Body style={{ color: colors.muted }}>
             Upload game film, tell the athlete what to look for, and get a recorded breakdown back.
           </Body>
-          <Button title="Order a breakdown" disabled />
-          <Pill tone="muted">Coming next</Pill>
+          <Link href="/parent/order" asChild>
+            <Button title="Order a breakdown" />
+          </Link>
+          <Link href="/mentors" asChild>
+            <Button title="Browse FLP Mentors" variant="ghost" small />
+          </Link>
         </Card>
         <Card style={s.cell}>
           <H3>Upload test</H3>

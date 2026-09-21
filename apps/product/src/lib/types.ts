@@ -1,6 +1,6 @@
 export type Role = "parent" | "athlete" | "admin";
 export type HockeyPosition = "forward" | "defense" | "goalie";
-export type AthleteStatus = "applied" | "approved" | "suspended";
+export type AthleteStatus = "applied" | "approved" | "suspended" | "deactivated";
 
 export type Profile = {
   id: string;
@@ -17,6 +17,7 @@ export type Athlete = {
   positions: HockeyPosition[];
   status: AthleteStatus;
   payouts_enabled: boolean;
+  tier?: "pro" | "pwhl" | "ncaa" | null;
 };
 
 export const POSITIONS: { key: HockeyPosition; label: string }[] = [

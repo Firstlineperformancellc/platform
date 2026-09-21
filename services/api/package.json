@@ -14,7 +14,9 @@
     "@hono/node-server": "^1.14.0",
     "@mux/mux-node": "^15.2.0",
     "@supabase/supabase-js": "^2.116.0",
-    "hono": "^4.7.0"
+    "hono": "^4.7.0",
+    "resend": "^6.28.1",
+    "stripe": "^22.6.2"
   },
   "devDependencies": {
     "@types/node": "^22.20.2",
