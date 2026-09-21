@@ -49,6 +49,10 @@ adminRoutes.patch("/mentors/:id", async (c) => {
     patch.blocked_at = new Date().toISOString();
   }
   if (Object.keys(patch).length === 0) return c.json({ error: "nothing to change" }, 400);
+  if (patch.status === "approved" && !patch.tier) {
+    const { data: cur } = await admin.from("athletes").select("tier").eq("user_id", id).maybeSingle();
+    if (!cur?.tier) return c.json({ error: "pick a tier before approving; the marketplace only lists tiered mentors" }, 400);
+  }
   const { error } = await admin.from("athletes").update(patch).eq("user_id", id);
   if (error) return c.json({ error: error.message }, 500);
   await audit(me.id, "mentor.update", "athlete", id, patch);

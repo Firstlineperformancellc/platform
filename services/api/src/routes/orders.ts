@@ -60,7 +60,7 @@ orders.post("/", async (c) => {
       currency: s.currency,
       first_choice_athlete_id: first.user_id,
       second_choice_athlete_id: second?.user_id ?? null,
-      wait_days: first.available ? null : (body.waitDays ?? s.rules.wait_days_default),
+      wait_days: first.available ? null : Math.max(1, Math.min(30, Math.round(Number(body.waitDays)) || s.rules.wait_days_default)),
       film_youtube_url: body.youtubeUrl || null,
       status: "draft",
     })

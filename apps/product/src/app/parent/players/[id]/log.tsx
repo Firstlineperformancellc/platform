@@ -101,6 +101,7 @@ export default function DevelopmentLog() {
                 {(e.detail.takeaways ?? []).map((t, j) => (
                   <Body key={j}>• {t}</Body>
                 ))}
+                {(e.detail.drills ?? []).length ? <Small>Drills: {(e.detail.drills ?? []).join(" · ")}</Small> : null}
                 {e.detail.next_step ? <Body style={{ color: colors.gold }}>Next: {e.detail.next_step}</Body> : null}
               </View>
             ) : null}

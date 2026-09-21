@@ -47,7 +47,7 @@ mentors.get("/me/connect", async (c) => {
   if (!m) return c.json({ error: "sign in as a mentor" }, 401);
   if (!stripe || !m.athlete.stripe_account_id) return c.json({ configured: Boolean(stripe), connected: false, payouts_enabled: false });
   const acct = await stripe.accounts.retrieve(m.athlete.stripe_account_id);
-  const enabled = Boolean(acct.payouts_enabled && acct.charges_enabled !== undefined);
+  const enabled = Boolean(acct.payouts_enabled);
   if (enabled !== m.athlete.payouts_enabled) await admin.from("athletes").update({ payouts_enabled: enabled }).eq("user_id", m.user.id);
   return c.json({ configured: true, connected: true, payouts_enabled: enabled, requirements: acct.requirements?.currently_due ?? [] });
 });

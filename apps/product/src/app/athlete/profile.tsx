@@ -183,7 +183,7 @@ export default function MentorProfileScreen() {
           <Button title="Add a window" variant="secondary" small onPress={() => set({ availability: [...windows, { dow: 2, start: "19:00", end: "21:00" }] })} />
           <Button title="Save availability" small loading={busy === "availability"} onPress={() => save("availability", { availability: windows.filter((w) => /^\d{2}:\d{2}$/.test(w.start) && /^\d{2}:\d{2}$/.test(w.end)) })} />
         </View>
-        <Small>Film Room booking opens once FLP sets session pricing.</Small>
+        <Small>Parents book 30 or 60 minute Film Rooms inside these windows, up to {settings.rules.session_book_ahead_days ?? 14} days ahead.</Small>
       </Card>
 
       <Card>

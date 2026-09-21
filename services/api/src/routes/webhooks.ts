@@ -105,7 +105,7 @@ webhooks.post("/stripe", async (c) => {
   return c.json({ received: true, type: event.type });
 });
 
-// Daily: HMAC-signed (X-Webhook-Signature = hex hmac(secret, `${timestamp}.${body}`)).
+// Daily: HMAC-signed (X-Webhook-Signature = hmac(secret, `${timestamp}.${body}`), base64 or hex).
 webhooks.post("/daily", async (c) => {
   const raw = await c.req.text();
   const ts = c.req.header("x-webhook-timestamp") ?? "";
@@ -113,7 +113,7 @@ webhooks.post("/daily", async (c) => {
   // Daily verifies a new webhook with a ping signed by the secret it only reveals afterwards.
   // Until the secret is configured, acknowledge and process nothing; after that, every event
   // must carry a valid signature.
-  const secret = process.env.DAILY_WEBHOOK_SECRET;
+  const secret = env.dailyWebhookSecret;
   if (!secret) {
     console.log("daily webhook: secret not configured, acknowledged without processing");
     return c.json({ received: true, processed: false });

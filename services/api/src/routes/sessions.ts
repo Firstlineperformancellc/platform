@@ -60,7 +60,7 @@ sessions.post("/", async (c) => {
   const { data: player } = await admin.from("players").select("id, parent_id, first_name").eq("id", b.playerId).maybeSingle();
   if (!player || player.parent_id !== user.id) return c.json({ error: "youth athlete not found" }, 404);
 
-  const minutes = MINUTES[b.format];
+  const minutes = b.packId ? MINUTES.season_arc : MINUTES[b.format];
   const starts = new Date(b.startsAt);
   const slots = await slotsForMentor(m.user_id, minutes);
   if (!slots.includes(starts.toISOString())) return c.json({ error: "that time is no longer available" }, 409);
@@ -85,7 +85,8 @@ sessions.post("/", async (c) => {
     pack = data;
   }
 
-  const price = pack ? 0 : (s.session_prices[b.format]?.[m.tier] ?? 0);
+  const format: Format = pack ? "season_arc" : b.format;
+  const price = pack ? 0 : (s.session_prices[format]?.[m.tier] ?? 0);
   if (!pack && !price) return c.json({ error: "session pricing is not set for this mentor's tier yet" }, 400);
   // Pack sessions carry their slice of the pack's mentor share so each completed session pays out.
   const share = pack ? Math.round(pack.mentor_share_cents / pack.sessions_total) : shareCents(price, s.mentor_share_pct[m.tier]);
@@ -95,7 +96,7 @@ sessions.post("/", async (c) => {
   const { data: sess, error } = await admin
     .from("sessions")
     .insert({
-      athlete_id: m.user_id, parent_id: user.id, player_id: player.id, status: "requested", format: b.format,
+      athlete_id: m.user_id, parent_id: user.id, player_id: player.id, status: "requested", format,
       source: b.breakdownId ? "breakdown" : "marketplace", breakdown_id: b.breakdownId ?? null, film_media_id: b.filmMediaId ?? null,
       scheduled_at: starts.toISOString(), duration_minutes: minutes, price_cents: price, mentor_share_cents: share, tier: m.tier,
       parent_note: (b.note ?? "").slice(0, 1000), parent_present: Boolean(b.parentPresent), accept_by: acceptBy, pack_id: pack?.id ?? null,
@@ -133,7 +134,7 @@ sessions.post("/", async (c) => {
 export async function afterPayment(sessionId: string) {
   const s = await getSettings();
   const sess = await sessionFor(sessionId);
-  if (!sess) return;
+  if (!sess || sess.paid_at) return; // webhooks retry; pay once, notify once
   const mayDecline = Boolean((s.rules as Record<string, unknown>).mentors_may_decline_sessions);
   const patch: Record<string, unknown> = { paid_at: iso(Date.now()) };
   if (!mayDecline) Object.assign(patch, await scheduleRoom(sess));

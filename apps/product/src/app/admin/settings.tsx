@@ -24,6 +24,18 @@ const RULES: { key: string; label: string; hint: string }[] = [
   { key: "session_grace_minutes", label: "Film Room grace (minutes)", hint: "" },
   { key: "recap_due_hours", label: "Mentor recap due (hours after session)", hint: "" },
   { key: "recording_retention_days", label: "Session recording retention (days)", hint: "" },
+  { key: "session_accept_hours", label: "Hours a mentor has to confirm a Film Room", hint: "Then the parent is refunded." },
+  { key: "session_min_lead_hours", label: "Earliest booking (hours ahead)", hint: "" },
+  { key: "session_book_ahead_days", label: "Booking horizon (days)", hint: "" },
+  { key: "addon_window_days", label: "Add-on price window after a breakdown (days)", hint: "" },
+  { key: "season_arc_sessions", label: "Sessions in a Season Arc", hint: "" },
+  { key: "season_arc_weeks", label: "Weeks to use a Season Arc", hint: "" },
+];
+const FORMATS: { key: string; label: string }[] = [
+  { key: "film_room_30", label: "Film Room · 30 min" },
+  { key: "film_room_60", label: "Film Room · 60 min" },
+  { key: "addon_30", label: "Add-on after a breakdown · 30 min" },
+  { key: "season_arc", label: "Season Arc (whole pack)" },
 ];
 const LISTS: { key: string; label: string }[] = [
   { key: "age_groups", label: "Age groups" },
@@ -37,6 +49,7 @@ export default function AdminSettings() {
   const { settings } = useSettings();
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [shares, setShares] = useState<Record<string, string>>({});
+  const [sessionPrices, setSessionPrices] = useState<Record<string, string>>({});
   const [rules, setRules] = useState<Record<string, string>>({});
   const [lists, setLists] = useState<Record<string, string>>({});
   const [adminEmail, setAdminEmail] = useState("");
@@ -48,6 +61,7 @@ export default function AdminSettings() {
     if (!settings) return;
     setPrices(Object.fromEntries(TIERS.map((t) => [t, String(settings.breakdown_prices[t] / 100)])));
     setShares(Object.fromEntries(TIERS.map((t) => [t, String(settings.mentor_share_pct[t])])));
+    setSessionPrices(Object.fromEntries(FORMATS.flatMap((f) => TIERS.map((t) => [`${f.key}.${t}`, String((settings.session_prices[f.key]?.[t] ?? 0) / 100)]))));
     setRules(Object.fromEntries(RULES.map((r) => [r.key, String((settings.rules as Record<string, unknown>)[r.key] ?? "")])));
     setLists(Object.fromEntries(LISTS.map((l) => [l.key, ((settings.taxonomy as Record<string, unknown>)[l.key] as string[]).join(", ")])));
   }, [settings]);
@@ -91,6 +105,33 @@ export default function AdminSettings() {
             save("prices", {
               breakdown_prices: Object.fromEntries(TIERS.map((t) => [t, Math.round(Number(prices[t]) * 100)])),
               mentor_share_pct: Object.fromEntries(TIERS.map((t) => [t, Math.round(Number(shares[t]))])),
+            })
+          }
+        />
+      </Card>
+
+      <Card>
+        <H3>Film Room session prices</H3>
+        <Small>Per tier, in dollars. The mentor's share follows the same split as breakdowns.</Small>
+        {FORMATS.map((f) => (
+          <View key={f.key} style={{ gap: space.xs }}>
+            <Small style={{ color: colors.ink }}>{f.label}</Small>
+            <View style={s.grid}>
+              {TIERS.map((t) => (
+                <View key={t} style={s.cell}>
+                  <TextField label={TIER_LABEL[t]} value={sessionPrices[`${f.key}.${t}`] ?? ""} onChangeText={(v) => setSessionPrices({ ...sessionPrices, [`${f.key}.${t}`]: v })} keyboardType="decimal-pad" />
+                </View>
+              ))}
+            </View>
+          </View>
+        ))}
+        <Button
+          title="Save session prices"
+          small
+          loading={busy === "sessions"}
+          onPress={() =>
+            save("sessions", {
+              session_prices: Object.fromEntries(FORMATS.map((f) => [f.key, Object.fromEntries(TIERS.map((t) => [t, Math.round(Number(sessionPrices[`${f.key}.${t}`]) * 100)]))])),
             })
           }
         />
