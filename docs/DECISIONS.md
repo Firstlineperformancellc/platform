@@ -67,3 +67,10 @@ Junior levels (OHL/WHL/QMJHL, USHL/NAHL/BCHL) are selectable as "highest level p
 - **Daily account:** domain `firstlineperform`, API key and webhook secret in the API env only; webhook registered with `services/api/deploy/daily-webhook.sh` (events recording.started, recording.ready-to-download, meeting.ended; HMAC-verified). `meeting.ended` closes a session only once the booked time is essentially over, so a mid-session reconnect doesn't end it; the timer closes anything left.
 - **Ratings:** Film Room ratings use the same 3-star gate and count toward the mentor's public rating alongside breakdown reviews.
 - **Parked:** pulling Daily recordings into Mux so families can rewatch in the app player (storage cost per session); a parent-side "no show" adjudication screen for admin (today: audit log + ledger).
+
+## 2026-09-21 — Audit pass (Scott asked for a full check; bugs fixed, judgment calls listed)
+
+- **Client access is read-mostly by policy.** Direct Supabase writes from the app are limited to what the app does: a parent's youth athletes and a mentor's own profile fields. Orders, jobs, breakdowns, sessions, media, audits, payouts, reviews and settings change only through the API, which checks the caller and logs admin actions. Migration 0013.
+- **Applications start plain.** Whatever a client sends, a new mentor row is stored as an unverified, untiered applicant with no payout account. Admin sets tier at approval, and approval without a tier is refused (the marketplace only lists tiered mentors).
+- **Prices and lists are public.** Signed-out visitors read the settings row so the marketplace and profiles render with prices. Nothing sensitive lives there.
+- **Film Room prices and session rules are editable in /admin/settings** (they were documented as editable before this pass but the screen lacked them).
