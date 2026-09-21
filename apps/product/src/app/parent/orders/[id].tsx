@@ -9,7 +9,7 @@ import { Pill } from "@/components/ui/Pill";
 import { Screen } from "@/components/ui/Screen";
 import { Body, H1, H3, Label, Small } from "@/components/ui/Text";
 import { Loading } from "@/lib/auth";
-import { getOrder, statusLabel, type Order } from "@/lib/orders";
+import { getOrder, orderJob, statusLabel, type Order } from "@/lib/orders";
 import { playerName } from "@/lib/players";
 import { money, TIER_LABEL, useSettings } from "@/lib/settings";
 import { colors, radius, space } from "@/theme/tokens";
@@ -38,7 +38,7 @@ export default function OrderPage() {
 
   const hasFilm = Boolean(order.film_media_id || order.film_youtube_url);
   const filmReady = order.media?.status === "ready";
-  const job = order.jobs?.[0];
+  const job = orderJob(order);
   const tone = order.status === "delivered" ? "ok" : order.status === "unassigned" ? "warn" : order.status === "refunded" ? "danger" : "gold";
 
   return (

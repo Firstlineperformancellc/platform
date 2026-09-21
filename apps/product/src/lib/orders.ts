@@ -3,6 +3,8 @@ import type { Tier } from "./settings";
 
 export type OrderStatus = "draft" | "paid" | "offered" | "accepted" | "in_review" | "delivered" | "closed" | "refunded" | "unassigned";
 
+export type OrderJob = { id: string; status: string; athlete_id: string | null; accepted_at: string | null; due_at: string | null; delivered_at: string | null };
+
 export type Order = {
   id: string;
   player_id: string;
@@ -23,7 +25,8 @@ export type Order = {
   second_choice_athlete_id: string | null;
   created_at: string;
   players: { first_name: string; last_name: string } | null;
-  jobs: { id: string; status: string; athlete_id: string | null; accepted_at: string | null; due_at: string | null; delivered_at: string | null }[];
+  // one job per order: PostgREST returns an object for the unique FK, older rows may come back as an array
+  jobs: OrderJob | OrderJob[] | null;
   media: { status: string; mux_playback_id: string | null } | null;
 };
 
@@ -40,6 +43,10 @@ export async function listOrders(): Promise<Order[]> {
   const { data, error } = await supabase.from("orders").select(COLS).neq("status", "draft").order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []) as unknown as Order[];
+}
+
+export function orderJob(o: Order): OrderJob | null {
+  return Array.isArray(o.jobs) ? (o.jobs[0] ?? null) : o.jobs;
 }
 
 export const ORDER_STEPS: { key: OrderStatus | "film"; label: string }[] = [
