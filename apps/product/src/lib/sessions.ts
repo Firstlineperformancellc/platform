@@ -32,6 +32,7 @@ export type Session = {
   paid_at: string | null;
   daily_room_url: string | null;
   recording_status: string | null;
+  recordings: { id: string; ready_at: string; duration: number | null }[];
   recap: Recap | null;
   recap_due_at: string | null;
   recap_at: string | null;
@@ -58,7 +59,7 @@ export type Pack = {
 };
 
 const COLS =
-  "id, athlete_id, parent_id, player_id, status, format, tier, scheduled_at, duration_minutes, price_cents, mentor_share_cents, parent_note, parent_present, breakdown_id, pack_id, accept_by, paid_at, daily_room_url, recording_status, recap, recap_due_at, recap_at, rating, review, review_status, cancel_reason, created_at, players(first_name, last_name, age_group, position), athletes(display_name, slug)";
+  "id, athlete_id, parent_id, player_id, status, format, tier, scheduled_at, duration_minutes, price_cents, mentor_share_cents, parent_note, parent_present, breakdown_id, pack_id, accept_by, paid_at, daily_room_url, recording_status, recordings, recap, recap_due_at, recap_at, rating, review, review_status, cancel_reason, created_at, players(first_name, last_name, age_group, position), athletes(display_name, slug)";
 
 export const FORMAT_LABEL: Record<SessionFormat, string> = {
   film_room_30: "Film Room · 30 min",
@@ -135,7 +136,8 @@ export const joinSession = (id: string) => api<{ configured: boolean; url?: stri
 export const submitRecap = (id: string, recap: Recap) => api<{ ok: true }>(`/sessions/${id}/recap`, { method: "POST", body: JSON.stringify(recap) });
 export const reviewSession = (id: string, rating: number, review: string) =>
   api<{ ok: true; review_status: string }>(`/sessions/${id}/review`, { method: "POST", body: JSON.stringify({ rating, review }) });
-export const recordingLink = (id: string) => api<{ url: string; expires: number }>(`/sessions/${id}/recording`);
+export const recordingLink = (id: string, recordingId?: string) =>
+  api<{ url: string; expires: number }>(`/sessions/${id}/recording${recordingId ? `?id=${encodeURIComponent(recordingId)}` : ""}`);
 
 // Display helpers (viewer's local time zone).
 export function whenLabel(iso: string) {

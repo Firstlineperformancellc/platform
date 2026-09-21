@@ -26,10 +26,11 @@ export async function createRoom(name: string, startsAt: Date, endsAt: Date) {
     body: JSON.stringify({
       name,
       privacy: "private",
+      // No room-level enable_recording: in Daily's UI that would hand every participant a
+      // stop button. Recording rights live on the mentor's meeting token only.
       properties: {
         nbf,
         exp,
-        enable_recording: "cloud",
         enable_chat: false,
         enable_screenshare: true,
         enable_knocking: false,
@@ -49,9 +50,13 @@ export async function meetingToken(room: string, userName: string, opts: { owner
         room_name: room,
         user_name: userName,
         is_owner: opts.owner,
-        start_cloud_recording: opts.startRecording,
         exp: Math.floor(Date.now() / 1000) + opts.expSeconds,
-        enable_recording: "cloud",
+        // Only the recording starter's token carries recording rights; the recording begins
+        // from the token flag the moment they join, and enable_recording_ui:false removes the
+        // stop control from their screen (verified 2026-09-21). Owners may manage participants
+        // but not the recording, so nobody in the room can turn it off.
+        ...(opts.startRecording ? { enable_recording: "cloud", start_cloud_recording: true, enable_recording_ui: false } : {}),
+        ...(opts.owner ? { permissions: { canAdmin: ["participants"] } } : {}),
       },
     }),
   });

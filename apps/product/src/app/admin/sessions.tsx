@@ -21,11 +21,11 @@ export default function AdminSessions() {
     }, []),
   );
 
-  async function openRecording(id: string) {
-    setBusy(id);
+  async function openRecording(id: string, recordingId?: string) {
+    setBusy(recordingId ?? id);
     setError(null);
     try {
-      const r = await recordingLink(id);
+      const r = await recordingLink(id, recordingId);
       if (Platform.OS === "web") window.open(r.url, "_blank", "noopener");
     } catch (e) {
       setError((e as Error).message);
@@ -54,7 +54,22 @@ export default function AdminSessions() {
           {r.recap ? <Small>Recap: {r.recap.takeaways.join(" · ")} → {r.recap.next_step}</Small> : r.status === "completed" ? <Small style={{ color: colors.warn }}>Recap not filed yet.</Small> : null}
           {r.cancel_reason ? <Small>{r.cancel_reason}</Small> : null}
           <View style={s.row}>
-            {r.recording_status === "ready" ? <Button title="Open recording" variant="secondary" small loading={busy === r.id} onPress={() => openRecording(r.id)} /> : <Small>Recording: {r.recording_status ?? "none"}</Small>}
+            {r.recordings?.length && r.recording_status !== "deleted" ? (
+              r.recordings.map((rec, i) => (
+                <Button
+                  key={rec.id}
+                  title={r.recordings.length > 1 ? `Recording ${i + 1}${rec.duration ? ` · ${Math.round(rec.duration / 60)} min` : ""}` : "Open recording"}
+                  variant="secondary"
+                  small
+                  loading={busy === rec.id}
+                  onPress={() => openRecording(r.id, rec.id)}
+                />
+              ))
+            ) : r.recording_status === "ready" ? (
+              <Button title="Open recording" variant="secondary" small loading={busy === r.id} onPress={() => openRecording(r.id)} />
+            ) : (
+              <Small>Recording: {r.recording_status ?? "none"}</Small>
+            )}
           </View>
         </Card>
       ))}

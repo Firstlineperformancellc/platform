@@ -25,7 +25,7 @@ async function mentorBySlug(slug: string) {
 async function sessionFor(id: string) {
   const { data } = await admin
     .from("sessions")
-    .select("id, athlete_id, parent_id, player_id, status, scheduled_at, duration_minutes, format, price_cents, mentor_share_cents, tier, daily_room_name, daily_room_url, recording_daily_id, recording_status, accept_by, paid_at, pack_id, recap, breakdown_id, film_media_id, parent_note, parent_present, stripe_payment_intent_id")
+    .select("id, athlete_id, parent_id, player_id, status, scheduled_at, duration_minutes, format, price_cents, mentor_share_cents, tier, daily_room_name, daily_room_url, recording_daily_id, recording_status, recordings, accept_by, paid_at, pack_id, recap, breakdown_id, film_media_id, parent_note, parent_present, stripe_payment_intent_id")
     .eq("id", id)
     .maybeSingle();
   return data;
@@ -387,7 +387,11 @@ sessions.get("/:id/recording", async (c) => {
   if (!sess) return c.json({ error: "not found" }, 404);
   const { data: me } = await admin.from("profiles").select("role").eq("id", user.id).maybeSingle();
   if (me?.role !== "admin" && sess.parent_id !== user.id) return c.json({ error: "not found" }, 404);
-  if (!sess.recording_daily_id || sess.recording_status !== "ready") return c.json({ error: "no recording available" }, 404);
-  const link = await recordingAccessLink(sess.recording_daily_id);
+  const ids = ((sess.recordings ?? []) as { id: string }[]).map((r) => r.id);
+  if (sess.recording_daily_id && !ids.includes(sess.recording_daily_id)) ids.push(sess.recording_daily_id);
+  const wanted = c.req.query("id");
+  const id = wanted && ids.includes(wanted) ? wanted : sess.recording_daily_id;
+  if (!id || sess.recording_status === "deleted") return c.json({ error: "no recording available" }, 404);
+  const link = await recordingAccessLink(id);
   return c.json({ url: link.download_link, expires: link.expires });
 });

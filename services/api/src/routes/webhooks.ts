@@ -125,13 +125,23 @@ webhooks.post("/daily", async (c) => {
   if (!ok) return c.json({ error: "bad signature" }, 400);
   const evt = JSON.parse(raw) as { type: string; payload: Record<string, unknown> };
   const room = (evt.payload.room_name ?? evt.payload.room) as string | undefined;
-  const { data: sess } = room ? await admin.from("sessions").select("id, status").eq("daily_room_name", room).maybeSingle() : { data: null };
+  const { data: sess } = room
+    ? await admin.from("sessions").select("id, status, scheduled_at, duration_minutes, recordings").eq("daily_room_name", room).maybeSingle()
+    : { data: null };
   if (sess) {
     if (evt.type === "recording.started") await admin.from("sessions").update({ recording_status: "recording" }).eq("id", sess.id);
     if (evt.type === "recording.ready-to-download") {
-      await admin.from("sessions").update({ recording_daily_id: evt.payload.recording_id as string, recording_status: "ready" }).eq("id", sess.id);
+      const id = evt.payload.recording_id as string;
+      const list = ((sess.recordings ?? []) as { id: string }[]).filter((r) => r.id !== id);
+      list.push({ id, ready_at: new Date().toISOString(), duration: evt.payload.duration ?? null } as { id: string });
+      await admin.from("sessions").update({ recording_daily_id: id, recording_status: "ready", recordings: list }).eq("id", sess.id);
     }
-    if (evt.type === "meeting.ended" && ["scheduled", "in_progress"].includes(sess.status)) await completeSession(sess.id);
+    // The room empties whenever both sides drop, including a mid-session reconnect, so only
+    // treat it as the end once the booked time is essentially over; the tick closes the rest.
+    if (evt.type === "meeting.ended" && ["scheduled", "in_progress"].includes(sess.status)) {
+      const ends = new Date(sess.scheduled_at!).getTime() + (sess.duration_minutes ?? 30) * 60000;
+      if (Date.now() >= ends - 5 * 60000) await completeSession(sess.id);
+    }
   }
   return c.json({ received: true, type: evt.type });
 });

@@ -50,9 +50,11 @@ export async function sessionsTick() {
   }
 
   // Recording retention.
-  const { data: old } = await admin.from("sessions").select("id, recording_daily_id").eq("recording_status", "ready").eq("recording_kept", false).lt("recording_expires_at", iso(now));
+  const { data: old } = await admin.from("sessions").select("id, recording_daily_id, recordings").eq("recording_status", "ready").eq("recording_kept", false).lt("recording_expires_at", iso(now));
   for (const x of old ?? []) {
-    if (x.recording_daily_id) await deleteRecording(x.recording_daily_id).catch(() => null);
+    const ids = new Set(((x.recordings ?? []) as { id: string }[]).map((r) => r.id));
+    if (x.recording_daily_id) ids.add(x.recording_daily_id);
+    for (const id of ids) await deleteRecording(id).catch(() => null);
     await admin.from("sessions").update({ recording_status: "deleted" }).eq("id", x.id);
     report.recordingsDeleted++;
   }
