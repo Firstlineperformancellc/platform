@@ -26,6 +26,10 @@ export type AdminMentor = {
 export type MentorStats = {
   jobs_completed: number;
   jobs_on_deck: number;
+  sessions_completed: number;
+  session_no_shows: number;
+  session_declines: number;
+  session_late_cancels: number;
   avg_turnaround_hours: number | null;
   on_time_rate: number | null;
   avg_rating: number | null;
@@ -157,6 +161,9 @@ export async function listPendingReviews(): Promise<PendingReview[]> {
   ];
   return rows.sort((x, y) => x.reviewed_at.localeCompare(y.reviewed_at));
 }
+export const adminCancelSession = (id: string, reason: string) => api<{ ok: true }>(`/admin/sessions/${id}/cancel`, { method: "POST", body: JSON.stringify({ reason }) });
+export const adminNoShow = (id: string, who: "mentor" | "parent") => api<{ ok: true }>(`/admin/sessions/${id}/no-show`, { method: "POST", body: JSON.stringify({ who }) });
+export const adminCompleteSession = (id: string) => api<{ ok: true }>(`/admin/sessions/${id}/complete`, { method: "POST" });
 export const moderateReview = (id: string, status: "published" | "hidden", kind: "breakdown" | "session" = "breakdown") =>
   api<{ ok: true }>(`/admin/reviews/${id}`, { method: "POST", body: JSON.stringify({ status, kind }) });
 

@@ -87,6 +87,8 @@ export default function AdminMentors() {
                     <Stat k="Rating" v={st.avg_rating ? `${Number(st.avg_rating).toFixed(1)} (${st.rating_count})` : "–"} />
                     <Stat k="Accepted / declined / expired" v={`${st.accepted_offers} / ${st.declines} / ${st.expired_offers}`} />
                     <Stat k="Audits" v={String(st.audits)} />
+                    <Stat k="Film Rooms" v={String(st.sessions_completed)} />
+                    <Stat k="No-shows / late cancels / declines" v={`${st.session_no_shows} / ${st.session_late_cancels} / ${st.session_declines}`} />
                     <Stat k="Last delivered" v={st.last_delivered_at ? new Date(st.last_delivered_at).toLocaleDateString() : "–"} />
                   </View>
                 ) : null}

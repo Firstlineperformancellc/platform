@@ -4,6 +4,7 @@ import { getSettings } from "../settings.js";
 import { offerJob } from "../jobs.js";
 import { stripe } from "../stripe.js";
 import { appUrl, notify } from "../notify.js";
+import { cancelAndRefund, completeSession } from "./sessions.js";
 
 // Alex and Bryan's control center. Every route checks the admin role first; reads mostly come
 // straight from Supabase under RLS in the app, so this file is the write side: approvals,
@@ -227,6 +228,55 @@ adminRoutes.post("/reviews/:id", async (c) => {
   const table = kind === "session" ? "sessions" : "breakdowns";
   await admin.from(table).update({ review_status: status }).eq("id", c.req.param("id"));
   await audit(me.id, "review.moderate", kind === "session" ? "session" : "breakdown", c.req.param("id"), { status });
+  return c.json({ ok: true });
+});
+
+// --- Film Room sessions ---------------------------------------------------------
+// POST /admin/sessions/:id/cancel { reason }   — cancel with a full refund, whoever's fault
+adminRoutes.post("/sessions/:id/cancel", async (c) => {
+  const me = await requireAdmin(c.req.header("authorization"));
+  if (!me) return c.json({ error: "admin only" }, 403);
+  const id = c.req.param("id");
+  const { reason } = (await c.req.json().catch(() => ({}))) as { reason?: string };
+  const { data: s } = await admin.from("sessions").select("id, status").eq("id", id).maybeSingle();
+  if (!s) return c.json({ error: "not found" }, 404);
+  if (!["requested", "scheduled", "in_progress"].includes(s.status)) return c.json({ error: `session is ${s.status}` }, 400);
+  await cancelAndRefund(id, "cancelled", (reason?.trim() || "Cancelled by FLP"), me.id);
+  await audit(me.id, "session.admin_cancel", "session", id, { reason: reason ?? "" });
+  return c.json({ ok: true });
+});
+
+// POST /admin/sessions/:id/no-show { who: "mentor" | "parent" }
+adminRoutes.post("/sessions/:id/no-show", async (c) => {
+  const me = await requireAdmin(c.req.header("authorization"));
+  if (!me) return c.json({ error: "admin only" }, 403);
+  const id = c.req.param("id");
+  const { who } = (await c.req.json().catch(() => ({}))) as { who?: string };
+  if (who !== "mentor" && who !== "parent") return c.json({ error: "who must be mentor or parent" }, 400);
+  const { data: s } = await admin.from("sessions").select("id, status, athlete_id, mentor_share_cents").eq("id", id).maybeSingle();
+  if (!s) return c.json({ error: "not found" }, 404);
+  if (!["scheduled", "in_progress"].includes(s.status)) return c.json({ error: `session is ${s.status}` }, 400);
+  if (who === "mentor") {
+    await cancelAndRefund(id, "no_show_mentor", "Your FLP Mentor didn't join", me.id);
+    await notify(s.athlete_id, "session.no_show", "A Film Room was marked as a no-show", `<p>FLP recorded a booked Film Room you didn't join. The family was refunded. Reply to this email if that's wrong.</p>`, { targetId: id });
+  } else {
+    await admin.from("sessions").update({ status: "no_show_parent", no_show_by: "parent", ended_at: new Date().toISOString() }).eq("id", id);
+    if (s.mentor_share_cents) await admin.from("payouts").insert({ athlete_id: s.athlete_id, session_id: id, amount_cents: s.mentor_share_cents, status: "owed", note: "parent no-show (admin)" });
+  }
+  await audit(me.id, `session.no_show_${who}`, "session", id, {});
+  return c.json({ ok: true });
+});
+
+// POST /admin/sessions/:id/complete — close a session that ran but never got closed
+adminRoutes.post("/sessions/:id/complete", async (c) => {
+  const me = await requireAdmin(c.req.header("authorization"));
+  if (!me) return c.json({ error: "admin only" }, 403);
+  const id = c.req.param("id");
+  const { data: s } = await admin.from("sessions").select("id, status").eq("id", id).maybeSingle();
+  if (!s) return c.json({ error: "not found" }, 404);
+  if (!["scheduled", "in_progress"].includes(s.status)) return c.json({ error: `session is ${s.status}` }, 400);
+  await completeSession(id);
+  await audit(me.id, "session.admin_complete", "session", id, {});
   return c.json({ ok: true });
 });
 
