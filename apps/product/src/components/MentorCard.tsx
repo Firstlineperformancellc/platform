@@ -1,4 +1,6 @@
 import { Pressable, StyleSheet, View } from "react-native";
+import { Image } from "expo-image";
+import { avatarUrl } from "@/lib/mentorProfile";
 import { Card } from "./ui/Card";
 import { Pill } from "./ui/Pill";
 import { Body, H3, Small } from "./ui/Text";
@@ -19,6 +21,7 @@ export function MentorCard({ mentor: m, settings, selected, onPress, compact }: 
   const inner = (
     <Card style={[s.card, selected === "first" && s.first, selected === "second" && s.second]}>
       <View style={s.head}>
+        {m.photo_path ? <Image source={{ uri: avatarUrl(m.photo_path)! }} style={s.avatar} contentFit="cover" /> : <View style={[s.avatar, s.avatarEmpty]} />}
         <View style={{ flex: 1, gap: 2 }}>
           <H3>{m.display_name}</H3>
           <Small>
@@ -58,6 +61,8 @@ export function MentorCard({ mentor: m, settings, selected, onPress, compact }: 
 
 const s = StyleSheet.create({
   card: { gap: space.sm },
+  avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.panel2 },
+  avatarEmpty: { borderWidth: 1, borderColor: colors.line2 },
   head: { flexDirection: "row", gap: space.md, alignItems: "flex-start" },
   meta: { flexDirection: "row", flexWrap: "wrap", gap: space.md, alignItems: "center" },
   first: { borderColor: colors.gold, borderWidth: 2 },

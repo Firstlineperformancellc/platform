@@ -7,7 +7,7 @@ import { mux, muxConfigured } from "../mux.js";
 // resumable direct-upload URL that the browser or app uploads to straight from the device.
 // Mux calls /webhooks/mux as the asset is created and becomes ready; that is what flips status.
 
-type Purpose = "game_film" | "breakdown";
+type Purpose = "game_film" | "breakdown" | "intro_video";
 const DAY = 60 * 60 * 24;
 
 export const uploads = new Hono();
@@ -18,7 +18,7 @@ uploads.post("/", async (c) => {
   if (!muxConfigured) return c.json({ error: "video uploads are not configured on this server" }, 503);
 
   const body = (await c.req.json().catch(() => ({}))) as { purpose?: Purpose; title?: string };
-  const purpose: Purpose = body.purpose === "breakdown" ? "breakdown" : "game_film";
+  const purpose: Purpose = body.purpose === "breakdown" ? "breakdown" : body.purpose === "intro_video" ? "intro_video" : "game_film";
   const title = typeof body.title === "string" ? body.title.slice(0, 200) : null;
 
   const { data: media, error } = await admin

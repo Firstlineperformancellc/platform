@@ -14,7 +14,9 @@ export type MarketplaceMentor = {
   specialties: string[];
   bio: string;
   photo_media_id: string | null;
+  photo_path: string | null;
   video_media_id: string | null;
+  video_playback_id: string | null;
   capacity_on_deck: number;
   jobs_on_deck: number;
   available: boolean;
@@ -25,7 +27,7 @@ export type MarketplaceMentor = {
 };
 
 const COLS =
-  "user_id, slug, display_name, tier, highest_level, current_team, badges, positions, specialties, bio, photo_media_id, video_media_id, capacity_on_deck, jobs_on_deck, available, avg_turnaround_hours, avg_rating, rating_count, jobs_completed";
+  "user_id, slug, display_name, tier, highest_level, current_team, badges, positions, specialties, bio, photo_media_id, photo_path, video_media_id, video_playback_id, capacity_on_deck, jobs_on_deck, available, avg_turnaround_hours, avg_rating, rating_count, jobs_completed";
 
 export async function listMentors(position?: HockeyPosition): Promise<MarketplaceMentor[]> {
   let q = supabase.from("marketplace_mentors").select(COLS).order("available", { ascending: false }).order("display_name");
@@ -44,4 +46,10 @@ export function turnaroundLabel(hours: number | null | undefined) {
   if (hours == null) return "New";
   if (hours < 24) return "Typically same day";
   return `Typically ${Math.round(hours / 24)} day${Math.round(hours / 24) === 1 ? "" : "s"}`;
+}
+
+export type MentorReview = { breakdown_id: string; rating: number; review: string | null; reviewed_at: string; parent_first_name: string; age_group: string; position: string };
+export async function listReviews(athleteId: string): Promise<MentorReview[]> {
+  const { data } = await supabase.from("mentor_reviews").select("breakdown_id, rating, review, reviewed_at, parent_first_name, age_group, position").eq("athlete_id", athleteId).order("reviewed_at", { ascending: false }).limit(20);
+  return (data ?? []) as MentorReview[];
 }

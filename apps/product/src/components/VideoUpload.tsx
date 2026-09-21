@@ -12,7 +12,7 @@ import { colors, radius, space } from "@/theme/tokens";
 type Phase = "idle" | "requesting" | "uploading" | "paused" | "processing" | "ready" | "error";
 
 type Props = {
-  purpose: "game_film" | "breakdown";
+  purpose: "game_film" | "breakdown" | "intro_video";
   buttonTitle?: string;
   onUploaded?: (mediaId: string) => void; // bytes are in; Mux is processing
   onReady?: (mediaId: string, playbackId: string | null) => void; // Mux finished

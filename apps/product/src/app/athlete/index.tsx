@@ -70,7 +70,12 @@ export default function AthleteHome() {
     <Screen width="page">
       <View style={s.topbar}>
         <Brand size={44} />
-        <Button title="Sign out" variant="ghost" small onPress={signOut} />
+        <View style={{ flexDirection: "row", gap: space.sm }}>
+          <Link href="/athlete/profile" asChild>
+            <Button title="My profile" variant="secondary" small />
+          </Link>
+          <Button title="Sign out" variant="ghost" small onPress={signOut} />
+        </View>
       </View>
       <View>
         <Label>FLP Mentor{athlete?.tier ? ` · ${TIER_LABEL[athlete.tier as Tier]}` : ""}</Label>
