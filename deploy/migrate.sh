@@ -8,7 +8,7 @@
 set -euo pipefail
 REF="${1:?project ref}"
 cd "$(dirname "$0")/.."
-q() { npx --no-install supabase db query --project-ref "$REF" "$@"; }
+q() { npx --no-install supabase db query --linked --project-ref "$REF" "$@"; }
 
 echo "▸ project $REF"
 q "create schema if not exists supabase_migrations; create table if not exists supabase_migrations.schema_migrations (version text primary key, statements text[], name text)" >/dev/null
