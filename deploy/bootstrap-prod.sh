@@ -48,6 +48,12 @@ if ! grep -q "^Host flp-prod$" ~/.ssh/config 2>/dev/null; then
   printf "\nHost flp-prod\n  HostName %s\n  User flp\n  IdentityFile ~/.ssh/flp_do\n  IdentitiesOnly yes\n" "$ip" >> ~/.ssh/config
 fi
 
+echo "▸ waiting for ssh"
+for i in $(seq 1 30); do
+  ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 -i ~/.ssh/flp_do "root@$ip" true 2>/dev/null && break
+  sleep 5
+done
+
 echo "▸ harden + install (as root once, then flp)"
 ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/flp_do "root@$ip" bash -s <<'REMOTE'
 set -euo pipefail
