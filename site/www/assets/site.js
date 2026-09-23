@@ -1,8 +1,7 @@
 // Marketing site behaviour: mobile menu, app links, and live prices from the same settings the app uses.
 (function () {
-  var APP = /^(dev|localhost)/.test(location.hostname) || location.pathname.indexOf("/site/") === 0
-    ? "https://dev.firstlineperform.com"
-    : "https://app.firstlineperform.com";
+  // Dev preview (dev.firstlineperform.com/site/) links to the dev app; every production host links to the real app.
+  var APP = /^(dev\.|localhost)/.test(location.hostname) ? "https://dev.firstlineperform.com" : "https://app.firstlineperform.com";
   document.querySelectorAll("a[data-app]").forEach(function (a) { a.href = APP + (a.getAttribute("data-app") || "/"); });
 
   var btn = document.querySelector(".menu"), nav = document.querySelector(".nav");
