@@ -43,7 +43,9 @@ fi
 
 echo "▸ typecheck + build (tag $TAG)"
 ( cd services/api && ./node_modules/.bin/tsc -p tsconfig.json )
-( cd apps/product && ./node_modules/.bin/tsc --noEmit && rm -rf dist && cp .env.prod .env.production.local && ./node_modules/.bin/expo export --platform web --output-dir dist >/dev/null; rm -f .env.production.local )
+( cd apps/product && ./node_modules/.bin/tsc --noEmit && rm -rf dist && set -a && . ./.env.prod && set +a && ./node_modules/.bin/expo export --platform web --output-dir dist --clear >/dev/null )
+grep -q "uspbmbvoxotbelribjgo\|api-dev.firstlineperform.com" apps/product/dist/_expo/static/js/web/*.js && { echo "production bundle references dev services; aborting"; exit 1; }
+grep -q "$(grep '^EXPO_PUBLIC_SUPABASE_URL=' apps/product/.env.prod | cut -d= -f2- | sed 's#https://##')" apps/product/dist/_expo/static/js/web/*.js || { echo "production bundle does not reference the production project; aborting"; exit 1; }
 
 echo "▸ ship api"
 ssh "$HOST" "mkdir -p $API_DEST/next $API_DEST/deploy"

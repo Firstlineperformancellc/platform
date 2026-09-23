@@ -12,9 +12,14 @@ OUT=dist
 echo "▸ typecheck"
 ./node_modules/.bin/tsc --noEmit
 
-echo "▸ export web"
+echo "▸ export web (dev env, fresh cache)"
 rm -rf "$OUT"
-./node_modules/.bin/expo export --platform web --output-dir "$OUT" >/dev/null
+# Metro caches transformed modules with env values inlined; a production release on this Mac would
+# otherwise leak into the next dev export. Clear it and pin the dev values from .env explicitly.
+set -a; . ./.env; set +a
+./node_modules/.bin/expo export --platform web --output-dir "$OUT" --clear >/dev/null
+grep -q "$(grep '^EXPO_PUBLIC_SUPABASE_URL=' .env | cut -d= -f2- | sed 's#https://##')" "$OUT"/_expo/static/js/web/*.js || { echo "bundle does not reference the dev Supabase project; aborting"; exit 1; }
+if grep -q "sbvojmprxienxacwrsfp" "$OUT"/_expo/static/js/web/*.js; then echo "bundle references the production project; aborting"; exit 1; fi
 
 echo "▸ ship"
 rsync -az --delete "$OUT"/ "$HOST:$DEST/"
