@@ -91,3 +91,10 @@ Junior levels (OHL/WHL/QMJHL, USHL/NAHL/BCHL) are selectable as "highest level p
 - **Hosts.** app.firstlineperform.com (web app) and api.firstlineperform.com (API) on droplet flp-prod-01 (64.225.20.246), Supabase project `flp-platform-prod` (Pro). firstlineperform.com keeps the coming-soon page until Scott explicitly ships the marketing site.
 - **Release path.** `deploy/release.sh` only, from a clean `main` in sync with GitHub; tags `vYYYY.MM.DD-N`; `deploy/rollback.sh` restores the previous API build. Production database changes go through `deploy/migrate.sh`, run by Scott. Claude does not write to production.
 - **First release** v2026.09.23-1 with provider keys empty: payments, uploads, video rooms and email stay off in production until the keys are pasted and a release is run.
+
+## 2026-09-23 — Provider wiring for production
+
+- **Resend** sends from `mail.firstlineperform.com` (verified). Two sending-only keys, `flp-api-dev` and `flp-api-prod`, scoped to that domain. The same prod key is the SMTP password in the production Supabase project, so sign-up and password emails also go through Resend. Auth emails use FLP-branded templates in `supabase/templates`.
+- **Mux** has two environments: `Development` (the original, used by dev) and `Production`. Each has its own access token, webhook and signing key. Family film in production is signed from the first upload.
+- **Daily allows one webhook per domain.** It points at production; production relays events for rooms it doesn't own to dev over the same signature, and room names carry the environment (`flp-prod-…`, `flp-dev-…`) so the two can't collide.
+- **Production auth config** is pushed from `supabase/config.toml`'s `[remotes.production]` overrides: app URL, redirect list, confirmed sign-ups, a one-minute email rate limit.
