@@ -47,7 +47,7 @@ export function AdminShell({ title, children }: { title: string; children: React
 
 const s = StyleSheet.create({
   topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.md, flexWrap: "wrap" },
-  nav: { flexDirection: "row", flexWrap: "wrap", gap: 4, backgroundColor: colors.panel, borderRadius: radius.md, padding: 4 },
+  nav: { flexDirection: "row", flexWrap: "wrap", gap: 4, backgroundColor: colors.panel, borderRadius: radius.md, padding: 4, flexShrink: 1, minWidth: 0 },
   navItem: { paddingHorizontal: space.md, paddingVertical: 6, borderRadius: radius.sm },
   navOn: { backgroundColor: colors.goldSoft },
   navText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.muted },
