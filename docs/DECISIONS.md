@@ -85,3 +85,9 @@ Junior levels (OHL/WHL/QMJHL, USHL/NAHL/BCHL) are selectable as "highest level p
 - **A first choice who is no longer listed is skipped**, not waited for; the order goes to the second choice or the admin queue at once.
 - **Family video is signed.** Game film and breakdowns are uploaded with Mux signed playback; the API issues two-hour tokens only to the owner, the mentor on the accepted job, the parent the breakdown was delivered to, or an admin. Intro videos stay public for the marketplace. Live on dev 2026-09-21: the Mux token `flp-api-dev` carries Video and System scope, the signing key was created with `services/api/deploy/mux-signing-key.sh`, and a bare stream URL for a family upload returns 403 at Mux.
 - **Kept:** a mentor cancelling an unconfirmed request inside the 24-hour window still counts as a late cancel on their scorecard (Scott, 2026-09-21).
+
+## 2026-09-23 — Production stack live (pre-launch)
+
+- **Hosts.** app.firstlineperform.com (web app) and api.firstlineperform.com (API) on droplet flp-prod-01 (64.225.20.246), Supabase project `flp-platform-prod` (Pro). firstlineperform.com keeps the coming-soon page until Scott explicitly ships the marketing site.
+- **Release path.** `deploy/release.sh` only, from a clean `main` in sync with GitHub; tags `vYYYY.MM.DD-N`; `deploy/rollback.sh` restores the previous API build. Production database changes go through `deploy/migrate.sh`, run by Scott. Claude does not write to production.
+- **First release** v2026.09.23-1 with provider keys empty: payments, uploads, video rooms and email stay off in production until the keys are pasted and a release is run.
