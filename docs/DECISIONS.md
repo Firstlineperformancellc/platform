@@ -98,3 +98,10 @@ Junior levels (OHL/WHL/QMJHL, USHL/NAHL/BCHL) are selectable as "highest level p
 - **Mux** has two environments: `Development` (the original, used by dev) and `Production`. Each has its own access token, webhook and signing key. Family film in production is signed from the first upload.
 - **Daily allows one webhook per domain.** It points at production; production relays events for rooms it doesn't own to dev over the same signature, and room names carry the environment (`flp-prod-…`, `flp-dev-…`) so the two can't collide.
 - **Production auth config** is pushed from `supabase/config.toml`'s `[remotes.production]` overrides: app URL, redirect list, confirmed sign-ups, a one-minute email rate limit.
+
+## 2026-09-23 — Pre-demo sweep
+
+- **Free preview payments switch.** `settings.rules.payments_mode` is `stripe` (charge at checkout when Stripe is configured) or `free_preview` (orders and Film Room bookings complete with no charge, for demos and the beta). Admin flips it on the Settings page; a red banner shows in admin while it's on; every flip is audit-logged. Switch back to Stripe before real families use the platform.
+- **Applicants finish on first sign-in.** With confirmed sign-ups, the mentor application creates the account first and the mentor profile after the applicant's first sign-in, from the dashboard card or the apply page.
+- **Phone-safe opening.** Join links, worksheet PDFs and recordings open through a helper that survives mobile popup blocking.
+- **Password reset** exists (sign-in page, branded email, `/reset-password`). **Terms and Privacy** are linked at sign-up and on the application, pointing at the drafts until counsel's versions replace them.
