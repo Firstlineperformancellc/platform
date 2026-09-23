@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs><radialGradient id="bg" cx="50%" cy="35%" r="70%"><stop offset="0" stop-color="#1a1a1a"/><stop offset="1" stop-color="#000"/></radialGradient></defs>
+  <rect width="400" height="400" fill="url(#bg)"/>
+  <circle cx="200" cy="215" r="150" fill="#0c0c0c" stroke="#d4a32c" stroke-width="6"/>
+  <!-- shoulders / jersey -->
+  <path d="M60 400 Q200 290 340 400 Z" fill="#d4a32c"/>
+  <path d="M120 400 Q200 330 280 400 Z" fill="#111"/>
+  <text x="200" y="392" text-anchor="middle" font-family="Barlow Condensed, Impact, sans-serif" font-style="italic" font-weight="800" font-size="26" fill="#d4a32c">CHIEFS</text>
+  <!-- neck + head -->
+  <rect x="172" y="245" width="56" height="50" rx="14" fill="#e4b98a"/>
+  <ellipse cx="200" cy="200" rx="88" ry="100" fill="#f0c9a0"/>
+  <!-- hair -->
+  <path d="M110 200 Q110 80 200 88 Q290 80 290 200 L275 160 Q255 112 200 118 Q145 112 125 160 Z" fill="#8a5a2b"/><path d="M150 100 q50 -40 100 0 l-20 30 q-30 -20 -60 0 z" fill="#8a5a2b"/>
+  <!-- glasses -->
+  <g fill="none" stroke="#111" stroke-width="10">
+    <rect x="128" y="178" width="66" height="54" rx="12"/>
+    <rect x="206" y="178" width="66" height="54" rx="12"/>
+    <line x1="128" y1="200" x2="104" y2="192"/>
+    <line x1="272" y1="200" x2="296" y2="192"/>
+  </g>
+  <rect x="190" y="196" width="20" height="14" rx="3" fill="#fff" transform="rotate(-14 200 203)"/>
+  <rect x="190" y="196" width="20" height="14" rx="3" fill="#fff" opacity=".85" transform="rotate(14 200 203)"/>
+  <!-- eyes -->
+  <circle cx="161" cy="205" r="7" fill="#111"/><circle cx="239" cy="205" r="7" fill="#111"/>
+  <!-- nose + grin -->
+  <path d="M200 215 q-8 22 6 26" fill="none" stroke="#c98a5a" stroke-width="5" stroke-linecap="round"/>
+  <path d="M158 262 q42 34 84 0" fill="none" stroke="#7a3b2a" stroke-width="7" stroke-linecap="round"/>
+  <rect x="176" y="272" width="12" height="9" fill="#111"/>
+</svg>
