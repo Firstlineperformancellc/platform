@@ -154,7 +154,8 @@ async function scheduleRoom(sess: NonNullable<Awaited<ReturnType<typeof sessionF
   const ends = new Date(starts.getTime() + (sess.duration_minutes ?? 30) * 60000);
   const patch: Record<string, unknown> = { status: "scheduled" };
   if (dailyConfigured) {
-    const room = await createRoom(`flp-${sess.id.slice(0, 8)}`, starts, ends);
+    // Prefixed by environment: dev and production share one Daily domain.
+    const room = await createRoom(`flp-${env.appEnv}-${sess.id.slice(0, 8)}`, starts, ends);
     patch.daily_room_name = room.name;
     patch.daily_room_url = room.url;
   }

@@ -27,5 +27,8 @@ export const env = {
   stripeWebhookSecret: optional("STRIPE_WEBHOOK_SECRET"),
   dailyApiKey: optional("DAILY_API_KEY"),
   dailyWebhookSecret: optional("DAILY_WEBHOOK_SECRET"),
+  // Daily allows one webhook per domain: production receives it and relays events for rooms it
+  // does not own (dev sessions) to this URL, unchanged, so dev verifies them with the same secret.
+  dailyRelayUrl: optional("DAILY_RELAY_URL"),
   resendApiKey: optional("RESEND_API_KEY"),
 };

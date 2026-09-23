@@ -130,6 +130,13 @@ webhooks.post("/daily", async (c) => {
   const { data: sess } = room
     ? await admin.from("sessions").select("id, status, scheduled_at, duration_minutes, recordings").eq("daily_room_name", room).maybeSingle()
     : { data: null };
+  if (!sess && env.dailyRelayUrl && room) {
+    // Not one of ours: hand it to the other environment exactly as received (same signature).
+    fetch(env.dailyRelayUrl, { method: "POST", headers: { "content-type": "application/json", "x-webhook-timestamp": ts, "x-webhook-signature": sig }, body: raw, signal: AbortSignal.timeout(8000) })
+      .then((r) => console.log(`daily relay ${room} -> ${r.status}`))
+      .catch((e) => console.warn("daily relay failed", (e as Error).message));
+    return c.json({ received: true, relayed: true });
+  }
   if (sess) {
     if (evt.type === "recording.started") await admin.from("sessions").update({ recording_status: "recording" }).eq("id", sess.id);
     if (evt.type === "recording.ready-to-download") {
