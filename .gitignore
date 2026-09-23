@@ -21,3 +21,6 @@ build/
 
 # supabase cli link state (per machine)
 supabase/.temp/
+
+# demo mentor photos are supplied locally and never committed
+deploy/demo/avatars/
