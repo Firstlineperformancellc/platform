@@ -49,16 +49,16 @@ if ! grep -q "^Host flp-prod$" ~/.ssh/config 2>/dev/null; then
 fi
 
 echo "▸ waiting for ssh"
-for i in $(seq 1 30); do
-  ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 -i ~/.ssh/flp_do "root@$ip" true 2>/dev/null && break
-  sleep 5
-done
+# Probe the port, not the login: repeated failed logins would get this Mac banned by fail2ban.
+for i in $(seq 1 60); do nc -z -w 5 "$ip" 22 2>/dev/null && break; sleep 5; done
 
 echo "▸ harden + install (root on first run; the flp user with sudo after root login is closed)"
-if ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 -i ~/.ssh/flp_do "root@$ip" true 2>/dev/null; then
+if ssh -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=8 flp-prod true 2>/dev/null; then
+  REMOTE_SSH=(ssh -o StrictHostKeyChecking=accept-new flp-prod sudo bash -s)
+elif ssh -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=8 -i ~/.ssh/flp_do "root@$ip" true 2>/dev/null; then
   REMOTE_SSH=(ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/flp_do "root@$ip" bash -s)
 else
-  REMOTE_SSH=(ssh -o StrictHostKeyChecking=accept-new flp-prod sudo bash -s)
+  echo "cannot reach $ip as flp or root (if fail2ban banned this Mac, wait ten minutes and retry)"; exit 1
 fi
 "${REMOTE_SSH[@]}" <<'REMOTE'
 set -euo pipefail
