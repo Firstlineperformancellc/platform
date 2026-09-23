@@ -1,6 +1,7 @@
 import { Platform, StyleSheet, View } from "react-native";
 import { Body, Small } from "./ui/Text";
 import { playerSrc, usePlayback } from "@/lib/media";
+import { openExternal } from "@/lib/open";
 import { colors, radius } from "@/theme/tokens";
 
 type Props = { mediaId: string | null | undefined; title: string; processingText?: string; downloadLabel?: string };
@@ -18,7 +19,7 @@ export function MuxPlayer({ mediaId, title, processingText = "The video is still
       {downloadLabel && pb.mp4Url ? (
         <Small>
           To record with your own screen recorder, play it here or{" "}
-          <Small style={s.link} onPress={() => window.open(pb.mp4Url!, "_blank", "noopener")}>
+          <Small style={s.link} onPress={() => openExternal(async () => pb.mp4Url!)}>
             {downloadLabel}
           </Small>
           . The download becomes available a few minutes after the film finishes processing.

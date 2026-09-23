@@ -61,7 +61,7 @@ export default function OrderPage() {
         </View>
       </View>
 
-      {paid && !hasFilm ? <Body style={{ color: colors.ok }}>Payment received. One more step: upload the game film.</Body> : null}
+      {paid && !hasFilm ? <Body style={{ color: colors.ok }}>{settings.rules.payments_mode === "free_preview" ? "Order placed (preview, no charge)." : "Payment received."} One more step: upload the game film.</Body> : null}
 
       {!hasFilm ? (
         <Card>

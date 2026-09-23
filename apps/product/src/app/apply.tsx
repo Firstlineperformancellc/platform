@@ -8,6 +8,9 @@ import { Screen } from "@/components/ui/Screen";
 import { TextField } from "@/components/ui/TextField";
 import { Body, H1, Label, Small } from "@/components/ui/Text";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth";
+import { marketingUrl } from "@/lib/site";
+import { useEffect } from "react";
 import { POSITIONS, type HockeyPosition } from "@/lib/types";
 import { colors, fonts, radius, space } from "@/theme/tokens";
 
@@ -20,6 +23,17 @@ function slugify(name: string) {
 // FLP approves it from the admin panel before the athlete can see any jobs.
 export default function Apply() {
   const router = useRouter();
+  const { session, profile, signOut } = useAuth();
+  // Signed in already (email confirmed after applying): only the profile is missing.
+  const finishing = Boolean(session && profile?.role === "athlete");
+  const wrongRole = Boolean(session && profile && profile.role !== "athlete");
+  useEffect(() => {
+    // Already has a mentor profile: nothing to finish here.
+    if (!finishing) return;
+    supabase.from("athletes").select("user_id").eq("user_id", session!.user.id).maybeSingle().then(({ data }) => {
+      if (data) router.replace("/athlete");
+    });
+  }, [finishing, session, router]);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,8 +49,20 @@ export default function Apply() {
   }
 
   async function submit() {
-    if (!fullName.trim()) return setError("Enter your name.");
     if (positions.length === 0) return setError("Pick at least one position you can review.");
+    if (finishing) {
+      setBusy(true);
+      setError(null);
+      const name = fullName.trim() || profile?.full_name || "FLP Mentor";
+      const { error: insertError } = await supabase.from("athletes").insert({
+        user_id: session!.user.id, slug: slugify(name), display_name: name, bio: bio.trim(), positions,
+        credentials: team.trim() ? [{ label: team.trim() }] : [],
+      });
+      setBusy(false);
+      if (insertError) return setError(insertError.message);
+      return router.replace("/athlete");
+    }
+    if (!fullName.trim()) return setError("Enter your name.");
     if (password.length < 8) return setError("Use a password of at least 8 characters.");
     setBusy(true);
     setError(null);
@@ -51,7 +77,7 @@ export default function Apply() {
     }
     if (!data.session) {
       setBusy(false);
-      return setNotice("Check your email to confirm your account, then sign in to finish your application.");
+      return setNotice("Check your email to confirm your account, then sign in. You'll finish the application on your first sign-in.");
     }
     const { error: insertError } = await supabase.from("athletes").insert({
       user_id: data.session.user.id,
@@ -73,24 +99,37 @@ export default function Apply() {
       <Body center style={{ color: colors.muted }}>
         FLP reviews every application. You'll hear back by email once you're approved.
       </Body>
+      {wrongRole ? (
+        <Card>
+          <Body>You're signed in as a {profile?.role === "admin" ? "FLP admin" : "parent"}. Mentor accounts use their own email address.</Body>
+          <Button title="Sign out and apply with another email" variant="secondary" onPress={signOut} />
+        </Card>
+      ) : null}
       <Card>
-        <TextField label="Your name" value={fullName} onChangeText={setFullName} autoComplete="name" />
-        <TextField
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          autoComplete="email"
-          keyboardType="email-address"
-        />
-        <TextField
-          label="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          autoComplete="new-password"
-          hint="At least 8 characters."
-        />
+        {finishing ? (
+          <Body style={{ color: colors.muted }}>Signed in as {session?.user.email}. Finish your mentor profile below.</Body>
+        ) : null}
+        <TextField label="Your name" value={fullName} onChangeText={setFullName} autoComplete="name" placeholder={finishing ? profile?.full_name : undefined} />
+        {finishing ? null : (
+          <>
+            <TextField
+              label="Email"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              autoComplete="email"
+              keyboardType="email-address"
+            />
+            <TextField
+              label="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoComplete="new-password"
+              hint="At least 8 characters."
+            />
+          </>
+        )}
         <TextField label="Current or highest team" value={team} onChangeText={setTeam} placeholder="e.g. Michigan Tech, NCAA D1" />
         <View style={{ gap: space.sm }}>
           <Label>Positions you can review</Label>
@@ -122,7 +161,12 @@ export default function Apply() {
         />
         {error ? <Body style={{ color: colors.danger }}>{error}</Body> : null}
         {notice ? <Body style={{ color: colors.ok }}>{notice}</Body> : null}
-        <Button title="Submit application" full loading={busy} onPress={submit} />
+        <Small>
+          By creating an account you agree to FLP's{" "}
+          <Small style={s.link} onPress={() => window.open(marketingUrl("terms.html"), "_blank", "noopener")}>Terms</Small> and{" "}
+          <Small style={s.link} onPress={() => window.open(marketingUrl("privacy.html"), "_blank", "noopener")}>Privacy Policy</Small>.
+        </Small>
+        <Button title={finishing ? "Finish application" : "Submit application"} full loading={busy} disabled={wrongRole} onPress={submit} />
       </Card>
       <Small center>
         Already applied?{" "}

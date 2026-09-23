@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { useFocusEffect } from "expo-router";
-import { Platform, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { Pill } from "./ui/Pill";
@@ -8,6 +8,7 @@ import { TextField } from "./ui/TextField";
 import { Body, H2, H3, Label, Small } from "./ui/Text";
 import { acceptSession, cancelSession, completeSession, declineSession, FORMAT_LABEL, joinSession, listSessions, minutesUntil, playerName, reportNoShow, submitRecap, whenLabel, type Session } from "@/lib/sessions";
 import { money, useSettings } from "@/lib/settings";
+import { openExternal } from "@/lib/open";
 import { colors, space } from "@/theme/tokens";
 
 // The mentor's side of Film Room: confirm requests, join, close out, write the recap.
@@ -42,9 +43,11 @@ export function MentorSessions() {
     setBusy(`join-${id}`);
     setError(null);
     try {
-      const r = await joinSession(id);
-      if (r.url && Platform.OS === "web") window.open(r.url, "_blank", "noopener");
-      else setError(r.error ?? "The room isn't ready.");
+      await openExternal(async () => {
+        const r = await joinSession(id);
+        if (!r.url) throw new Error(r.error ?? "The room isn't ready.");
+        return r.url;
+      });
       load();
     } catch (e) {
       setError((e as Error).message);

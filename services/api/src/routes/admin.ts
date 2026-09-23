@@ -291,6 +291,9 @@ adminRoutes.patch("/settings", async (c) => {
   for (const key of ["breakdown_prices", "mentor_share_pct", "session_prices", "rules", "taxonomy"] as const) {
     if (body[key] && typeof body[key] === "object") patch[key] = { ...(current[key] as object), ...(body[key] as object) };
   }
+  const mode = (patch.rules as Record<string, unknown> | undefined)?.payments_mode;
+  if (mode !== undefined && mode !== "stripe" && mode !== "free_preview") return c.json({ error: "payments_mode must be stripe or free_preview" }, 400);
+  if (mode !== undefined && mode !== current.rules.payments_mode) await audit(me.id, "settings.payments_mode", "settings", null, { mode });
   if (typeof body.currency === "string") patch.currency = body.currency;
   const { error } = await admin.from("settings").update(patch).eq("id", 1);
   if (error) return c.json({ error: error.message }, 500);

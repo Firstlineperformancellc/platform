@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { Link, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Brand } from "@/components/Brand";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -11,6 +11,7 @@ import { Body, H1, H3, Label, Small } from "@/components/ui/Text";
 import { Loading, RequireRole } from "@/lib/auth";
 import { cancelSession, FORMAT_LABEL, getSession, joinSession, minutesUntil, playerName, reportNoShow, reviewSession, STATUS_LABEL, whenLabel, type Session } from "@/lib/sessions";
 import { money, useSettings } from "@/lib/settings";
+import { openExternal } from "@/lib/open";
 import { colors, space } from "@/theme/tokens";
 
 const TONE: Record<string, "gold" | "ok" | "warn" | "danger" | "muted"> = {
@@ -77,9 +78,11 @@ function Inner() {
     setBusy("join");
     setError(null);
     try {
-      const r = await joinSession(sess!.id);
-      if (r.url && Platform.OS === "web") window.open(r.url, "_blank", "noopener");
-      else setError(r.error ?? "The room isn't ready.");
+      await openExternal(async () => {
+        const r = await joinSession(sess!.id);
+        if (!r.url) throw new Error(r.error ?? "The room isn't ready.");
+        return r.url;
+      });
     } catch (e) {
       setError((e as Error).message);
     }

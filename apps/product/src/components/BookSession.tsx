@@ -175,7 +175,7 @@ export function BookSession({ mentor, settings, addonBreakdownId }: Props) {
           <Choice label="Who's on the call" options={[{ key: "no", label: "Just my youth athlete" }, { key: "yes", label: "I'll sit in too" }]} value={present} onChange={(v) => setPresent(v as string)} />
 
           <View style={s.row}>
-            <Button title={usePack ? "Book with a credit" : `Book · ${money(price)}`} loading={busy === "book"} disabled={!startsAt || !playerId} onPress={book} />
+            <Button title={usePack ? "Book with a credit" : settings.rules.payments_mode === "free_preview" ? `Book · preview, no charge` : `Book · ${money(price)}`} loading={busy === "book"} disabled={!startsAt || !playerId} onPress={book} />
             <Small>
               {settings.rules.mentors_may_decline_sessions ? `${first} confirms within ${settings.rules.session_accept_hours ?? 24} hours or you're refunded.` : "Confirmed on booking."} Free
               cancellation up to {settings.rules.session_cancel_hours} hours before.

@@ -8,6 +8,7 @@ import { Screen } from "@/components/ui/Screen";
 import { TextField } from "@/components/ui/TextField";
 import { Body, H1, Small } from "@/components/ui/Text";
 import { supabase } from "@/lib/supabase";
+import { marketingUrl } from "@/lib/site";
 import { colors } from "@/theme/tokens";
 
 // Parent account. The player is added afterwards as a profile under this account, never as a login.
@@ -66,6 +67,11 @@ export default function SignUp() {
         />
         {error ? <Body style={{ color: colors.danger }}>{error}</Body> : null}
         {notice ? <Body style={{ color: colors.ok }}>{notice}</Body> : null}
+        <Small>
+          By creating an account you agree to FLP's{" "}
+          <Small style={s.link} onPress={() => window.open(marketingUrl("terms.html"), "_blank", "noopener")}>Terms</Small> and{" "}
+          <Small style={s.link} onPress={() => window.open(marketingUrl("privacy.html"), "_blank", "noopener")}>Privacy Policy</Small>.
+        </Small>
         <Button title="Create account" full loading={busy} onPress={submit} />
       </Card>
       <Small center>

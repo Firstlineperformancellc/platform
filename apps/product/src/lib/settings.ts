@@ -38,6 +38,7 @@ export type Settings = {
     season_arc_sessions?: number;
     season_arc_weeks?: number;
     session_reminder_hours?: number[];
+    payments_mode?: "stripe" | "free_preview";
   };
   taxonomy: {
     age_groups: string[];

@@ -280,7 +280,7 @@ export default function OrderWizard() {
       <View style={s.nav}>
         {stepIndex > 0 ? <Button title="Back" variant="ghost" onPress={() => setStep(STEPS[stepIndex - 1].key)} /> : <View />}
         {step === "review" ? (
-          <Button title={`Pay ${price != null ? money(price) : ""}`} loading={busy} onPress={pay} />
+          <Button title={settings.rules.payments_mode === "free_preview" ? `Place order · preview, no charge` : `Pay ${price != null ? money(price) : ""}`} loading={busy} onPress={pay} />
         ) : (
           <Button title="Continue" onPress={next} disabled={step === "player" && players.length === 0} />
         )}

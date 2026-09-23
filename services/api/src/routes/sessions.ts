@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { admin, userFromBearer } from "../supabase.js";
-import { getSettings, shareCents, type Tier } from "../settings.js";
+import { getSettings, paymentPath, shareCents, type Tier } from "../settings.js";
 import { stripe, stripeConfigured } from "../stripe.js";
 import { env } from "../env.js";
 import { appUrl, notify } from "../notify.js";
@@ -110,7 +110,8 @@ sessions.post("/", async (c) => {
     await afterPayment(sess.id);
     return c.json({ sessionId: sess.id, devPaid: true });
   }
-  if (stripeConfigured && stripe) {
+  const path = paymentPath(s, stripeConfigured, env.appEnv);
+  if (path === "stripe" && stripe) {
     const checkout = await stripe.checkout.sessions.create({
       mode: "payment",
       customer_email: user.email ?? undefined,
@@ -122,7 +123,7 @@ sessions.post("/", async (c) => {
     await admin.from("sessions").update({ stripe_checkout_session_id: checkout.id }).eq("id", sess.id);
     return c.json({ sessionId: sess.id, checkoutUrl: checkout.url });
   }
-  if (env.appEnv === "dev") {
+  if (path === "free") {
     await afterPayment(sess.id);
     return c.json({ sessionId: sess.id, devPaid: true });
   }
@@ -364,7 +365,8 @@ sessions.post("/packs", async (c) => {
     .select("id")
     .single();
   if (error || !pack) return c.json({ error: error?.message ?? "could not create pack" }, 500);
-  if (stripeConfigured && stripe) {
+  const packPath = paymentPath(s, stripeConfigured, env.appEnv);
+  if (packPath === "stripe" && stripe) {
     const checkout = await stripe.checkout.sessions.create({
       mode: "payment", customer_email: user.email ?? undefined,
       line_items: [{ quantity: 1, price_data: { currency: s.currency, unit_amount: price, product_data: { name: `FLP Season Arc · ${total} Film Rooms with ${m.display_name}` } } }],
@@ -374,7 +376,7 @@ sessions.post("/packs", async (c) => {
     await admin.from("session_packs").update({ stripe_checkout_session_id: checkout.id }).eq("id", pack.id);
     return c.json({ packId: pack.id, checkoutUrl: checkout.url });
   }
-  if (env.appEnv === "dev") {
+  if (packPath === "free") {
     await admin.from("session_packs").update({ paid_at: iso(Date.now()) }).eq("id", pack.id);
     return c.json({ packId: pack.id, devPaid: true });
   }

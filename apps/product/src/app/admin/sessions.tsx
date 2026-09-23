@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { useFocusEffect } from "expo-router";
-import { Platform, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { AdminShell } from "@/components/AdminShell";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -11,6 +11,7 @@ import { Body, H3, Small } from "@/components/ui/Text";
 import { adminCancelSession, adminCompleteSession, adminNoShow } from "@/lib/admin";
 import { FORMAT_LABEL, listSessions, minutesUntil, playerName, recordingLink, STATUS_LABEL, whenLabel, type Session } from "@/lib/sessions";
 import { money } from "@/lib/settings";
+import { openExternal } from "@/lib/open";
 import { colors, space } from "@/theme/tokens";
 
 // Every Film Room on the platform with the levers Alex and Bryan need: cancel with a refund,
@@ -40,10 +41,7 @@ export default function AdminSessions() {
   }
 
   async function openRecording(id: string, recordingId?: string) {
-    await run(recordingId ?? id, async () => {
-      const r = await recordingLink(id, recordingId);
-      if (Platform.OS === "web") window.open(r.url, "_blank", "noopener");
-    });
+    await run(recordingId ?? id, () => openExternal(async () => (await recordingLink(id, recordingId)).url));
   }
 
   const live = (r: Session) => ["requested", "scheduled", "in_progress"].includes(r.status);

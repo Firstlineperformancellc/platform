@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { admin, userFromBearer } from "../supabase.js";
-import { getSettings, shareCents, type Tier } from "../settings.js";
+import { getSettings, paymentPath, shareCents, type Tier } from "../settings.js";
 import { stripe, stripeConfigured } from "../stripe.js";
 import { openJobForOrder } from "../jobs.js";
 import { env } from "../env.js";
@@ -68,7 +68,8 @@ orders.post("/", async (c) => {
     .single();
   if (error || !order) return c.json({ error: error?.message ?? "could not create order" }, 500);
 
-  if (stripeConfigured && stripe) {
+  const path = paymentPath(s, stripeConfigured, env.appEnv);
+  if (path === "stripe" && stripe) {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       customer_email: user.email ?? undefined,
@@ -81,8 +82,8 @@ orders.post("/", async (c) => {
     return c.json({ orderId: order.id, checkoutUrl: session.url });
   }
 
-  if (env.appEnv === "dev") {
-    // Dev shortcut while Stripe keys are pending: treat the order as paid immediately.
+  if (path === "free") {
+    // Dev, or the admin's free-preview switch: treat the order as paid without a charge.
     await admin.from("orders").update({ status: "paid", paid_at: new Date().toISOString() }).eq("id", order.id);
     await openJobForOrder(order.id);
     return c.json({ orderId: order.id, devPaid: true });

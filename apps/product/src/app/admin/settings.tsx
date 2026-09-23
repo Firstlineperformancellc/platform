@@ -4,6 +4,8 @@ import { AdminShell } from "@/components/AdminShell";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { TextField } from "@/components/ui/TextField";
+import { Choice } from "@/components/ui/Choice";
+import { Pill } from "@/components/ui/Pill";
 import { Body, H3, Small } from "@/components/ui/Text";
 import { grantAdmin, patchSettings } from "@/lib/admin";
 import { Loading } from "@/lib/auth";
@@ -85,6 +87,23 @@ export default function AdminSettings() {
     <AdminShell title="Settings">
       {msg ? <Body style={{ color: colors.ok }}>{msg}</Body> : null}
       {error ? <Body style={{ color: colors.danger }}>{error}</Body> : null}
+
+      <Card>
+        <View style={s.row}>
+          <H3>Payments</H3>
+          <Pill tone={settings.rules.payments_mode === "free_preview" ? "danger" : "ok"}>{settings.rules.payments_mode === "free_preview" ? "Free preview: nothing is charged" : "Stripe: parents are charged"}</Pill>
+        </View>
+        <Small>
+          Free preview lets orders and Film Room bookings go through without a card, for demos and beta testing. Switch back to Stripe before real
+          families use the platform.
+        </Small>
+        <Choice
+          label="Mode"
+          options={[{ key: "stripe", label: "Stripe (charge at checkout)" }, { key: "free_preview", label: "Free preview (no charge)" }]}
+          value={settings.rules.payments_mode ?? "stripe"}
+          onChange={(v) => save("payments", { rules: { payments_mode: v } })}
+        />
+      </Card>
 
       <Card>
         <H3>Breakdown prices and mentor share</H3>
@@ -191,6 +210,7 @@ export default function AdminSettings() {
 }
 
 const s = StyleSheet.create({
+  row: { flexDirection: "row", alignItems: "center", gap: space.md, flexWrap: "wrap", justifyContent: "space-between" },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: space.lg },
   cell: { flexGrow: 1, flexBasis: 220, maxWidth: 320, gap: space.sm },
 });

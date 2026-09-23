@@ -158,7 +158,10 @@ export default function AthleteHome() {
       ) : athlete === null ? (
         <Card>
           <H3>Finish your application</H3>
-          <Body style={{ color: colors.muted }}>Your account exists but the mentor profile is missing.</Body>
+          <Body style={{ color: colors.muted }}>Your account is confirmed. Two minutes more and FLP can review you: positions, your playing history, a short bio.</Body>
+          <Link href="/apply" asChild>
+            <Button title="Finish your application" />
+          </Link>
         </Card>
       ) : null}
     </Screen>

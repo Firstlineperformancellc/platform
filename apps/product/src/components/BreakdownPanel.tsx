@@ -10,6 +10,7 @@ import { MuxPlayer } from "./MuxPlayer";
 import { fileAudit, getBreakdownForJob, openAuditFor, reviewBreakdown, worksheetPdfUrl, type Breakdown } from "@/lib/breakdowns";
 import { mentorSlugForJob } from "@/lib/sessions";
 import { useSettings } from "@/lib/settings";
+import { openExternal } from "@/lib/open";
 import { Link } from "expo-router";
 import { colors, fonts, radius, space } from "@/theme/tokens";
 
@@ -72,14 +73,15 @@ export function BreakdownPanel({ jobId }: { jobId: string }) {
 
   async function downloadPdf() {
     setBusy("pdf");
+    setError(null);
     try {
-      const { url } = await worksheetPdfUrl(bd!.id);
-      if (Platform.OS === "web") window.open(url, "_blank");
+      await openExternal(async () => (await worksheetPdfUrl(bd!.id)).url);
     } catch (e) {
       setError((e as Error).message);
     }
     setBusy(null);
   }
+
 
   return (
     <Card>

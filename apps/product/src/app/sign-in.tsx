@@ -27,6 +27,16 @@ export default function SignIn() {
     router.replace("/");
   }
 
+  async function forgot() {
+    if (!email.trim()) return setError("Enter your email first.");
+    setBusy("link");
+    setError(null);
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${siteUrl()}/reset-password` });
+    setBusy(null);
+    if (error) return setError(error.message);
+    setNotice("Check your email for a link to set a new password.");
+  }
+
   async function withLink() {
     if (!email.trim()) return setError("Enter your email first.");
     setBusy("link");
@@ -77,6 +87,7 @@ export default function SignIn() {
               onPress={withLink}
             />
           ) : null}
+          <Button title="Forgot your password?" variant="ghost" full disabled={!!busy} onPress={forgot} />
         </View>
       </Card>
       <Small center>
