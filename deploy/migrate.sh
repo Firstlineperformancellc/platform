@@ -13,9 +13,11 @@ q() { npx --no-install supabase db query --linked --project-ref "$REF" "$@"; }
 echo "▸ project $REF"
 q "create schema if not exists supabase_migrations; create table if not exists supabase_migrations.schema_migrations (version text primary key, statements text[], name text)" >/dev/null
 applied="$(q "select string_agg(version, ' ') as v from supabase_migrations.schema_migrations" 2>/dev/null | python3 -c 'import json,sys
+raw=sys.stdin.read(); i=raw.find("{")
 try:
-    d=json.load(sys.stdin); print((d.get("rows") or [{}])[0].get("v") or "")
+    d=json.loads(raw[i:]) if i>=0 else {}; print((d.get("rows") or [{}])[0].get("v") or "")
 except Exception: print("")')"
+[ -n "$applied" ] || { echo "could not read the applied-migrations list; refusing to guess"; exit 1; }
 
 for f in supabase/migrations/*.sql; do
   v="$(basename "$f" | cut -d_ -f1)"
