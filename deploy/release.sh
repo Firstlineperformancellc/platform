@@ -22,9 +22,16 @@ branch="$(git rev-parse --abbrev-ref HEAD)"
 git fetch -q origin main && [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || { echo "main is not in sync with origin"; exit 1; }
 [ -f services/api/.env.prod ] || { echo "services/api/.env.prod missing"; exit 1; }
 [ -f apps/product/.env.prod ] || { echo "apps/product/.env.prod missing"; exit 1; }
-for k in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY MUX_TOKEN_ID MUX_TOKEN_SECRET MUX_WEBHOOK_SECRET MUX_SIGNING_KEY_ID MUX_SIGNING_KEY_PRIVATE STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET DAILY_API_KEY DAILY_WEBHOOK_SECRET RESEND_API_KEY TICK_SECRET APP_ORIGIN; do
+# Hard requirements to boot; provider keys are warned about so a pre-launch release can prove the pipeline.
+for k in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY TICK_SECRET APP_ORIGIN; do
   grep -qE "^$k=.+" services/api/.env.prod || { echo "services/api/.env.prod: $k is empty"; exit 1; }
 done
+for k in MUX_TOKEN_ID MUX_TOKEN_SECRET MUX_WEBHOOK_SECRET MUX_SIGNING_KEY_ID MUX_SIGNING_KEY_PRIVATE STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET DAILY_API_KEY DAILY_WEBHOOK_SECRET RESEND_API_KEY; do
+  grep -qE "^$k=.+" services/api/.env.prod || echo "  warning: $k is empty in services/api/.env.prod (that feature stays off in production)"
+done
+if [ "${FLP_RELEASE_ALLOW_MISSING_KEYS:-}" != "1" ] && grep -qE "^(STRIPE_SECRET_KEY|MUX_TOKEN_ID|DAILY_API_KEY|RESEND_API_KEY)=$" services/api/.env.prod; then
+  echo "  provider keys are missing; re-run with FLP_RELEASE_ALLOW_MISSING_KEYS=1 for a pre-launch release"; exit 1
+fi
 grep -q "^APP_ENV=prod" services/api/.env.prod || { echo "services/api/.env.prod must set APP_ENV=prod"; exit 1; }
 if [ -z "$TAG" ]; then
   d="$(date +%Y.%m.%d)"; n=1
