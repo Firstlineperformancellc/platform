@@ -54,16 +54,28 @@ for i in $(seq 1 30); do
   sleep 5
 done
 
-echo "▸ harden + install (as root once, then flp)"
-ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/flp_do "root@$ip" bash -s <<'REMOTE'
+echo "▸ harden + install (root on first run; the flp user with sudo after root login is closed)"
+if ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 -i ~/.ssh/flp_do "root@$ip" true 2>/dev/null; then
+  REMOTE_SSH=(ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/flp_do "root@$ip" bash -s)
+else
+  REMOTE_SSH=(ssh -o StrictHostKeyChecking=accept-new flp-prod sudo bash -s)
+fi
+"${REMOTE_SSH[@]}" <<'REMOTE'
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
+# Ubuntu's first-boot updater holds the apt lock for a few minutes; wait it out.
+for i in $(seq 1 60); do
+  if ! fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock >/dev/null 2>&1 && ! pgrep -x apt-get >/dev/null && ! pgrep -x unattended-upgr >/dev/null; then break; fi
+  sleep 5
+done
 id flp >/dev/null 2>&1 || { adduser --disabled-password --gecos "" flp; usermod -aG sudo flp; echo "flp ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/flp; chmod 440 /etc/sudoers.d/flp; }
 mkdir -p /home/flp/.ssh && cp /root/.ssh/authorized_keys /home/flp/.ssh/ && chown -R flp:flp /home/flp/.ssh && chmod 700 /home/flp/.ssh && chmod 600 /home/flp/.ssh/authorized_keys
 apt-get update -q && apt-get install -y -q nginx certbot python3-certbot-nginx ufw fail2ban unattended-upgrades rsync curl >/dev/null
 sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication no/; s/^#\?PermitRootLogin .*/PermitRootLogin no/' /etc/ssh/sshd_config
 systemctl restart ssh
-ufw allow OpenSSH >/dev/null && ufw allow 'Nginx Full' >/dev/null && ufw --force enable >/dev/null
+ufw allow OpenSSH >/dev/null
+ufw allow 'Nginx Full' >/dev/null
+ufw --force enable >/dev/null
 systemctl enable --now fail2ban >/dev/null
 dpkg-reconfigure -f noninteractive unattended-upgrades
 if [ ! -x /usr/local/bin/node ]; then
