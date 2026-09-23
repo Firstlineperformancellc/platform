@@ -16,10 +16,12 @@ TAG="${2:-}"
 [ "${1:-}" = "--tag" ] || TAG=""
 
 echo "▸ preflight"
-branch="$(git rev-parse --abbrev-ref HEAD)"
-[ "$branch" = "main" ] || { echo "release only from main (on $branch)"; exit 1; }
 [ -z "$(git status --porcelain)" ] || { echo "working tree not clean"; exit 1; }
-git fetch -q origin main && [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || { echo "main is not in sync with origin"; exit 1; }
+start_branch="$(git rev-parse --abbrev-ref HEAD)"
+git fetch -q origin main
+git checkout -q main
+trap 'git checkout -q "$start_branch" 2>/dev/null || true' EXIT
+[ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || { echo "local main is not in sync with origin/main"; exit 1; }
 [ -f services/api/.env.prod ] || { echo "services/api/.env.prod missing"; exit 1; }
 [ -f apps/product/.env.prod ] || { echo "apps/product/.env.prod missing"; exit 1; }
 # Hard requirements to boot; provider keys are warned about so a pre-launch release can prove the pipeline.
