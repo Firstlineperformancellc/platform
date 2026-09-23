@@ -15,8 +15,11 @@ q "create schema if not exists supabase_migrations; create table if not exists s
 applied="$(q "select string_agg(version, ' ') as v from supabase_migrations.schema_migrations" 2>&1 | python3 -c 'import json,sys
 raw=sys.stdin.read(); i=raw.find("{")
 try:
-    d=json.JSONDecoder().raw_decode(raw[i:])[0] if i>=0 else {}; print((d.get("rows") or [{}])[0].get("v") or "")
-except Exception: print("")')"
+    d=json.JSONDecoder().raw_decode(raw[i:])[0] if i>=0 else {}; v=(d.get("rows") or [{}])[0].get("v") or ""
+except Exception as e:
+    v=""
+if not v: sys.stderr.write("raw CLI output was: " + repr(raw[:600]) + "\n")
+print(v)')"
 [ -n "$applied" ] || { echo "could not read the applied-migrations list; refusing to guess"; exit 1; }
 
 for f in supabase/migrations/*.sql; do
