@@ -4,15 +4,18 @@ import { StyleSheet, View } from "react-native";
 import { AdminShell } from "@/components/AdminShell";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Body, Display, H3 } from "@/components/ui/Text";
+import { Body, Display, H3, Small } from "@/components/ui/Text";
 import { counts } from "@/lib/admin";
+import { ticketCounts } from "@/lib/support";
 import { colors, space } from "@/theme/tokens";
 
 export default function AdminHome() {
   const [c, setC] = useState<Awaited<ReturnType<typeof counts>> | null>(null);
+  const [tc, setTc] = useState<{ open: number; pending: number } | null>(null);
   useFocusEffect(
     useCallback(() => {
       counts().then(setC);
+      ticketCounts().then(setTc).catch(() => setTc({ open: 0, pending: 0 }));
     }, []),
   );
   const tiles = [
@@ -38,11 +41,30 @@ export default function AdminHome() {
           </Card>
         ))}
       </View>
+      <Link href="/admin/support" asChild>
+        <Card style={StyleSheet.flatten([s.support, (tc?.open ?? 0) > 0 && s.hot])}>
+          <View style={s.supportRow}>
+            <View style={{ flex: 1, minWidth: 220, gap: 4 }}>
+              <H3>Support desk</H3>
+              <Body style={{ color: colors.muted }}>support@firstlineperform.com, the in-app form, and the website all land here. Answer from the ticket; the reply goes out as email.</Body>
+            </View>
+            <View style={s.supportStats}>
+              <View style={s.stat}><Display style={{ color: (tc?.open ?? 0) > 0 ? colors.gold : colors.faint }}>{tc ? String(tc.open) : "–"}</Display><Small>waiting on FLP</Small></View>
+              <View style={s.stat}><Display style={{ color: colors.faint }}>{tc ? String(tc.pending) : "–"}</Display><Small>waiting on customer</Small></View>
+            </View>
+            <Button title="Open the desk" variant="secondary" small />
+          </View>
+        </Card>
+      </Link>
     </AdminShell>
   );
 }
 
 const s = StyleSheet.create({
+  support: { marginTop: space.sm },
+  supportRow: { flexDirection: "row", flexWrap: "wrap", gap: space.lg, alignItems: "center" },
+  supportStats: { flexDirection: "row", gap: space.lg },
+  stat: { alignItems: "center", minWidth: 110 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: space.lg },
   cell: { flexGrow: 1, flexBasis: 240, maxWidth: 360 },
   hot: { borderColor: colors.goldDim },

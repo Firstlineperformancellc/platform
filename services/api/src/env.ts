@@ -31,4 +31,8 @@ export const env = {
   // does not own (dev sessions) to this URL, unchanged, so dev verifies them with the same secret.
   dailyRelayUrl: optional("DAILY_RELAY_URL"),
   resendApiKey: optional("RESEND_API_KEY"),
+  // Support desk: the address replies come from (needs the root domain verified in Resend) and the
+  // shared secret the inbound-mail script presents.
+  supportFrom: optional("SUPPORT_FROM"),
+  inboundEmailSecret: optional("INBOUND_EMAIL_SECRET"),
 };

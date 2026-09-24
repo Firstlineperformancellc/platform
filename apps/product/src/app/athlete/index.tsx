@@ -75,6 +75,7 @@ export default function AthleteHome() {
           <Link href="/athlete/profile" asChild>
             <Button title="My profile" variant="secondary" small />
           </Link>
+          <Link href="/support" asChild><Button title="Support" variant="ghost" small /></Link>
           <Button title="Sign out" variant="ghost" small onPress={signOut} />
         </View>
       </View>

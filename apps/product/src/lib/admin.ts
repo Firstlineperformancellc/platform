@@ -169,6 +169,10 @@ export type AdminUser = {
   players: number; orders: number; spent_orders_cents: number; spent_sessions_cents: number; spent_packs_cents: number; refunded_cents: number;
   sessions: number; breakdowns_delivered: number; earned_cents: number; paid_out_cents: number;
 };
+export async function getUser(id: string): Promise<AdminUser | null> {
+  const { data } = await supabase.from("admin_users").select("*").eq("id", id).maybeSingle();
+  return (data as AdminUser | null) ?? null;
+}
 export async function listUsers(): Promise<AdminUser[]> {
   const { data, error } = await supabase.from("admin_users").select("*").order("created_at", { ascending: false }).limit(1000);
   if (error) throw new Error(error.message);

@@ -13,6 +13,7 @@ import { adminRoutes } from "./routes/admin.js";
 import { mentors } from "./routes/mentors.js";
 import { sessions } from "./routes/sessions.js";
 import { media } from "./routes/media.js";
+import { support } from "./routes/support.js";
 
 const app = new Hono();
 
@@ -24,13 +25,14 @@ const ORIGINS = [
   "https://dev.firstlineperform.com",
   "https://app.firstlineperform.com",
   "https://firstlineperform.com",
+  "https://beta.firstlineperform.com",
 ];
 app.use(
   "*",
   cors({
     origin: (origin) => (ORIGINS.includes(origin) ? origin : ""),
     allowHeaders: ["authorization", "content-type"],
-    allowMethods: ["GET", "POST", "PATCH", "OPTIONS"],
+    allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     maxAge: 600,
   }),
 );
@@ -52,6 +54,7 @@ app.route("/admin", adminRoutes);
 app.route("/mentors", mentors);
 app.route("/sessions", sessions);
 app.route("/media", media);
+app.route("/support", support);
 app.route("/internal", internal);
 app.route("/webhooks", webhooks);
 

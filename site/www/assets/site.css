@@ -103,3 +103,8 @@ footer .copy{grid-column:1/-1;border-top:1px solid var(--line);padding-top:18px;
   section{padding:52px 0}
   .hero{padding:56px 0 40px}
 }
+
+/* contact form */
+.field{width:100%;padding:11px 12px;border-radius:8px;border:1px solid var(--line2);background:var(--panel2);color:var(--ink);font:inherit;font-size:16px}
+.field:focus{outline:2px solid var(--gold);outline-offset:1px}
+label.small{margin-bottom:-8px}

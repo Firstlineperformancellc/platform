@@ -4,6 +4,20 @@
   var APP = /^(dev\.|localhost)/.test(location.hostname) ? "https://dev.firstlineperform.com" : "https://app.firstlineperform.com";
   document.querySelectorAll("a[data-app]").forEach(function (a) { a.href = APP + (a.getAttribute("data-app") || "/"); });
 
+  // Contact form -> the support desk (same API the app uses). Host-based like the app links.
+  var API = /^(dev\.|localhost)/.test(location.hostname) ? "https://api-dev.firstlineperform.com" : "https://api.firstlineperform.com";
+  var form = document.getElementById("contact");
+  if (form) form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var status = document.getElementById("c-status"); status.textContent = "Sending…";
+    var f = new FormData(form); var payload = {};
+    f.forEach(function (v, k) { payload[k] = v; });
+    fetch(API + "/support/tickets", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) })
+      .then(function (r) { return r.json().then(function (b) { return { ok: r.ok, b: b }; }); })
+      .then(function (x) { if (x.ok) { status.textContent = "Sent. Your ticket number is " + x.b.number + "; a confirmation is on its way to your inbox."; form.reset(); } else { status.textContent = x.b.error || "That didn't send. Email support@firstlineperform.com instead."; } })
+      .catch(function () { status.textContent = "That didn't send. Email support@firstlineperform.com instead."; });
+  });
+
   var btn = document.querySelector(".menu"), nav = document.querySelector(".nav");
   if (btn && nav) btn.addEventListener("click", function () { nav.classList.toggle("open"); });
 

@@ -27,17 +27,28 @@
 <section class="hero" style="padding-bottom:24px">
   <div class="wrap" style="grid-template-columns:1fr">
     <div><p class="kicker">Contact</p><h1>Talk to <span class="gold">FLP</span></h1><div class="rule"></div>
-    <p class="lead">Questions about an order, an application, or the platform: email us and a person answers.</p>
-    <div class="btns"><a class="btn primary" href="mailto:team@firstlineperform.com">team@firstlineperform.com</a></div>
+    <p class="lead">Questions about an order, an application, or the platform: send it here and a person answers, usually within a business day. Or email <b>support@firstlineperform.com</b>.</p>
     </div>
   </div>
 </section>
 <section class="tight">
   <div class="wrap">
-    <div class="grid cols3">
-      <div class="card"><h3>Parents</h3><p class="muted">Order questions are fastest from the order page in your account, where FLP can see the job. For anything else, email.</p></div>
-      <div class="card"><h3>Mentors</h3><p class="muted">Application status, payouts and profile questions: email with the address you applied with.</p></div>
-      <div class="card"><h3>Safety</h3><p class="muted">Anything concerning a minor's safety: email with "Safeguarding" in the subject and it goes to the top of the queue.</p></div>
+    <div class="grid cols2">
+      <form id="contact" class="card" style="gap:14px;display:grid">
+        <h3>Send a message</h3>
+        <label class="small" for="c-name">Your name</label><input id="c-name" name="name" class="field" autocomplete="name">
+        <label class="small" for="c-email">Email</label><input id="c-email" name="email" type="email" class="field" required autocomplete="email">
+        <label class="small" for="c-subject">Subject</label><input id="c-subject" name="subject" class="field">
+        <label class="small" for="c-body">What's going on?</label><textarea id="c-body" name="body" class="field" rows="6" required></textarea>
+        <input name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
+        <button class="btn primary" type="submit">Send</button>
+        <p id="c-status" class="small" aria-live="polite"></p>
+      </form>
+      <div>
+        <div class="card" style="margin-bottom:16px"><h3>Parents</h3><p class="muted">Order questions are fastest from the order page in your account, where FLP can see the job.</p></div>
+        <div class="card" style="margin-bottom:16px"><h3>Mentors</h3><p class="muted">Application status, payouts and profile questions: use the address you applied with.</p></div>
+        <div class="card"><h3>Safety</h3><p class="muted">Anything concerning a minor's safety: put "Safeguarding" in the subject and it goes to the top of the queue.</p></div>
+      </div>
     </div>
     <p class="small" style="margin-top:22px">First Line Performance LLC.</p>
   </div>

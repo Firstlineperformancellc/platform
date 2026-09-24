@@ -44,4 +44,23 @@ function shell(title: string, body: string) {
   </div></body>`;
 }
 
+// Support mail: to any address, from the support identity when the domain is verified, threaded.
+export async function sendMail(opts: { to: string; subject: string; html: string; text?: string; from?: string; replyTo?: string; inReplyTo?: string; references?: string[] }) {
+  if (!resend) return { sent: false as const, id: null, error: "mail not configured" };
+  const headers: Record<string, string> = {};
+  if (opts.inReplyTo) headers["In-Reply-To"] = opts.inReplyTo;
+  if (opts.references?.length) headers["References"] = opts.references.join(" ");
+  try {
+    const r = await resend.emails.send({
+      from: opts.from ?? FROM, to: opts.to, subject: opts.subject, html: opts.html, text: opts.text,
+      replyTo: opts.replyTo, headers: Object.keys(headers).length ? headers : undefined,
+    });
+    if (r.error) return { sent: false as const, id: null, error: r.error.message };
+    return { sent: true as const, id: r.data?.id ?? null, error: null };
+  } catch (err) {
+    return { sent: false as const, id: null, error: (err as Error).message };
+  }
+}
+export const mailShell = shell;
+
 export const appUrl = (path: string) => `${process.env.APP_ORIGIN ?? "https://dev.firstlineperform.com"}${path}`;
