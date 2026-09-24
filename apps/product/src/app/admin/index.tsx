@@ -7,15 +7,19 @@ import { Card } from "@/components/ui/Card";
 import { Body, Display, H3, Small } from "@/components/ui/Text";
 import { counts } from "@/lib/admin";
 import { ticketCounts } from "@/lib/support";
+import { latestRun, type Run } from "@/lib/health";
+import { HealthBadge } from "@/components/HealthMeter";
 import { colors, space } from "@/theme/tokens";
 
 export default function AdminHome() {
   const [c, setC] = useState<Awaited<ReturnType<typeof counts>> | null>(null);
   const [tc, setTc] = useState<{ open: number; pending: number } | null>(null);
+  const [health, setHealth] = useState<Run | null | undefined>(undefined);
   useFocusEffect(
     useCallback(() => {
       counts().then(setC);
       ticketCounts().then(setTc).catch(() => setTc({ open: 0, pending: 0 }));
+      latestRun().then(setHealth).catch(() => setHealth(null));
     }, []),
   );
   const tiles = [
@@ -29,6 +33,7 @@ export default function AdminHome() {
   ];
   return (
     <AdminShell title="Control center">
+      <HealthBadge run={health} />
       <View style={s.grid}>
         {tiles.map((t) => (
           <Card key={t.label} style={[s.cell, (t.n ?? 0) > 0 && s.hot]}>

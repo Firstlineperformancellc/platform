@@ -14,6 +14,7 @@ import { mentors } from "./routes/mentors.js";
 import { sessions } from "./routes/sessions.js";
 import { media } from "./routes/media.js";
 import { support } from "./routes/support.js";
+import { health } from "./routes/health.js";
 
 const app = new Hono();
 
@@ -56,6 +57,7 @@ app.route("/mentors", mentors);
 app.route("/sessions", sessions);
 app.route("/media", media);
 app.route("/support", support);
+app.route("/admin/health", health);
 app.route("/internal", internal);
 app.route("/webhooks", webhooks);
 

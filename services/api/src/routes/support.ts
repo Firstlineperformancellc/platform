@@ -151,6 +151,15 @@ support.post("/inbound", async (c) => {
   return c.json({ ok: true, ticket: t.number, created: true });
 });
 
+// POST /support/heartbeat — the mailbox script calls this on every run so the health meter can
+// tell whether the email door is alive. { handled: n }
+support.post("/heartbeat", async (c) => {
+  if (!env.inboundEmailSecret || c.req.header("x-inbound-secret") !== env.inboundEmailSecret) return c.json({ error: "forbidden" }, 403);
+  const meta = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  await admin.from("service_heartbeats").upsert({ service: "support-inbox", last_seen_at: new Date().toISOString(), meta });
+  return c.json({ ok: true });
+});
+
 // ---- admin side --------------------------------------------------------------------------
 async function requireAdmin(authorization: string | undefined) {
   const user = await userFromBearer(authorization);

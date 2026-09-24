@@ -16,7 +16,8 @@ Mail stays on Google Workspace. A Google Apps Script in the mailbox that receive
 4. Run `setup` once from the editor. Approve the Gmail and "connect to external service" permissions.
    That installs the trigger and processes anything already waiting.
 5. Send a test email to support@ and watch it appear in /admin/support within five minutes. The
-   message gets the Gmail label "FLP/Ticketed" once it's handed over.
+   message gets the Gmail label "FLP/Ticketed" once it's handed over. Each run also pings the API, so
+   the Service Health Meter on the admin overview shows "Support inbox" as healthy while the script is alive.
 
 ## Outbound (replies from support@)
 

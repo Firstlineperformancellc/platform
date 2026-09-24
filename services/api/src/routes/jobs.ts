@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { userFromBearer } from "../supabase.js";
 import { respondToOffer, tick } from "../jobs.js";
+import { healthTick } from "../health.js";
 import { sessionsTick } from "../sessionsTick.js";
 
 export const jobs = new Hono();
@@ -35,5 +36,6 @@ internal.get("/tick", async (c) => {
   if (!secret || c.req.header("x-tick-secret") !== secret) return c.json({ error: "forbidden" }, 403);
   const report = await tick();
   const sessionReport = await sessionsTick();
-  return c.json({ ok: true, ...report, sessions: sessionReport, at: new Date().toISOString() });
+  const healthReport = await healthTick().catch((e) => ({ ran: false, error: (e as Error).message }));
+  return c.json({ ok: true, ...report, sessions: sessionReport, health: healthReport, at: new Date().toISOString() });
 });

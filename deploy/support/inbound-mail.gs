@@ -6,6 +6,7 @@
  * so a human can see what went over); the API also ignores a message it has already stored.
  */
 var API_URL = "https://api.firstlineperform.com/support/inbound";  // dev: https://api-dev.firstlineperform.com/support/inbound
+var HEARTBEAT_URL = API_URL.replace(/\/inbound$/, "/heartbeat");   // tells the Service Health Meter this script is alive
 var SECRET  = "PASTE_INBOUND_EMAIL_SECRET_HERE";                     // INBOUND_EMAIL_SECRET from the API env file
 var LABEL   = "FLP/Ticketed";
 var QUERY   = "to:support@firstlineperform.com newer_than:3d -from:support@firstlineperform.com";
@@ -42,4 +43,7 @@ function handOver() {
     });
   });
   STORE.setProperty("handled", JSON.stringify(done.slice(-2000)));
+  try {
+    UrlFetchApp.fetch(HEARTBEAT_URL, { method: "post", contentType: "application/json", headers: { "x-inbound-secret": SECRET }, payload: JSON.stringify({ handled: done.length }), muteHttpExceptions: true });
+  } catch (e) { console.error("FLP heartbeat failed: " + e); }
 }
