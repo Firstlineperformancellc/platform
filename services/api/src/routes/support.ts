@@ -23,7 +23,7 @@ const stripQuoted = (t: string) => {
 };
 
 async function requesterId(email: string) {
-  const { data } = await admin.from("profiles").select("id, full_name").ilike("email", email).maybeSingle();
+  const { data } = await admin.from("profiles").select("id, full_name").eq("email", email.toLowerCase()).limit(1).maybeSingle();
   return data;
 }
 
@@ -36,7 +36,7 @@ async function createTicket(input: { subject: string; body: string; html?: strin
   const who = await requesterId(input.email);
   const { data: t, error } = await admin
     .from("support_tickets")
-    .insert({ subject: input.subject.slice(0, 200) || "(no subject)", channel: input.channel, requester_email: input.email.toLowerCase(), requester_name: (input.name ?? who?.full_name ?? "").slice(0, 120), requester_id: who?.id ?? null, last_direction: "in" })
+    .insert({ subject: input.subject.slice(0, 200) || "(no subject)", channel: input.channel, requester_email: input.email.toLowerCase(), requester_name: (input.name || who?.full_name || "").slice(0, 120), requester_id: who?.id ?? null, last_direction: "in" })
     .select("id, number")
     .single();
   if (error || !t) throw new Error(error?.message ?? "could not create ticket");
@@ -71,10 +71,11 @@ support.post("/tickets", async (c) => {
   const b = (await c.req.json().catch(() => ({}))) as { subject?: string; body?: string; email?: string; name?: string; website?: string };
   if (b.website) return c.json({ ok: true }); // honeypot for site bots
   const user = await userFromBearer(c.req.header("authorization"));
-  const ip = c.req.header("x-forwarded-for")?.split(",")[0].trim() || c.req.header("x-real-ip") || "unknown";
-  if (overLimit(user ? `u:${user.id}` : `ip:${ip}`)) return c.json({ error: "too many messages in a row; email support@firstlineperform.com instead" }, 429);
-  const email = (user?.email ?? b.email ?? "").trim();
+  const email = (user?.email ?? b.email ?? "").trim().toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return c.json({ error: "a valid email is required" }, 400);
+  const ip = c.req.header("x-forwarded-for")?.split(",")[0].trim() || c.req.header("x-real-ip") || "";
+  const limited = user ? overLimit(`u:${user.id}`) : [overLimit(`e:${email}`), ip ? overLimit(`ip:${ip}`) : false].some(Boolean);
+  if (limited) return c.json({ error: "too many messages in a row; email support@firstlineperform.com instead" }, 429);
   const body = (b.body ?? "").trim();
   if (body.length < 5) return c.json({ error: "tell us what's going on" }, 400);
   const subject = (b.subject ?? "").trim() || body.slice(0, 80);
@@ -137,7 +138,7 @@ support.post("/inbound", async (c) => {
     }
   }
   if (!ticket) {
-    const { data } = await admin.from("support_tickets").select("id, number, status").ilike("requester_email", email).in("status", ["open", "pending"]).order("last_message_at", { ascending: false }).limit(1).maybeSingle();
+    const { data } = await admin.from("support_tickets").select("id, number, status").eq("requester_email", email).in("status", ["open", "pending"]).order("last_message_at", { ascending: false }).limit(1).maybeSingle();
     if (data && /^(re|fwd?):/i.test(subject)) ticket = data; // a reply from a sender who has an open ticket
   }
   if (ticket) {

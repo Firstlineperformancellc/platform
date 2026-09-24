@@ -1,7 +1,7 @@
 /**
  * FLP support inbox → platform. Paste into script.google.com while signed in as the account that
  * receives support@firstlineperform.com, set the two constants, run `setup` once (it asks for Gmail
- * permission and installs a 2-minute trigger). Every new message addressed to support@ is posted
+ * permission and installs a 5-minute trigger). Every new message addressed to support@ is posted
  * to the API. Handled messages are remembered by id (and the thread gets the label "FLP/Ticketed"
  * so a human can see what went over); the API also ignores a message it has already stored.
  */
@@ -14,7 +14,7 @@ var STORE   = PropertiesService.getScriptProperties();
 function setup() {
   GmailApp.getUserLabelByName(LABEL) || GmailApp.createLabel(LABEL);
   ScriptApp.getProjectTriggers().forEach(function (t) { ScriptApp.deleteTrigger(t); });
-  ScriptApp.newTrigger("handOver").timeBased().everyMinutes(2).create();
+  ScriptApp.newTrigger("handOver").timeBased().everyMinutes(5).create();
   handOver();
 }
 

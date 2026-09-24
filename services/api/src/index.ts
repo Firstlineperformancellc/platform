@@ -25,6 +25,7 @@ const ORIGINS = [
   "https://dev.firstlineperform.com",
   "https://app.firstlineperform.com",
   "https://firstlineperform.com",
+  "https://www.firstlineperform.com",
   "https://beta.firstlineperform.com",
 ];
 app.use(

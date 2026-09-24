@@ -11,7 +11,7 @@ export default function SupportSetup() {
       <Card>
         <H3>How a ticket gets here</H3>
         <Body>Three doors, one queue.</Body>
-        <Body>• <Body style={{ color: colors.ink }}>Email</Body> to support@firstlineperform.com. A small script in that mailbox hands every new message to the platform within a couple of minutes. Replies from customers land on the same ticket by the [FLP-123] tag in the subject.</Body>
+        <Body>• <Body style={{ color: colors.ink }}>Email</Body> to support@firstlineperform.com. A small script in that mailbox hands every new message to the platform within five minutes. Replies from customers land on the same ticket by the [FLP-123] tag in the subject.</Body>
         <Body>• <Body style={{ color: colors.ink }}>In the app</Body>: parents and mentors have a Contact support link on their dashboard.</Body>
         <Body>• <Body style={{ color: colors.ink }}>The website</Body>: the contact page posts straight into the queue.</Body>
       </Card>

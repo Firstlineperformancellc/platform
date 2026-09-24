@@ -108,7 +108,7 @@ export default function SupportTicket() {
             <Choice label="Status" options={(["open", "pending", "resolved", "closed"] as const).map((k) => ({ key: k, label: STATUS_LABEL[k] }))} value={t.status} onChange={(v) => run("status", () => updateTicket(t.id, { status: v as TicketStatus }))} />
             <Choice label="Priority" options={[{ key: "low", label: "Low" }, { key: "normal", label: "Normal" }, { key: "high", label: "High" }, { key: "urgent", label: "Urgent" }]} value={t.priority} onChange={(v) => run("priority", () => updateTicket(t.id, { priority: v as Ticket["priority"] }))} />
             <Choice label="Assigned to" options={[{ key: "", label: "Unassigned" }, ...admins.map((a) => ({ key: a.id, label: a.full_name || "Admin" }))]} value={t.assigned_to ?? ""} onChange={(v) => run("assign", () => updateTicket(t.id, { assigned_to: (v as string) || null }))} />
-            <TextField label="Tags (comma-separated)" value={tags} onChangeText={setTags} placeholder="billing, film room, bug" autoCapitalize="none" onBlur={() => run("tags", () => updateTicket(t.id, { tags: tags.split(",").map((x) => x.trim()).filter(Boolean) }))} />
+            <TextField label="Tags (comma-separated)" value={tags} onChangeText={setTags} placeholder="billing, film room, bug" autoCapitalize="none" onBlur={() => { const next = tags.split(",").map((x) => x.trim().toLowerCase()).filter(Boolean); if (next.join(",") !== t.tags.join(",")) run("tags", () => updateTicket(t.id, { tags: next })); }} />
           </Card>
           <Card>
             <H3>Requester</H3>

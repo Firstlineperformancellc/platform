@@ -6,7 +6,7 @@ and the website's contact form. Admins answer from /admin/support; every reply i
 ## Inbound (support@ → tickets)
 
 Mail stays on Google Workspace. A Google Apps Script in the mailbox that receives support@
-(`inbound-mail.gs`) posts each new message to the API every two minutes.
+(`inbound-mail.gs`) posts each new message to the API every five minutes.
 
 1. Make sure support@firstlineperform.com delivers to a mailbox you can sign into (a Workspace user,
    or an alias of admin@).
@@ -15,7 +15,7 @@ Mail stays on Google Workspace. A Google Apps Script in the mailbox that receive
    API env file.
 4. Run `setup` once from the editor. Approve the Gmail and "connect to external service" permissions.
    That installs the trigger and processes anything already waiting.
-5. Send a test email to support@ and watch it appear in /admin/support within two minutes. The
+5. Send a test email to support@ and watch it appear in /admin/support within five minutes. The
    message gets the Gmail label "FLP/Ticketed" once it's handed over.
 
 ## Outbound (replies from support@)
