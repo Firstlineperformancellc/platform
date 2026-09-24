@@ -11,9 +11,9 @@ safe="$(printf "%s" "$EMAIL" | tr -d "'\\\\")"
 npx --no-install supabase db query --linked --project-ref "$REF" -o json \
   "update public.profiles set role = 'admin' where lower(email) = lower('$safe') returning email, role" 2>&1 \
   | python3 -c 'import json,sys
-raw=sys.stdin.read(); i=raw.find("{")
+raw=sys.stdin.read(); i=min([k for k in (raw.find("{"), raw.find("[")) if k>=0] or [-1])
 try:
-    rows=json.JSONDecoder().raw_decode(raw[i:])[0].get("rows") or []
+    rows=(lambda d: d if isinstance(d,list) else d.get("rows"))(json.JSONDecoder().raw_decode(raw[i:])[0]) or []
     print("  " + ", ".join(r["email"] + " -> " + r["role"] for r in rows) if rows else "  no account with that email yet")
 except Exception: print("  (could not parse the result)")'
 npx --no-install supabase db query --linked --project-ref "$REF" -o json \

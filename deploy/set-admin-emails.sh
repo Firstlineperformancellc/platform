@@ -15,6 +15,6 @@ q "insert into public.audit_log (actor_id, action, target_type, target_id, meta)
 echo "allowlist on $REF: $list"
 q "select p.email, p.role from public.profiles p where lower(p.email) in (select lower(e) from jsonb_array_elements_text('$safe'::jsonb) e)" 2>/dev/null \
   2>&1 | python3 -c 'import json,sys
-raw=sys.stdin.read(); i=raw.find("{")
-rows=(json.JSONDecoder().raw_decode(raw[i:])[0].get("rows") if i>=0 else None) or []
+raw=sys.stdin.read(); i=min([k for k in (raw.find("{"), raw.find("[")) if k>=0] or [-1])
+rows=((lambda d: d if isinstance(d,list) else d.get("rows"))(json.JSONDecoder().raw_decode(raw[i:])[0]) if i>=0 else None) or []
 print("existing accounts promoted:", ", ".join(r["email"] + " (" + r["role"] + ")" for r in rows) if rows else "none yet; they become admins when they sign up")'
