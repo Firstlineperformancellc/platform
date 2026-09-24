@@ -105,3 +105,11 @@ Junior levels (OHL/WHL/QMJHL, USHL/NAHL/BCHL) are selectable as "highest level p
 - **Applicants finish on first sign-in.** With confirmed sign-ups, the mentor application creates the account first and the mentor profile after the applicant's first sign-in, from the dashboard card or the apply page.
 - **Phone-safe opening.** Join links, worksheet PDFs and recordings open through a helper that survives mobile popup blocking.
 - **Password reset** exists (sign-in page, branded email, `/reset-password`). **Terms and Privacy** are linked at sign-up and on the application, pointing at the drafts until counsel's versions replace them.
+
+## 2026-09-24 — Admin Users page
+
+- **Every account in one place.** Admin sees all parents, mentors and admins with search, role and status filters, joined and last sign-in dates, youth athletes, orders, Film Rooms, and money: what a parent has spent (and been refunded) or what a mentor has earned and been paid.
+- **Suspend and unsuspend** lock the account at the sign-in layer, refuse its API calls immediately, pull a mentor off the marketplace, email the person with the reason, and log the action.
+- **Delete** erases an account outright only when nothing references it; an account with orders, sessions or payouts is deactivated instead, so ledgers and other people's records keep their history. Admins are managed from Settings, not deletable from Users, and nobody can act on their own account.
+- **Activity timeline** per account: created, sign-ins, orders, film uploads, breakdowns accepted and delivered, reviews, audits, Film Rooms booked and completed, packs, payouts, and every admin action on the account.
+- **Guard:** users cannot change their own suspension or deletion flags.
