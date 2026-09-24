@@ -8,7 +8,7 @@ REF="${1:?project ref}"; shift
 cd "$(dirname "$0")/.."
 list="$(python3 -c 'import json,sys; print(json.dumps([e.strip().lower() for e in sys.argv[1:]]))' "$@")"
 safe="${list//\'/}"
-q() { npx --no-install supabase db query --linked --project-ref "$REF" "$1"; }
+q() { npx --no-install supabase db query --linked --project-ref "$REF" -o json "$1"; }
 q "update public.settings set admin_emails = '$safe'::jsonb where id = 1" >/dev/null
 q "update public.profiles p set role = 'admin' where lower(p.email) in (select lower(e) from jsonb_array_elements_text('$safe'::jsonb) e) and p.role <> 'admin'" >/dev/null
 q "insert into public.audit_log (actor_id, action, target_type, target_id, meta) select null, 'admin.allowlist', 'settings', null, jsonb_build_object('emails', '$safe'::jsonb, 'via', 'deploy/set-admin-emails.sh')" >/dev/null
