@@ -280,6 +280,77 @@ adminRoutes.post("/sessions/:id/complete", async (c) => {
   return c.json({ ok: true });
 });
 
+// --- Users -----------------------------------------------------------------------
+// Suspend, unsuspend, delete. Enforced at the auth layer (ban) and mirrored on the profile so the
+// directory shows it and the API refuses the account's calls.
+async function targetUser(c: { req: { param: (k: string) => string } }, me: { id: string }) {
+  const id = c.req.param("id");
+  const { data: p } = await admin.from("profiles").select("id, email, role, full_name, suspended_at, deleted_at").eq("id", id).maybeSingle();
+  if (!p) return { error: "not found", status: 404 as const };
+  if (p.id === me.id) return { error: "you can't act on your own account here", status: 400 as const };
+  if (p.role === "admin") return { error: "admins are managed from Settings, not here", status: 400 as const };
+  return { p };
+}
+
+adminRoutes.post("/users/:id/suspend", async (c) => {
+  const me = await requireAdmin(c.req.header("authorization"));
+  if (!me) return c.json({ error: "admin only" }, 403);
+  const t = await targetUser(c, me);
+  if ("error" in t) return c.json({ error: t.error }, t.status);
+  const { reason } = (await c.req.json().catch(() => ({}))) as { reason?: string };
+  const why = (reason ?? "").trim().slice(0, 500);
+  await admin.auth.admin.updateUserById(t.p.id, { ban_duration: "876000h" });
+  await admin.from("profiles").update({ suspended_at: new Date().toISOString(), suspended_reason: why || null }).eq("id", t.p.id);
+  if (t.p.role === "athlete") await admin.from("athletes").update({ status: "suspended", blocked_at: new Date().toISOString() }).eq("user_id", t.p.id).eq("status", "approved");
+  await audit(me.id, "user.suspend", "profile", t.p.id, { reason: why });
+  await notify(t.p.id, "account.suspended", "Your First Line Performance account is suspended",
+    `<p>An FLP admin has suspended your account.${why ? ` Reason: ${why}` : ""}</p><p>Reply to this email if you think this is a mistake.</p>`, { targetId: t.p.id });
+  return c.json({ ok: true });
+});
+
+adminRoutes.post("/users/:id/unsuspend", async (c) => {
+  const me = await requireAdmin(c.req.header("authorization"));
+  if (!me) return c.json({ error: "admin only" }, 403);
+  const t = await targetUser(c, me);
+  if ("error" in t) return c.json({ error: t.error }, t.status);
+  await admin.auth.admin.updateUserById(t.p.id, { ban_duration: "none" });
+  await admin.from("profiles").update({ suspended_at: null, suspended_reason: null }).eq("id", t.p.id);
+  if (t.p.role === "athlete") await admin.from("athletes").update({ status: "approved", blocked_at: null }).eq("user_id", t.p.id).eq("status", "suspended");
+  await audit(me.id, "user.unsuspend", "profile", t.p.id, {});
+  await notify(t.p.id, "account.restored", "Your First Line Performance account is active again", `<p>An FLP admin has restored your account. You can sign in as before.</p>`, { targetId: t.p.id });
+  return c.json({ ok: true });
+});
+
+// Delete: gone for good when nothing references the account; otherwise deactivated so orders,
+// sessions and the ledger keep their history.
+adminRoutes.post("/users/:id/delete", async (c) => {
+  const me = await requireAdmin(c.req.header("authorization"));
+  if (!me) return c.json({ error: "admin only" }, 403);
+  const t = await targetUser(c, me);
+  if ("error" in t) return c.json({ error: t.error }, t.status);
+  const id = t.p.id;
+  const refs = await Promise.all([
+    admin.from("orders").select("id", { count: "exact", head: true }).eq("parent_id", id),
+    admin.from("jobs").select("id", { count: "exact", head: true }).eq("athlete_id", id),
+    admin.from("sessions").select("id", { count: "exact", head: true }).or(`parent_id.eq.${id},athlete_id.eq.${id}`),
+    admin.from("session_packs").select("id", { count: "exact", head: true }).or(`parent_id.eq.${id},athlete_id.eq.${id}`),
+    admin.from("payouts").select("id", { count: "exact", head: true }).eq("athlete_id", id),
+    admin.from("job_offers").select("id", { count: "exact", head: true }).eq("athlete_id", id),
+  ]);
+  const referenced = refs.some((r) => (r.count ?? 0) > 0);
+  if (!referenced) {
+    await audit(me.id, "user.delete", "profile", id, { email: t.p.email, mode: "hard" });
+    const { error } = await admin.auth.admin.deleteUser(id);
+    if (error) return c.json({ error: error.message }, 500);
+    return c.json({ ok: true, mode: "deleted" });
+  }
+  await admin.auth.admin.updateUserById(id, { ban_duration: "876000h" });
+  await admin.from("profiles").update({ deleted_at: new Date().toISOString(), suspended_at: new Date().toISOString(), suspended_reason: "account deleted" }).eq("id", id);
+  if (t.p.role === "athlete") await admin.from("athletes").update({ status: "deactivated", blocked_at: new Date().toISOString(), deleted_at: new Date().toISOString() }).eq("user_id", id);
+  await audit(me.id, "user.delete", "profile", id, { email: t.p.email, mode: "deactivated" });
+  return c.json({ ok: true, mode: "deactivated" });
+});
+
 // --- Settings ----------------------------------------------------------------
 // PATCH /admin/settings { breakdown_prices?, mentor_share_pct?, session_prices?, rules?, taxonomy? }  (shallow-merged per key)
 adminRoutes.patch("/settings", async (c) => {

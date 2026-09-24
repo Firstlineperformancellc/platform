@@ -16,6 +16,7 @@ export default function AdminHome() {
     }, []),
   );
   const tiles = [
+    { n: c?.users, label: "Accounts", blurb: "Every parent, mentor and admin.", href: "/admin/users" as const },
     { n: c?.applications, label: "Mentor applications", blurb: "Waiting for approval.", href: "/admin/mentors" as const },
     { n: c?.needsAssignment, label: "Jobs needing a mentor", blurb: "Unassigned or waiting on a waitlist.", href: "/admin/jobs" as const },
     { n: c?.openAudits, label: "Open audits", blurb: "Quality Control Audits to resolve.", href: "/admin/audits" as const },

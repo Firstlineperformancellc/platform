@@ -10,6 +10,7 @@ import { colors, fonts, radius, space } from "@/theme/tokens";
 
 const NAV = [
   { href: "/admin", label: "Overview" },
+  { href: "/admin/users", label: "Users" },
   { href: "/admin/mentors", label: "Mentors" },
   { href: "/admin/jobs", label: "Orders & jobs" },
   { href: "/admin/sessions", label: "Film Room" },

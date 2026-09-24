@@ -14,5 +14,8 @@ export async function userFromBearer(authorization: string | undefined) {
   if (!token) return null;
   const { data, error } = await admin.auth.getUser(token);
   if (error || !data.user) return null;
+  // A suspended or deleted account keeps a valid token for up to an hour; refuse it here regardless.
+  const { data: p } = await admin.from("profiles").select("suspended_at, deleted_at").eq("id", data.user.id).maybeSingle();
+  if (p?.suspended_at || p?.deleted_at) return null;
   return data.user;
 }

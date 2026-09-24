@@ -161,6 +161,29 @@ export async function listPendingReviews(): Promise<PendingReview[]> {
   ];
   return rows.sort((x, y) => x.reviewed_at.localeCompare(y.reviewed_at));
 }
+export type AdminUser = {
+  id: string; email: string; full_name: string; role: "parent" | "athlete" | "admin"; created_at: string;
+  suspended_at: string | null; suspended_reason: string | null; deleted_at: string | null;
+  last_sign_in_at: string | null; email_confirmed_at: string | null; banned_until: string | null;
+  mentor_slug: string | null; mentor_status: string | null; mentor_tier: string | null;
+  players: number; orders: number; spent_orders_cents: number; spent_sessions_cents: number; spent_packs_cents: number; refunded_cents: number;
+  sessions: number; breakdowns_delivered: number; earned_cents: number; paid_out_cents: number;
+};
+export async function listUsers(): Promise<AdminUser[]> {
+  const { data, error } = await supabase.from("admin_users").select("*").order("created_at", { ascending: false }).limit(1000);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as AdminUser[];
+}
+export type ActivityRow = { user_id: string; at: string; kind: string; detail: string | null; ref: string | null };
+export async function userActivity(userId: string): Promise<ActivityRow[]> {
+  const { data, error } = await supabase.from("admin_user_activity").select("*").eq("user_id", userId).order("at", { ascending: false }).limit(150);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as ActivityRow[];
+}
+export const suspendUser = (id: string, reason: string) => api<{ ok: true }>(`/admin/users/${id}/suspend`, { method: "POST", body: JSON.stringify({ reason }) });
+export const unsuspendUser = (id: string) => api<{ ok: true }>(`/admin/users/${id}/unsuspend`, { method: "POST" });
+export const deleteUser = (id: string) => api<{ ok: true; mode: "deleted" | "deactivated" }>(`/admin/users/${id}/delete`, { method: "POST" });
+
 export const adminCancelSession = (id: string, reason: string) => api<{ ok: true }>(`/admin/sessions/${id}/cancel`, { method: "POST", body: JSON.stringify({ reason }) });
 export const adminNoShow = (id: string, who: "mentor" | "parent") => api<{ ok: true }>(`/admin/sessions/${id}/no-show`, { method: "POST", body: JSON.stringify({ who }) });
 export const adminCompleteSession = (id: string) => api<{ ok: true }>(`/admin/sessions/${id}/complete`, { method: "POST" });
@@ -171,7 +194,7 @@ export const patchSettings = (patch: Record<string, unknown>) => api<{ ok: true 
 export const grantAdmin = (email: string) => api<{ ok: true }>("/admin/admins", { method: "POST", body: JSON.stringify({ email }) });
 
 export async function counts() {
-  const [mentors, jobs, audits, payouts, reviews, sessions, sessionReviews] = await Promise.all([
+  const [mentors, jobs, audits, payouts, reviews, sessions, sessionReviews, users] = await Promise.all([
     supabase.from("athletes").select("status", { count: "exact", head: true }).eq("status", "applied"),
     supabase.from("jobs").select("status", { count: "exact", head: true }).in("status", ["unassigned", "waiting"]),
     supabase.from("quality_audits").select("id", { count: "exact", head: true }).eq("status", "open"),
@@ -179,6 +202,7 @@ export async function counts() {
     supabase.from("breakdowns").select("id", { count: "exact", head: true }).eq("review_status", "pending_admin"),
     supabase.from("sessions").select("id", { count: "exact", head: true }).in("status", ["requested", "scheduled", "in_progress"]),
     supabase.from("sessions").select("id", { count: "exact", head: true }).eq("review_status", "pending_admin"),
+    supabase.from("profiles").select("id", { count: "exact", head: true }),
   ]);
-  return { applications: mentors.count ?? 0, needsAssignment: jobs.count ?? 0, openAudits: audits.count ?? 0, owedPayouts: payouts.count ?? 0, pendingReviews: (reviews.count ?? 0) + (sessionReviews.count ?? 0), liveSessions: sessions.count ?? 0 };
+  return { applications: mentors.count ?? 0, needsAssignment: jobs.count ?? 0, openAudits: audits.count ?? 0, owedPayouts: payouts.count ?? 0, pendingReviews: (reviews.count ?? 0) + (sessionReviews.count ?? 0), liveSessions: sessions.count ?? 0, users: users.count ?? 0 };
 }
