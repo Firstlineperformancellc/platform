@@ -24,3 +24,6 @@ supabase/.temp/
 
 # demo mentor photos are supplied locally and never committed
 deploy/demo/avatars/
+
+# Scott's FLP business paperwork (receipts, invoices): not part of the handover repo
+finance/
