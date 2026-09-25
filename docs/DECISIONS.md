@@ -128,3 +128,8 @@ Junior levels (OHL/WHL/QMJHL, USHL/NAHL/BCHL) are selectable as "highest level p
 - **Three states plus one.** Healthy, Needs attention (answered, but the setup is incomplete), Unhealthy (no answer or refused). "Not connected" services (Stripe until it exists) are shown but never counted, so the meter can be green before launch. If no run lands for two hours the meter reads "Checks overdue", which means the job timer itself is down.
 - **Reporting.** One email to every admin when a service turns unhealthy and one when it recovers; nothing repeats hourly. Runs are kept for 30 days (`service_health_runs`, admin-read RLS; migration 0019).
 - **Placement.** Health is its own admin tab (`/admin/health`: meter, each service, last 48 runs). The Control Center carries a slim badge with the overall state and one dot per service, linking to the tab. Scott reviewed a mockup (`docs/mockups/service-health-meter.html`) before it shipped.
+
+## 2026-09-25 — Contact details and Contact button on Users
+
+- **Every account carries name, email, phone and mailing address** (migration 0020 adds `profiles.address`; phone existed). People fill them in themselves: parents on a new Account page, mentors at the bottom of their profile page. Only the owner can edit them; admins see them on the Users tile.
+- **Contact sends a real email from the Users tile** and opens a support ticket for it (status "waiting on customer", assigned to the sender), so the person's reply threads straight back into the Support desk by the `[FLP-n]` tag. It goes out from the support identity with support@ as reply-to, is audit-logged as `user.contact`, and the tile reports honestly if the mail provider refused the address.

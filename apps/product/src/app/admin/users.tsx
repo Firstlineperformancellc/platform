@@ -9,6 +9,7 @@ import { Pill } from "@/components/ui/Pill";
 import { TextField } from "@/components/ui/TextField";
 import { Body, H3, Small } from "@/components/ui/Text";
 import { deleteUser, listUsers, suspendUser, unsuspendUser, userActivity, type ActivityRow, type AdminUser } from "@/lib/admin";
+import { contactUser } from "@/lib/support";
 import { useAuth } from "@/lib/auth";
 import { money } from "@/lib/settings";
 import { colors, space } from "@/theme/tokens";
@@ -44,6 +45,9 @@ export default function AdminUsers() {
   const [confirm, setConfirm] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [compose, setCompose] = useState<string | null>(null);
+  const [cSubject, setCSubject] = useState("");
+  const [cBody, setCBody] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
@@ -84,7 +88,7 @@ export default function AdminUsers() {
   const shown = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return (rows ?? []).filter((u) => {
-      if (needle && !`${u.full_name} ${u.email}`.toLowerCase().includes(needle)) return false;
+      if (needle && !`${u.full_name} ${u.email} ${u.phone ?? ""}`.toLowerCase().includes(needle)) return false;
       if (filter === "parents") return u.role === "parent";
       if (filter === "mentors") return u.role === "athlete";
       if (filter === "admins") return u.role === "admin";
@@ -121,7 +125,9 @@ export default function AdminUsers() {
             <View style={s.head}>
               <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
                 <H3>{u.full_name || "(no name)"}{isMe ? " · you" : ""}</H3>
-                <Small>{u.email}</Small>
+                <Small selectable>{u.email}</Small>
+                {u.phone ? <Small selectable>{u.phone}</Small> : null}
+                {u.address ? <Small selectable>{u.address.replace(/\s*\n+\s*/g, ", ")}</Small> : null}
                 <Small>
                   Joined {new Date(u.created_at).toLocaleDateString()} · last sign-in {u.last_sign_in_at ? when(u.last_sign_in_at) : "never"}
                 </Small>
@@ -152,6 +158,7 @@ export default function AdminUsers() {
             </View>
             {u.suspended_reason ? <Small style={{ color: colors.danger }}>Reason: {u.suspended_reason}</Small> : null}
             <View style={s.row}>
+              {!isMe && !u.deleted_at ? <Button title="Contact" variant="secondary" small onPress={() => { setCompose(compose === u.id ? null : u.id); setCSubject(""); setCBody(""); }} /> : null}
               <Button title={isOpen ? "Hide activity" : "Activity"} variant="ghost" small onPress={() => toggle(u.id)} />
               {canAct && !u.suspended_at ? (
                 <>
@@ -172,6 +179,16 @@ export default function AdminUsers() {
                 )
               ) : null}
             </View>
+            {compose === u.id ? (
+              <View style={s.composer}>
+                <TextField label="Subject" value={cSubject} onChangeText={setCSubject} placeholder="A note from First Line Performance" />
+                <TextField label={`Message to ${u.full_name || u.email}`} value={cBody} onChangeText={setCBody} multiline style={{ minHeight: 110, textAlignVertical: "top" }} placeholder="Goes out by email from support@firstlineperform.com. Their reply lands in the Support desk." />
+                <View style={s.actions}>
+                  <Button title="Send email" small loading={busy === `c-${u.id}`} disabled={!cBody.trim()} onPress={() => run(`c-${u.id}`, async () => { const r = await contactUser(u.id, cSubject, cBody); setCompose(null); setMsg(r.mailed ? `Sent to ${u.email} as ticket #${r.number}.` : `Saved as ticket #${r.number}, but the email did not send: ${r.error ?? "mail not configured"}`); })} />
+                  <Button title="Cancel" variant="ghost" small onPress={() => setCompose(null)} />
+                </View>
+              </View>
+            ) : null}
             {isOpen ? (
               <View style={s.timeline}>
                 {!activity[u.id] ? (
@@ -206,6 +223,8 @@ function Stat({ k, v }: { k: string; v: string }) {
 }
 
 const s = StyleSheet.create({
+  actions: { flexDirection: "row", gap: 8, alignItems: "center", flexWrap: "wrap" },
+  composer: { gap: 8, borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 10, marginTop: 4 },
   toolbar: { flexDirection: "row", flexWrap: "wrap", gap: space.md, alignItems: "flex-end" },
   head: { flexDirection: "row", gap: space.md, alignItems: "flex-start", flexWrap: "wrap" },
   pills: { flexDirection: "row", gap: 6, flexWrap: "wrap" },

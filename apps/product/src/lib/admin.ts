@@ -168,6 +168,7 @@ export type AdminUser = {
   mentor_slug: string | null; mentor_status: string | null; mentor_tier: string | null;
   players: number; orders: number; spent_orders_cents: number; spent_sessions_cents: number; spent_packs_cents: number; refunded_cents: number;
   sessions: number; breakdowns_delivered: number; earned_cents: number; paid_out_cents: number;
+  phone: string | null; address: string | null;
 };
 export async function getUser(id: string): Promise<AdminUser | null> {
   const { data } = await supabase.from("admin_users").select("*").eq("id", id).maybeSingle();

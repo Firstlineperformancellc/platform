@@ -53,6 +53,9 @@ export const updateTicket = (id: string, patch: Partial<Pick<Ticket, "status" | 
 export const saveCanned = (row: { id?: string; title: string; body: string; sort?: number }) => api<{ ok: true }>("/support/admin/canned", { method: "POST", body: JSON.stringify(row) });
 export const deleteCanned = (id: string) => api<{ ok: true }>(`/support/admin/canned/${id}`, { method: "DELETE" });
 
+// Users page: email a person; the API opens a ticket so the reply comes back into the desk.
+export const contactUser = (userId: string, subject: string, body: string) => api<{ ok: true; number: number; ticketId: string; mailed: boolean; error: string | null }>(`/support/admin/contact/${userId}`, { method: "POST", body: JSON.stringify({ subject, body }) });
+
 // requester side
 export const openTicket = (subject: string, body: string) => api<{ ok: true; number: number; ticketId: string }>("/support/tickets", { method: "POST", body: JSON.stringify({ subject, body }) });
 export const requesterReply = (id: string, body: string) => api<{ ok: true }>(`/support/tickets/${id}/reply`, { method: "POST", body: JSON.stringify({ body }) });

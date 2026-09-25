@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/Card";
 import { Choice } from "@/components/ui/Choice";
 import { Pill } from "@/components/ui/Pill";
 import { Screen } from "@/components/ui/Screen";
+import { ContactDetails } from "@/components/ContactDetails";
 import { TextField } from "@/components/ui/TextField";
 import { Body, H1, H3, Label, Small } from "@/components/ui/Text";
 import { Loading } from "@/lib/auth";
@@ -208,6 +209,7 @@ export default function MentorProfileScreen() {
           <Body style={{ color: colors.muted }}>Payout setup opens once FLP's Stripe account is connected. You'll get an email.</Body>
         )}
       </Card>
+      <ContactDetails />
     </Screen>
   );
 }

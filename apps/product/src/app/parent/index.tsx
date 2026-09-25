@@ -16,6 +16,7 @@ export default function ParentHome() {
       <View style={s.topbar}>
         <Brand size={44} />
         <View style={{ flexDirection: "row", gap: 8 }}>
+          <Link href="/parent/account" asChild><Button title="Account" variant="ghost" small /></Link>
           <Link href="/support" asChild><Button title="Support" variant="ghost" small /></Link>
           <Button title="Sign out" variant="ghost" small onPress={signOut} />
         </View>

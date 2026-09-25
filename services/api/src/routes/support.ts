@@ -197,6 +197,33 @@ support.post("/admin/:id/reply", async (c) => {
   return c.json({ ok: true, mailed: mail.sent, error: mail.error });
 });
 
+// POST /support/admin/contact/:userId { subject, body } — email a person from the Users page. The
+// message opens a ticket (already answered, waiting on them) so their reply lands in the desk.
+support.post("/admin/contact/:userId", async (c) => {
+  const me = await requireAdmin(c.req.header("authorization"));
+  if (!me) return c.json({ error: "admin only" }, 403);
+  const { data: who } = await admin.from("profiles").select("id, email, full_name, deleted_at").eq("id", c.req.param("userId")).maybeSingle();
+  if (!who?.email) return c.json({ error: "no such account" }, 404);
+  if (who.deleted_at) return c.json({ error: "that account is deactivated" }, 400);
+  const b = (await c.req.json().catch(() => ({}))) as { subject?: string; body?: string };
+  const text = (b.body ?? "").trim();
+  if (!text) return c.json({ error: "write the message first" }, 400);
+  const subject = (b.subject ?? "").trim().slice(0, 200) || "A note from First Line Performance";
+  const { data: t, error } = await admin
+    .from("support_tickets")
+    .insert({ subject, channel: "app", status: "pending", requester_email: who.email.toLowerCase(), requester_name: who.full_name ?? "", requester_id: who.id, assigned_to: me.id, last_direction: "out" })
+    .select("id, number")
+    .single();
+  if (error || !t) return c.json({ error: error?.message ?? "could not open a ticket" }, 500);
+  const mailSubject = `${tag(t.number)} ${subject}`.slice(0, 200);
+  const signature = `<p style="margin-top:20px;color:#999">${escape(me.full_name || "FLP")}<br/>First Line Performance</p>`;
+  const mail = await sendMail({ to: who.email, from: supportFrom(), replyTo: SUPPORT_ADDR, subject: mailSubject, html: mailShell(subject, textToHtml(text) + signature), text });
+  await admin.from("support_messages").insert({ ticket_id: t.id, direction: "out", author_id: me.id, from_email: supportFrom().replace(/^.*<|>.*$/g, ""), to_email: who.email, subject: mailSubject, body_text: text.slice(0, 20000), message_id: mail.id ? `<${mail.id}@resend>` : null });
+  await auditRow(me.id, "user.contact", t.id, { user_id: who.id, mailed: mail.sent, error: mail.error });
+  await admin.from("notifications").insert({ user_id: who.id, channel: "email", template: "support.contact", payload: { subject: mailSubject, targetId: t.id }, sent_at: mail.sent ? new Date().toISOString() : null, error: mail.error });
+  return c.json({ ok: true, number: t.number, ticketId: t.id, mailed: mail.sent, error: mail.error });
+});
+
 // POST /support/admin/:id/note { body }  — internal, never mailed
 support.post("/admin/:id/note", async (c) => {
   const me = await requireAdmin(c.req.header("authorization"));
