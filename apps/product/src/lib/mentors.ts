@@ -15,6 +15,7 @@ export type MarketplaceMentor = {
   bio: string;
   photo_media_id: string | null;
   photo_path: string | null;
+  eliteprospects_url?: string | null;
   video_media_id: string | null;
   video_playback_id: string | null;
   capacity_on_deck: number;
@@ -27,7 +28,7 @@ export type MarketplaceMentor = {
 };
 
 const COLS =
-  "user_id, slug, display_name, tier, highest_level, current_team, badges, positions, specialties, bio, photo_media_id, photo_path, video_media_id, video_playback_id, capacity_on_deck, jobs_on_deck, available, avg_turnaround_hours, avg_rating, rating_count, jobs_completed";
+  "user_id, slug, display_name, tier, highest_level, current_team, badges, positions, specialties, bio, photo_media_id, photo_path, video_media_id, video_playback_id, capacity_on_deck, jobs_on_deck, available, avg_turnaround_hours, avg_rating, rating_count, jobs_completed, eliteprospects_url";
 
 export async function listMentors(position?: HockeyPosition): Promise<MarketplaceMentor[]> {
   let q = supabase.from("marketplace_mentors").select(COLS).order("available", { ascending: false }).order("display_name");

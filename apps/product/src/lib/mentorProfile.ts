@@ -12,6 +12,7 @@ export type MentorProfile = {
   specialties: string[];
   positions: HockeyPosition[];
   current_team: string;
+  eliteprospects_url: string | null;
   highest_level: string | null;
   badges: string[];
   tier: string | null;
@@ -26,7 +27,7 @@ export type MentorProfile = {
   payouts_enabled: boolean;
 };
 
-const COLS = "user_id, slug, display_name, bio, specialties, positions, current_team, highest_level, badges, tier, status, verified, capacity_on_deck, availability, timezone, photo_path, video_media_id, stripe_account_id, payouts_enabled";
+const COLS = "user_id, slug, display_name, bio, specialties, positions, current_team, highest_level, badges, eliteprospects_url, tier, status, verified, capacity_on_deck, availability, timezone, photo_path, video_media_id, stripe_account_id, payouts_enabled";
 
 export async function getMyProfile(): Promise<MentorProfile | null> {
   const { data: auth } = await supabase.auth.getUser();
@@ -35,7 +36,7 @@ export async function getMyProfile(): Promise<MentorProfile | null> {
   return (data as MentorProfile | null) ?? null;
 }
 
-export type MentorProfilePatch = Partial<Pick<MentorProfile, "display_name" | "bio" | "specialties" | "positions" | "current_team" | "highest_level" | "badges" | "capacity_on_deck" | "availability" | "timezone" | "photo_path" | "video_media_id">>;
+export type MentorProfilePatch = Partial<Pick<MentorProfile, "display_name" | "bio" | "specialties" | "positions" | "current_team" | "eliteprospects_url" | "highest_level" | "badges" | "capacity_on_deck" | "availability" | "timezone" | "photo_path" | "video_media_id">>;
 
 export async function saveMyProfile(patch: MentorProfilePatch) {
   const { data: auth } = await supabase.auth.getUser();

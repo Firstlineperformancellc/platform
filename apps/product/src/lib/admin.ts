@@ -10,6 +10,10 @@ export type AdminMentor = {
   status: string;
   tier: string | null;
   highest_level: string | null;
+  eliteprospects_url?: string | null;
+  motivation?: "money" | "fulltime" | "help" | "multiple" | "other" | null;
+  motivation_other?: string | null;
+  special_circumstances?: string | null;
   current_team: string;
   positions: string[];
   bio: string;
@@ -44,7 +48,7 @@ export type MentorStats = {
 export async function listMentors(): Promise<AdminMentor[]> {
   const { data, error } = await supabase
     .from("athletes")
-    .select("user_id, slug, display_name, status, tier, highest_level, current_team, positions, bio, verified, capacity_on_deck, badges, credentials, blocked_at, created_at, profiles!athletes_user_id_fkey(email, full_name)")
+    .select("user_id, slug, display_name, status, tier, highest_level, current_team, positions, bio, verified, capacity_on_deck, badges, credentials, eliteprospects_url, motivation, motivation_other, special_circumstances, blocked_at, created_at, profiles!athletes_user_id_fkey(email, full_name)")
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);

@@ -10,9 +10,10 @@ import { Body, H1, Label, Small } from "@/components/ui/Text";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { marketingUrl } from "@/lib/site";
-import { checkEmailMessage, EXISTS_MESSAGE, resendConfirmation, signUpOutcome } from "@/lib/signup";
+import { EXISTS_MESSAGE, resendConfirmation, signUpOutcome } from "@/lib/signup";
 import { useEffect } from "react";
-import { POSITIONS, type HockeyPosition } from "@/lib/types";
+import { MOTIVATIONS, normaliseEliteProspects, POSITIONS, type HockeyPosition, type Motivation } from "@/lib/types";
+import { Choice } from "@/components/ui/Choice";
 import { colors, fonts, radius, space } from "@/theme/tokens";
 
 function slugify(name: string) {
@@ -41,6 +42,10 @@ export default function Apply() {
   const [team, setTeam] = useState("");
   const [bio, setBio] = useState("");
   const [positions, setPositions] = useState<HockeyPosition[]>([]);
+  const [epUrl, setEpUrl] = useState("");
+  const [motivation, setMotivation] = useState<Motivation | null>(null);
+  const [motivationOther, setMotivationOther] = useState("");
+  const [special, setSpecial] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -52,18 +57,26 @@ export default function Apply() {
   }
 
   async function submit() {
-    if (positions.length === 0) return setError("Pick at least one position you can review.");
+    // Anything in the special-circumstances box lets an incomplete application through to the reviewers.
+    const partial = special.trim().length > 0;
+    if (!partial && positions.length === 0) return setError("Pick at least one position you can review, or tell us about your circumstances below.");
+    if (!partial && !motivation) return setError("Tell us why you want to mentor.");
+    if (!partial && motivation === "other" && !motivationOther.trim()) return setError("Add a few words about why you want to mentor.");
+    const ep = normaliseEliteProspects(epUrl);
+    if (epUrl.trim() && !ep) return setError("That doesn't look like an eliteprospects.com link.");
+    const application = { bio: bio.trim(), positions, team: team.trim(), eliteprospects_url: ep, motivation, motivation_other: motivation === "other" ? motivationOther.trim() : null, special_circumstances: special.trim() || null };
     if (finishing) {
       setBusy(true);
       setError(null);
       const name = fullName.trim() || profile?.full_name || "FLP Mentor";
       const { error: insertError } = await supabase.from("athletes").insert({
-        user_id: session!.user.id, slug: slugify(name), display_name: name, bio: bio.trim(), positions,
-        credentials: team.trim() ? [{ label: team.trim() }] : [],
+        user_id: session!.user.id, slug: slugify(name), display_name: name, bio: application.bio, positions,
+        credentials: team.trim() ? [{ label: team.trim() }] : [], current_team: application.team,
+        eliteprospects_url: application.eliteprospects_url, motivation: application.motivation, motivation_other: application.motivation_other, special_circumstances: application.special_circumstances,
       });
       setBusy(false);
       if (insertError) return setError(insertError.message);
-      return router.replace("/athlete");
+      return router.replace({ pathname: "/applied", params: { email: session!.user.email ?? "" } });
     }
     if (!fullName.trim()) return setError("Enter your name.");
     if (password.length < 8) return setError("Use a password of at least 8 characters.");
@@ -72,7 +85,7 @@ export default function Apply() {
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { data: { full_name: fullName.trim(), role: "athlete" } },
+      options: { data: { full_name: fullName.trim(), role: "athlete", application } },
     });
     if (error) {
       setBusy(false);
@@ -84,21 +97,22 @@ export default function Apply() {
       return setError(EXISTS_MESSAGE);
     }
     if (outcome === "check_email" || !data.session) {
+      // The application itself was saved with the account; only the email confirmation is left.
       setBusy(false);
-      setSentTo(email.trim());
-      return setNotice(checkEmailMessage(email.trim(), " and takes you straight to the rest of the application"));
+      return router.replace({ pathname: "/applied", params: { email: email.trim(), confirm: "1" } });
     }
-    const { error: insertError } = await supabase.from("athletes").insert({
-      user_id: data.session.user.id,
-      slug: slugify(fullName),
-      display_name: fullName.trim(),
-      bio: bio.trim(),
-      positions,
-      credentials: team.trim() ? [{ label: team.trim() }] : [],
-    });
+    // Confirmations off (development): make sure the applicant row exists, then say thanks.
+    const { data: existing } = await supabase.from("athletes").select("user_id").eq("user_id", data.session.user.id).maybeSingle();
+    if (!existing) {
+      const { error: insertError } = await supabase.from("athletes").insert({
+        user_id: data.session.user.id, slug: slugify(fullName), display_name: fullName.trim(), bio: application.bio, positions,
+        credentials: team.trim() ? [{ label: team.trim() }] : [], current_team: application.team,
+        eliteprospects_url: application.eliteprospects_url, motivation: application.motivation, motivation_other: application.motivation_other, special_circumstances: application.special_circumstances,
+      });
+      if (insertError) { setBusy(false); return setError(insertError.message); }
+    }
     setBusy(false);
-    if (insertError) return setError(insertError.message);
-    router.replace("/athlete");
+    router.replace({ pathname: "/applied", params: { email: email.trim() } });
   }
 
   return (
@@ -159,6 +173,9 @@ export default function Apply() {
             })}
           </View>
         </View>
+        <TextField label="Elite Prospects profile link" value={epUrl} onChangeText={setEpUrl} autoCapitalize="none" autoCorrect={false} keyboardType="url" placeholder="eliteprospects.com/player/…" hint="Optional, but it speeds up our review." />
+        <Choice label="Why do you want to be a mentor?" options={MOTIVATIONS} value={motivation} onChange={(v) => setMotivation(v as Motivation)} />
+        {motivation === "other" ? <TextField label="Tell us in your own words" value={motivationOther} onChangeText={setMotivationOther} multiline style={{ height: 80, paddingTop: space.md, textAlignVertical: "top" }} /> : null}
         <TextField
           label="Short bio"
           value={bio}
@@ -167,6 +184,15 @@ export default function Apply() {
           numberOfLines={4}
           style={{ height: 110, paddingTop: space.md, textAlignVertical: "top" }}
           placeholder="Where you've played and what you're best at teaching."
+        />
+        <TextField
+          label="Are there any special circumstances you think our team should know about during the approval process?"
+          value={special}
+          onChangeText={setSpecial}
+          multiline
+          numberOfLines={3}
+          style={{ height: 90, paddingTop: space.md, textAlignVertical: "top" }}
+          hint="Optional. If you fill this in, you can submit without completing every field above."
         />
         {error ? <Body style={{ color: colors.danger }}>{error}</Body> : null}
         {notice ? <Body style={{ color: colors.ok }}>{notice}</Body> : null}

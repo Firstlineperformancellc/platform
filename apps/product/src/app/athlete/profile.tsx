@@ -129,6 +129,7 @@ export default function MentorProfileScreen() {
         </View>
         <TextField label="Display name" value={p.display_name} onChangeText={(v) => set({ display_name: v })} />
         <TextField label="Current team or status" value={p.current_team} onChangeText={(v) => set({ current_team: v })} placeholder="e.g. Michigan Tech alum, now coaching in Grand Rapids" />
+        <TextField label="Elite Prospects profile link" value={p.eliteprospects_url ?? ""} onChangeText={(v) => set({ eliteprospects_url: v || null })} autoCapitalize="none" autoCorrect={false} keyboardType="url" placeholder="eliteprospects.com/player/…" />
         <Choice
           label="Highest level you played"
           options={settings.taxonomy.levels.map((l) => ({ key: l.key, label: l.label, hint: l.tier ? TIER_LABEL[l.tier] : "not offered yet" }))}

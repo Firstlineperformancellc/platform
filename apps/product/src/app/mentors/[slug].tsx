@@ -60,6 +60,9 @@ export default function MentorProfile() {
         <H1>{mentor.display_name}</H1>
       </View>
       <MentorCard mentor={mentor} settings={settings} />
+      {mentor.eliteprospects_url ? (
+        <Small style={{ color: colors.gold }} onPress={() => window.open(mentor.eliteprospects_url!, "_blank", "noopener")}>Elite Prospects profile ↗</Small>
+      ) : null}
 
       {mentor.video_playback_id && Platform.OS === "web" ? (
         <Card>

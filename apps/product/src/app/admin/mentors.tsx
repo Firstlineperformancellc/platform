@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { MOTIVATION_LABEL } from "@/lib/types";
 import { useFocusEffect } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { AdminShell } from "@/components/AdminShell";
@@ -77,6 +78,9 @@ export default function AdminMentors() {
                   </View>
                 </View>
                 {m.bio ? <Body style={{ color: colors.muted }}>{m.bio}</Body> : null}
+                {m.special_circumstances ? <Body style={{ color: colors.warn }}>Special circumstances: {m.special_circumstances}</Body> : null}
+                {m.motivation ? <Small>Why they want to mentor: {MOTIVATION_LABEL[m.motivation]}{m.motivation === "other" && m.motivation_other ? ` — ${m.motivation_other}` : ""}</Small> : null}
+                {m.eliteprospects_url ? <Small style={{ color: colors.gold }} onPress={() => window.open(m.eliteprospects_url!, "_blank", "noopener")}>Elite Prospects profile ↗</Small> : <Small style={{ color: colors.faint }}>No Elite Prospects link given.</Small>}
 
                 {m.status !== "applied" && st ? (
                   <View style={s.stats}>
