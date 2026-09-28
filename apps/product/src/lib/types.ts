@@ -25,7 +25,7 @@ export const MOTIVATIONS: { key: Motivation; label: string }[] = [
   { key: "money", label: "I want to make some extra money" },
   { key: "fulltime", label: "I want to mentor full time as my primary income" },
   { key: "help", label: "I want to help young athletes" },
-  { key: "multiple", label: "Multiple reasons" },
+  { key: "multiple", label: "Multiple reasons (multiple fields selectable)" },
   { key: "other", label: "Other" },
 ];
 export const MOTIVATION_LABEL = Object.fromEntries(MOTIVATIONS.map((m) => [m.key, m.label])) as Record<Motivation, string>;

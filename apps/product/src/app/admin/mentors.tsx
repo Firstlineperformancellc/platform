@@ -78,8 +78,9 @@ export default function AdminMentors() {
                   </View>
                 </View>
                 {m.bio ? <Body style={{ color: colors.muted }}>{m.bio}</Body> : null}
-                {m.special_circumstances ? <Body style={{ color: colors.warn }}>Special circumstances: {m.special_circumstances}</Body> : null}
-                {m.motivation ? <Small>Why they want to mentor: {MOTIVATION_LABEL[m.motivation]}{m.motivation === "other" && m.motivation_other ? ` — ${m.motivation_other}` : ""}</Small> : null}
+                {m.application?.special_circumstances ? <Body style={{ color: colors.warn }}>Special circumstances: {m.application.special_circumstances}</Body> : null}
+                {m.application?.age ? <Small>Age {m.application.age}</Small> : null}
+                {m.application?.motivations?.length ? <Small>Why they want to mentor: {m.application.motivations.map((k) => MOTIVATION_LABEL[k].replace(" (multiple fields selectable)", "")).join(" · ")}{m.application.motivations.includes("other") && m.application.motivation_other ? ` — ${m.application.motivation_other}` : ""}</Small> : null}
                 {m.eliteprospects_url ? <Small style={{ color: colors.gold }} onPress={() => window.open(m.eliteprospects_url!, "_blank", "noopener")}>Elite Prospects profile ↗</Small> : <Small style={{ color: colors.faint }}>No Elite Prospects link given.</Small>}
 
                 {m.status !== "applied" && st ? (

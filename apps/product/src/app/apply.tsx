@@ -13,7 +13,7 @@ import { marketingUrl } from "@/lib/site";
 import { EXISTS_MESSAGE, resendConfirmation, signUpOutcome } from "@/lib/signup";
 import { useEffect } from "react";
 import { MOTIVATIONS, normaliseEliteProspects, POSITIONS, type HockeyPosition, type Motivation } from "@/lib/types";
-import { Choice } from "@/components/ui/Choice";
+import { Dropdown } from "@/components/ui/Dropdown";
 import { colors, fonts, radius, space } from "@/theme/tokens";
 
 function slugify(name: string) {
@@ -43,7 +43,8 @@ export default function Apply() {
   const [bio, setBio] = useState("");
   const [positions, setPositions] = useState<HockeyPosition[]>([]);
   const [epUrl, setEpUrl] = useState("");
-  const [motivation, setMotivation] = useState<Motivation | null>(null);
+  const [motivations, setMotivations] = useState<Motivation[]>([]);
+  const [age, setAge] = useState("");
   const [motivationOther, setMotivationOther] = useState("");
   const [special, setSpecial] = useState("");
   const [busy, setBusy] = useState(false);
@@ -60,20 +61,23 @@ export default function Apply() {
     // Anything in the special-circumstances box lets an incomplete application through to the reviewers.
     const partial = special.trim().length > 0;
     if (!partial && positions.length === 0) return setError("Pick at least one position you can review, or tell us about your circumstances below.");
-    if (!partial && !motivation) return setError("Tell us why you want to mentor.");
-    if (!partial && motivation === "other" && !motivationOther.trim()) return setError("Add a few words about why you want to mentor.");
+    if (!partial && motivations.length === 0) return setError("Tell us why you want to mentor.");
+    if (!partial && motivations.includes("other") && !motivationOther.trim()) return setError("Add a few words about why you want to mentor.");
+    const ageNum = age.trim() ? Number(age.trim()) : null;
+    if (!partial && (ageNum === null || !Number.isInteger(ageNum) || ageNum < 16 || ageNum > 99)) return setError("Enter your age.");
+    if (ageNum !== null && (!Number.isInteger(ageNum) || ageNum < 13 || ageNum > 110)) return setError("That age doesn't look right.");
     const ep = normaliseEliteProspects(epUrl);
     if (epUrl.trim() && !ep) return setError("That doesn't look like an eliteprospects.com link.");
-    const application = { bio: bio.trim(), positions, team: team.trim(), eliteprospects_url: ep, motivation, motivation_other: motivation === "other" ? motivationOther.trim() : null, special_circumstances: special.trim() || null };
+    const application = { bio: bio.trim(), positions, team: team.trim(), eliteprospects_url: ep, motivations, motivation_other: motivations.includes("other") ? motivationOther.trim() : null, special_circumstances: special.trim() || null, age: ageNum };
     if (finishing) {
       setBusy(true);
       setError(null);
       const name = fullName.trim() || profile?.full_name || "FLP Mentor";
       const { error: insertError } = await supabase.from("athletes").insert({
         user_id: session!.user.id, slug: slugify(name), display_name: name, bio: application.bio, positions,
-        credentials: team.trim() ? [{ label: team.trim() }] : [], current_team: application.team,
-        eliteprospects_url: application.eliteprospects_url, motivation: application.motivation, motivation_other: application.motivation_other, special_circumstances: application.special_circumstances,
+        credentials: team.trim() ? [{ label: team.trim() }] : [], current_team: application.team, eliteprospects_url: application.eliteprospects_url,
       });
+      if (!insertError) await supabase.from("athlete_applications").insert({ user_id: session!.user.id, motivations, motivation_other: application.motivation_other, special_circumstances: application.special_circumstances, age: application.age });
       setBusy(false);
       if (insertError) return setError(insertError.message);
       return router.replace({ pathname: "/applied", params: { email: session!.user.email ?? "" } });
@@ -106,10 +110,10 @@ export default function Apply() {
     if (!existing) {
       const { error: insertError } = await supabase.from("athletes").insert({
         user_id: data.session.user.id, slug: slugify(fullName), display_name: fullName.trim(), bio: application.bio, positions,
-        credentials: team.trim() ? [{ label: team.trim() }] : [], current_team: application.team,
-        eliteprospects_url: application.eliteprospects_url, motivation: application.motivation, motivation_other: application.motivation_other, special_circumstances: application.special_circumstances,
+        credentials: team.trim() ? [{ label: team.trim() }] : [], current_team: application.team, eliteprospects_url: application.eliteprospects_url,
       });
       if (insertError) { setBusy(false); return setError(insertError.message); }
+      await supabase.from("athlete_applications").insert({ user_id: data.session.user.id, motivations, motivation_other: application.motivation_other, special_circumstances: application.special_circumstances, age: application.age });
     }
     setBusy(false);
     router.replace({ pathname: "/applied", params: { email: email.trim() } });
@@ -154,6 +158,7 @@ export default function Apply() {
           </>
         )}
         <TextField label="Current or highest team" value={team} onChangeText={setTeam} placeholder="e.g. Michigan Tech, NCAA D1" />
+        <TextField label="Age" value={age} onChangeText={(v) => setAge(v.replace(/[^0-9]/g, "").slice(0, 3))} keyboardType="number-pad" style={{ maxWidth: 120 }} />
         <View style={{ gap: space.sm }}>
           <Label>Positions you can review</Label>
           <View style={s.chips}>
@@ -174,16 +179,18 @@ export default function Apply() {
           </View>
         </View>
         <TextField label="Elite Prospects profile link" value={epUrl} onChangeText={setEpUrl} autoCapitalize="none" autoCorrect={false} keyboardType="url" placeholder="eliteprospects.com/player/…" hint="Optional, but it speeds up our review." />
-        <Choice label="Why do you want to be a mentor?" options={MOTIVATIONS} value={motivation} onChange={(v) => setMotivation(v as Motivation)} />
-        {motivation === "other" ? <TextField label="Tell us in your own words" value={motivationOther} onChangeText={setMotivationOther} multiline style={{ height: 80, paddingTop: space.md, textAlignVertical: "top" }} /> : null}
+        <Dropdown label="Why do you want to be a mentor?" options={MOTIVATIONS} value={motivations} onChange={(v) => setMotivations(v as Motivation[])} placeholder="Choose one or more" />
+        {motivations.includes("other") ? <TextField label="Tell us in your own words" value={motivationOther} onChangeText={setMotivationOther} multiline maxLength={1000} style={{ height: 80, paddingTop: space.md, textAlignVertical: "top" }} /> : null}
         <TextField
           label="Short bio"
           value={bio}
           onChangeText={setBio}
           multiline
-          numberOfLines={4}
-          style={{ height: 110, paddingTop: space.md, textAlignVertical: "top" }}
+          numberOfLines={3}
+          maxLength={1000}
+          style={s.threeLines}
           placeholder="Where you've played and what you're best at teaching."
+          hint={`${bio.length} / 1000`}
         />
         <TextField
           label="Are there any special circumstances you think our team should know about during the approval process?"
@@ -191,8 +198,9 @@ export default function Apply() {
           onChangeText={setSpecial}
           multiline
           numberOfLines={3}
-          style={{ height: 90, paddingTop: space.md, textAlignVertical: "top" }}
-          hint="Optional. If you fill this in, you can submit without completing every field above."
+          maxLength={1000}
+          style={s.threeLines}
+          hint={`Optional. If you fill this in, you can submit without completing every field above. ${special.length} / 1000`}
         />
         {error ? <Body style={{ color: colors.danger }}>{error}</Body> : null}
         {notice ? <Body style={{ color: colors.ok }}>{notice}</Body> : null}
@@ -220,6 +228,7 @@ export default function Apply() {
 }
 
 const s = StyleSheet.create({
+  threeLines: { height: 86, paddingTop: space.md, textAlignVertical: "top" },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
   chip: {
     height: 40,
