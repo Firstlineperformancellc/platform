@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Link, useFocusEffect } from "expo-router";
+import { Link, useFocusEffect, useRouter } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { Brand } from "@/components/Brand";
 import { MentorSessions } from "@/components/MentorSessions";
@@ -24,6 +24,7 @@ function who(o: { players: { first_name: string; last_name: string } | null; age
 
 export default function AthleteHome() {
   const { profile, session, signOut } = useAuth();
+  const router = useRouter();
   const { settings } = useSettings();
   const [athlete, setAthlete] = useState<Athlete | null | undefined>(undefined);
   const [offers, setOffers] = useState<Offer[]>([]);
@@ -39,11 +40,12 @@ export default function AthleteHome() {
       .eq("user_id", session.user.id)
       .maybeSingle();
     setAthlete((data as Athlete | null) ?? null);
+    if (!data) { router.replace("/apply"); return; } // confirmed account, no application yet: finish it now
     if (data?.status === "approved") {
       setOffers(await listOpenOffers());
       setJobs(await listMyJobs());
     }
-  }, [session]);
+  }, [session, router]);
 
   useFocusEffect(
     useCallback(() => {

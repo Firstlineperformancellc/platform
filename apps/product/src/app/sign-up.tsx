@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useRouter } from "expo-router";
-import { StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Brand } from "@/components/Brand";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -9,6 +9,7 @@ import { TextField } from "@/components/ui/TextField";
 import { Body, H1, Small } from "@/components/ui/Text";
 import { supabase } from "@/lib/supabase";
 import { marketingUrl } from "@/lib/site";
+import { checkEmailMessage, EXISTS_MESSAGE, resendConfirmation, signUpOutcome } from "@/lib/signup";
 import { colors } from "@/theme/tokens";
 
 // Parent account. The player is added afterwards as a profile under this account, never as a login.
@@ -20,6 +21,8 @@ export default function SignUp() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
 
   async function submit() {
     if (!fullName.trim()) return setError("Enter your name.");
@@ -33,8 +36,11 @@ export default function SignUp() {
     });
     setBusy(false);
     if (error) return setError(error.message);
-    if (data.session) return router.replace("/");
-    setNotice("Check your email to confirm your account, then sign in.");
+    const outcome = signUpOutcome(data);
+    if (outcome === "signed_in") return router.replace("/");
+    if (outcome === "exists") return setError(EXISTS_MESSAGE);
+    setSentTo(email.trim());
+    setNotice(checkEmailMessage(email.trim(), ""));
   }
 
   return (
@@ -67,6 +73,12 @@ export default function SignUp() {
         />
         {error ? <Body style={{ color: colors.danger }}>{error}</Body> : null}
         {notice ? <Body style={{ color: colors.ok }}>{notice}</Body> : null}
+        {sentTo ? (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+            <Button title="Resend the email" variant="ghost" small loading={resending} onPress={async () => { setResending(true); setError(null); try { await resendConfirmation(sentTo); setNotice(`Sent again to ${sentTo}.`); } catch (e) { setError((e as Error).message); } setResending(false); }} />
+            <Link href="/sign-in" asChild><Button title="Already confirmed? Sign in" variant="ghost" small /></Link>
+          </View>
+        ) : null}
         <Small>
           By creating an account you agree to FLP's{" "}
           <Small style={s.link} onPress={() => window.open(marketingUrl("terms.html"), "_blank", "noopener")}>Terms</Small> and{" "}

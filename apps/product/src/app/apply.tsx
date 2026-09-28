@@ -10,6 +10,7 @@ import { Body, H1, Label, Small } from "@/components/ui/Text";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { marketingUrl } from "@/lib/site";
+import { checkEmailMessage, EXISTS_MESSAGE, resendConfirmation, signUpOutcome } from "@/lib/signup";
 import { useEffect } from "react";
 import { POSITIONS, type HockeyPosition } from "@/lib/types";
 import { colors, fonts, radius, space } from "@/theme/tokens";
@@ -43,6 +44,8 @@ export default function Apply() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
 
   function toggle(p: HockeyPosition) {
     setPositions((cur) => (cur.includes(p) ? cur.filter((x) => x !== p) : [...cur, p]));
@@ -75,9 +78,15 @@ export default function Apply() {
       setBusy(false);
       return setError(error.message);
     }
-    if (!data.session) {
+    const outcome = signUpOutcome(data);
+    if (outcome === "exists") {
       setBusy(false);
-      return setNotice("Check your email to confirm your account, then sign in. You'll finish the application on your first sign-in.");
+      return setError(EXISTS_MESSAGE);
+    }
+    if (outcome === "check_email" || !data.session) {
+      setBusy(false);
+      setSentTo(email.trim());
+      return setNotice(checkEmailMessage(email.trim(), " and takes you straight to the rest of the application"));
     }
     const { error: insertError } = await supabase.from("athletes").insert({
       user_id: data.session.user.id,
@@ -161,6 +170,12 @@ export default function Apply() {
         />
         {error ? <Body style={{ color: colors.danger }}>{error}</Body> : null}
         {notice ? <Body style={{ color: colors.ok }}>{notice}</Body> : null}
+        {sentTo ? (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+            <Button title="Resend the email" variant="ghost" small loading={resending} onPress={async () => { setResending(true); setError(null); try { await resendConfirmation(sentTo); setNotice(`Sent again to ${sentTo}.`); } catch (e) { setError((e as Error).message); } setResending(false); }} />
+            <Link href="/sign-in" asChild><Button title="Already confirmed? Sign in" variant="ghost" small /></Link>
+          </View>
+        ) : null}
         <Small>
           By creating an account you agree to FLP's{" "}
           <Small style={s.link} onPress={() => window.open(marketingUrl("terms.html"), "_blank", "noopener")}>Terms</Small> and{" "}
