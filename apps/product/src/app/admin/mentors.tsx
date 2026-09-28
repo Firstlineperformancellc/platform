@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { MOTIVATION_LABEL } from "@/lib/types";
+import { GENDER_LABEL, MOTIVATION_LABEL } from "@/lib/types";
 import { useFocusEffect } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { AdminShell } from "@/components/AdminShell";
@@ -79,7 +79,7 @@ export default function AdminMentors() {
                 </View>
                 {m.bio ? <Body style={{ color: colors.muted }}>{m.bio}</Body> : null}
                 {m.application?.special_circumstances ? <Body style={{ color: colors.warn }}>Special circumstances: {m.application.special_circumstances}</Body> : null}
-                {m.application?.age ? <Small>Age {m.application.age}</Small> : null}
+                {m.application?.age || m.application?.gender ? <Small>{[m.application?.age ? `Age ${m.application.age}` : null, m.application?.gender ? GENDER_LABEL[m.application.gender] : null].filter(Boolean).join(" · ")}</Small> : null}
                 {m.application?.motivations?.length ? <Small>Why they want to mentor: {m.application.motivations.map((k) => MOTIVATION_LABEL[k].replace(" (multiple fields selectable)", "")).join(" · ")}{m.application.motivations.includes("other") && m.application.motivation_other ? ` — ${m.application.motivation_other}` : ""}</Small> : null}
                 {m.eliteprospects_url ? <Small style={{ color: colors.gold }} onPress={() => window.open(m.eliteprospects_url!, "_blank", "noopener")}>Elite Prospects profile ↗</Small> : <Small style={{ color: colors.faint }}>No Elite Prospects link given.</Small>}
 

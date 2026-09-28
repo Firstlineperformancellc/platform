@@ -28,6 +28,14 @@ export const MOTIVATIONS: { key: Motivation; label: string }[] = [
   { key: "multiple", label: "Multiple reasons (multiple fields selectable)" },
   { key: "other", label: "Other" },
 ];
+export type Gender = "male" | "female" | "nonbinary" | "unspecified";
+export const GENDERS: { key: Gender; label: string }[] = [
+  { key: "male", label: "Male" },
+  { key: "female", label: "Female" },
+  { key: "nonbinary", label: "Non-binary" },
+  { key: "unspecified", label: "Prefer not to say" },
+];
+export const GENDER_LABEL = Object.fromEntries(GENDERS.map((g) => [g.key, g.label])) as Record<Gender, string>;
 export const MOTIVATION_LABEL = Object.fromEntries(MOTIVATIONS.map((m) => [m.key, m.label])) as Record<Motivation, string>;
 // Elite Prospects links: accept a bare or full URL on eliteprospects.com, return it normalised or null when it isn't one.
 export function normaliseEliteProspects(input: string): string | null {

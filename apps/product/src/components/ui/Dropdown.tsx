@@ -4,13 +4,14 @@ import { Label, Small } from "./Text";
 import { colors, fonts, radius, space } from "@/theme/tokens";
 
 type Option = { key: string; label: string };
-type Props = { label: string; options: Option[]; value: string[]; onChange: (next: string[]) => void; placeholder?: string; hint?: string };
+type Props = { label: string; options: Option[]; value: string[]; onChange: (next: string[]) => void; placeholder?: string; hint?: string; single?: boolean };
 
 // A drop-down that allows several picks. Tap the field to open the list, tap rows to tick them.
-export function Dropdown({ label, options, value, onChange, placeholder = "Choose…", hint }: Props) {
+export function Dropdown({ label, options, value, onChange, placeholder = "Choose…", hint, single = false }: Props) {
   const [open, setOpen] = useState(false);
   const chosen = options.filter((o) => value.includes(o.key)).map((o) => o.label);
   function toggle(key: string) {
+    if (single) { onChange([key]); setOpen(false); return; }
     onChange(value.includes(key) ? value.filter((k) => k !== key) : [...value, key]);
   }
   return (
@@ -31,7 +32,7 @@ export function Dropdown({ label, options, value, onChange, placeholder = "Choos
               </Pressable>
             );
           })}
-          <Pressable accessibilityRole="button" onPress={() => setOpen(false)} style={s.done}><Text style={s.doneText}>Done</Text></Pressable>
+          {single ? null : <Pressable accessibilityRole="button" onPress={() => setOpen(false)} style={s.done}><Text style={s.doneText}>Done</Text></Pressable>}
         </View>
       ) : null}
       {hint ? <Small>{hint}</Small> : null}

@@ -12,7 +12,7 @@ import { useAuth } from "@/lib/auth";
 import { marketingUrl } from "@/lib/site";
 import { EXISTS_MESSAGE, resendConfirmation, signUpOutcome } from "@/lib/signup";
 import { useEffect } from "react";
-import { MOTIVATIONS, normaliseEliteProspects, POSITIONS, type HockeyPosition, type Motivation } from "@/lib/types";
+import { GENDERS, MOTIVATIONS, normaliseEliteProspects, POSITIONS, type Gender, type HockeyPosition, type Motivation } from "@/lib/types";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { colors, fonts, radius, space } from "@/theme/tokens";
 
@@ -45,6 +45,7 @@ export default function Apply() {
   const [epUrl, setEpUrl] = useState("");
   const [motivations, setMotivations] = useState<Motivation[]>([]);
   const [age, setAge] = useState("");
+  const [gender, setGender] = useState<Gender | null>(null);
   const [motivationOther, setMotivationOther] = useState("");
   const [special, setSpecial] = useState("");
   const [busy, setBusy] = useState(false);
@@ -66,9 +67,10 @@ export default function Apply() {
     const ageNum = age.trim() ? Number(age.trim()) : null;
     if (!partial && (ageNum === null || !Number.isInteger(ageNum) || ageNum < 16 || ageNum > 99)) return setError("Enter your age.");
     if (ageNum !== null && (!Number.isInteger(ageNum) || ageNum < 13 || ageNum > 110)) return setError("That age doesn't look right.");
+    if (!partial && !gender) return setError("Pick a gender, or \"Prefer not to say\".");
     const ep = normaliseEliteProspects(epUrl);
     if (epUrl.trim() && !ep) return setError("That doesn't look like an eliteprospects.com link.");
-    const application = { bio: bio.trim(), positions, team: team.trim(), eliteprospects_url: ep, motivations, motivation_other: motivations.includes("other") ? motivationOther.trim() : null, special_circumstances: special.trim() || null, age: ageNum };
+    const application = { bio: bio.trim(), positions, team: team.trim(), eliteprospects_url: ep, motivations, motivation_other: motivations.includes("other") ? motivationOther.trim() : null, special_circumstances: special.trim() || null, age: ageNum, gender };
     if (finishing) {
       setBusy(true);
       setError(null);
@@ -77,7 +79,7 @@ export default function Apply() {
         user_id: session!.user.id, slug: slugify(name), display_name: name, bio: application.bio, positions,
         credentials: team.trim() ? [{ label: team.trim() }] : [], current_team: application.team, eliteprospects_url: application.eliteprospects_url,
       });
-      if (!insertError) await supabase.from("athlete_applications").insert({ user_id: session!.user.id, motivations, motivation_other: application.motivation_other, special_circumstances: application.special_circumstances, age: application.age });
+      if (!insertError) await supabase.from("athlete_applications").insert({ user_id: session!.user.id, motivations, motivation_other: application.motivation_other, special_circumstances: application.special_circumstances, age: application.age, gender });
       setBusy(false);
       if (insertError) return setError(insertError.message);
       return router.replace({ pathname: "/applied", params: { email: session!.user.email ?? "" } });
@@ -113,7 +115,7 @@ export default function Apply() {
         credentials: team.trim() ? [{ label: team.trim() }] : [], current_team: application.team, eliteprospects_url: application.eliteprospects_url,
       });
       if (insertError) { setBusy(false); return setError(insertError.message); }
-      await supabase.from("athlete_applications").insert({ user_id: data.session.user.id, motivations, motivation_other: application.motivation_other, special_circumstances: application.special_circumstances, age: application.age });
+      await supabase.from("athlete_applications").insert({ user_id: data.session.user.id, motivations, motivation_other: application.motivation_other, special_circumstances: application.special_circumstances, age: application.age, gender });
     }
     setBusy(false);
     router.replace({ pathname: "/applied", params: { email: email.trim() } });
@@ -158,7 +160,10 @@ export default function Apply() {
           </>
         )}
         <TextField label="Current or highest team" value={team} onChangeText={setTeam} placeholder="e.g. Michigan Tech, NCAA D1" />
-        <TextField label="Age" value={age} onChangeText={(v) => setAge(v.replace(/[^0-9]/g, "").slice(0, 3))} keyboardType="number-pad" style={{ maxWidth: 120 }} />
+        <View style={s.pair}>
+          <View style={{ width: 110 }}><TextField label="Age" value={age} onChangeText={(v) => setAge(v.replace(/[^0-9]/g, "").slice(0, 3))} keyboardType="number-pad" /></View>
+          <View style={{ flex: 1, minWidth: 180 }}><Dropdown label="Gender" options={GENDERS} value={gender ? [gender] : []} onChange={(v) => setGender((v[0] as Gender) ?? null)} single placeholder="Choose" /></View>
+        </View>
         <View style={{ gap: space.sm }}>
           <Label>Positions you can review</Label>
           <View style={s.chips}>
@@ -228,6 +233,7 @@ export default function Apply() {
 }
 
 const s = StyleSheet.create({
+  pair: { flexDirection: "row", flexWrap: "wrap", gap: space.md, alignItems: "flex-start" },
   threeLines: { height: 86, paddingTop: space.md, textAlignVertical: "top" },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
   chip: {
