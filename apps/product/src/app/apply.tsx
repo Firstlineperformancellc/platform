@@ -112,9 +112,9 @@ export default function Apply() {
   return (
     <Screen title="Apply as a mentor" width="form" center>
       <Brand size={96} />
-      <H1 center>Apply as an athlete</H1>
+      <H1 center>{finishing ? "Your email is confirmed." : "Apply as an athlete"}</H1>
       <Body center style={{ color: colors.muted }}>
-        FLP reviews every application. You'll hear back by email once you're approved.
+        {finishing ? "One more step: finish your application below. FLP reviews every application and you'll hear back by email." : "FLP reviews every application. You'll hear back by email once you're approved."}
       </Body>
       {wrongRole ? (
         <Card>
@@ -124,7 +124,7 @@ export default function Apply() {
       ) : null}
       <Card>
         {finishing ? (
-          <Body style={{ color: colors.muted }}>Signed in as {session?.user.email}. Finish your mentor profile below.</Body>
+          <Body style={{ color: colors.muted }}>Signed in as {session?.user.email}. Your account is active; these details are what FLP reviews.</Body>
         ) : null}
         <TextField label="Your name" value={fullName} onChangeText={setFullName} autoComplete="name" placeholder={finishing ? profile?.full_name : undefined} />
         {finishing ? null : (
