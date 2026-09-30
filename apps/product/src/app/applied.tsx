@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Screen } from "@/components/ui/Screen";
 import { Body, H1, H3, Label, Small } from "@/components/ui/Text";
-import { applicantConfirmUrl, resendConfirmation } from "@/lib/signup";
+import { applicantConfirmUrl, resendConfirmation, saveApplicationRows, takeStashedApplication } from "@/lib/signup";
+import { useAuth } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 import { marketingUrl } from "@/lib/site";
 import { colors, fonts, radius, space } from "@/theme/tokens";
 
@@ -20,6 +22,23 @@ export default function Applied() {
   const email = hydrated ? params.email : undefined;
   const needsConfirm = hydrated && params.confirm === "1";
   const justConfirmed = hydrated && params.confirmed === "1";
+  const { session, profile } = useAuth();
+  // After confirming: does this account already hold an application? Older accounts may not.
+  const [appState, setAppState] = useState<"checking" | "saved" | "missing">("checking");
+  useEffect(() => {
+    if (!justConfirmed || !session || profile?.role !== "athlete") return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.from("athletes").select("user_id").eq("user_id", session.user.id).maybeSingle();
+      if (data) { if (!cancelled) setAppState("saved"); return; }
+      const stashed = takeStashedApplication(session.user.email ?? "");
+      if (stashed) {
+        try { await saveApplicationRows(session.user.id, stashed.fullName || profile.full_name, stashed.application); if (!cancelled) setAppState("saved"); return; } catch { /* fall through */ }
+      }
+      if (!cancelled) setAppState("missing");
+    })();
+    return () => { cancelled = true; };
+  }, [justConfirmed, session, profile]);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -34,13 +53,21 @@ export default function Applied() {
       <View style={{ alignItems: "center", gap: 6 }}>
         <Label>Mentor application</Label>
         <H1 center>{justConfirmed ? "Your email is confirmed." : "Thank you for applying."}</H1>
-        <Body center style={{ color: colors.muted }}>{justConfirmed ? "Your account is active and your application is with our team. Nothing more is needed from you right now." : "Your application is in. Here is what happens next."}</Body>
+        <Body center style={{ color: colors.muted }}>{justConfirmed ? (appState === "missing" ? "Your account is active." : "Your account is active and your application is with our team. Nothing more is needed from you right now.") : "Your application is in. Here is what happens next."}</Body>
       </View>
       {justConfirmed ? (
-        <Card style={s.confirm}>
-          <H3 style={{ color: colors.gold }}>Confirmed</H3>
-          <Body>We'll email you{email ? ` at ${email}` : ""} when the review is done or if we need anything else.</Body>
-        </Card>
+        appState === "missing" ? (
+          <Card style={s.confirm}>
+            <H3 style={{ color: colors.gold }}>One more step</H3>
+            <Body>Your email is confirmed, but we don't have your application details yet. It takes two minutes: positions, your playing history, a short bio.</Body>
+            <Link href="/apply" asChild><Button title="Finish your application" /></Link>
+          </Card>
+        ) : (
+          <Card style={s.confirm}>
+            <H3 style={{ color: colors.gold }}>Confirmed</H3>
+            <Body>We'll email you{email ? ` at ${email}` : ""} when the review is done or if we need anything else.</Body>
+          </Card>
+        )
       ) : null}
       {needsConfirm ? (
         <Card style={s.confirm}>

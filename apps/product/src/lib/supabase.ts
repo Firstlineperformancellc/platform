@@ -12,6 +12,10 @@ if (!url || !anonKey) {
 
 // The anon key is a public, RLS-restricted key by design; every row a client can
 // touch is governed by the policies in supabase/migrations.
+// True when this page load came from a Supabase email link (the client clears the hash right after).
+export const arrivedFromEmailLink = typeof window !== "undefined" && /[#&]type=(signup|magiclink|recovery)/.test(window.location.hash);
+export const arrivedFromSignupConfirmation = typeof window !== "undefined" && /[#&]type=signup/.test(window.location.hash);
+
 export const supabase = createClient(url, anonKey, {
   auth: {
     storage: Platform.OS === "web" ? undefined : AsyncStorage,

@@ -10,16 +10,12 @@ import { Body, H1, Label, Small } from "@/components/ui/Text";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { marketingUrl } from "@/lib/site";
-import { applicantConfirmUrl, EXISTS_MESSAGE, resendConfirmation, signUpOutcome } from "@/lib/signup";
+import { applicantConfirmUrl, EXISTS_MESSAGE, resendConfirmation, saveApplicationRows, signUpOutcome, stashApplication } from "@/lib/signup";
 import { useEffect } from "react";
 import { GENDERS, MOTIVATIONS, normaliseEliteProspects, POSITIONS, type Gender, type HockeyPosition, type Motivation } from "@/lib/types";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { colors, fonts, radius, space } from "@/theme/tokens";
 
-function slugify(name: string) {
-  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  return `${base || "athlete"}-${Math.random().toString(36).slice(2, 6)}`;
-}
 
 // Athlete application. Creates the account and an athlete profile in "applied" state;
 // FLP approves it from the admin panel before the athlete can see any jobs.
@@ -75,13 +71,8 @@ export default function Apply() {
       setBusy(true);
       setError(null);
       const name = fullName.trim() || profile?.full_name || "FLP Mentor";
-      const { error: insertError } = await supabase.from("athletes").insert({
-        user_id: session!.user.id, slug: slugify(name), display_name: name, bio: application.bio, positions,
-        credentials: team.trim() ? [{ label: team.trim() }] : [], current_team: application.team, eliteprospects_url: application.eliteprospects_url,
-      });
-      if (!insertError) await supabase.from("athlete_applications").insert({ user_id: session!.user.id, motivations, motivation_other: application.motivation_other, special_circumstances: application.special_circumstances, age: application.age, gender });
+      try { await saveApplicationRows(session!.user.id, name, application); } catch (e) { setBusy(false); return setError((e as Error).message); }
       setBusy(false);
-      if (insertError) return setError(insertError.message);
       return router.replace({ pathname: "/applied", params: { email: session!.user.email ?? "" } });
     }
     if (!fullName.trim()) return setError("Enter your name.");
@@ -103,19 +94,16 @@ export default function Apply() {
       return setError(EXISTS_MESSAGE);
     }
     if (outcome === "check_email" || !data.session) {
-      // The application itself was saved with the account; only the email confirmation is left.
+      // A brand-new account has its application saved by the database already. An account that
+      // already existed (unconfirmed) does not, so keep the answers here until the link brings them back.
+      stashApplication(email.trim(), fullName.trim(), application);
       setBusy(false);
       return router.replace({ pathname: "/applied", params: { email: email.trim(), confirm: "1" } });
     }
     // Confirmations off (development): make sure the applicant row exists, then say thanks.
     const { data: existing } = await supabase.from("athletes").select("user_id").eq("user_id", data.session.user.id).maybeSingle();
     if (!existing) {
-      const { error: insertError } = await supabase.from("athletes").insert({
-        user_id: data.session.user.id, slug: slugify(fullName), display_name: fullName.trim(), bio: application.bio, positions,
-        credentials: team.trim() ? [{ label: team.trim() }] : [], current_team: application.team, eliteprospects_url: application.eliteprospects_url,
-      });
-      if (insertError) { setBusy(false); return setError(insertError.message); }
-      await supabase.from("athlete_applications").insert({ user_id: data.session.user.id, motivations, motivation_other: application.motivation_other, special_circumstances: application.special_circumstances, age: application.age, gender });
+      try { await saveApplicationRows(data.session.user.id, fullName, application); } catch (e) { setBusy(false); return setError((e as Error).message); }
     }
     setBusy(false);
     router.replace({ pathname: "/applied", params: { email: email.trim() } });
