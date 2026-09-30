@@ -10,7 +10,7 @@ import { Body, H1, Label, Small } from "@/components/ui/Text";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { marketingUrl } from "@/lib/site";
-import { EXISTS_MESSAGE, resendConfirmation, signUpOutcome } from "@/lib/signup";
+import { applicantConfirmUrl, EXISTS_MESSAGE, resendConfirmation, signUpOutcome } from "@/lib/signup";
 import { useEffect } from "react";
 import { GENDERS, MOTIVATIONS, normaliseEliteProspects, POSITIONS, type Gender, type HockeyPosition, type Motivation } from "@/lib/types";
 import { Dropdown } from "@/components/ui/Dropdown";
@@ -91,7 +91,7 @@ export default function Apply() {
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { data: { full_name: fullName.trim(), role: "athlete", application } },
+      options: { data: { full_name: fullName.trim(), role: "athlete", application }, emailRedirectTo: applicantConfirmUrl() },
     });
     if (error) {
       setBusy(false);

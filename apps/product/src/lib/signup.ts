@@ -13,7 +13,10 @@ export const EXISTS_MESSAGE = "There's already an account with this email. Sign 
 export const checkEmailMessage = (email: string, then: string) =>
   `We sent a confirmation link to ${email}. It can take a couple of minutes to arrive, so check spam too. Opening it signs you in${then}.`;
 
-export async function resendConfirmation(email: string) {
-  const { error } = await supabase.auth.resend({ type: "signup", email });
+// The confirmation link for a mentor applicant lands on the "email confirmed" page, not the dashboard.
+export const applicantConfirmUrl = () => (typeof window !== "undefined" ? `${window.location.origin}/applied?confirmed=1` : undefined);
+
+export async function resendConfirmation(email: string, redirectTo?: string) {
+  const { error } = await supabase.auth.resend({ type: "signup", email, options: redirectTo ? { emailRedirectTo: redirectTo } : undefined });
   if (error) throw new Error(/after \d+ seconds|security purposes/i.test(error.message) ? "Give it a minute before asking for another email." : error.message);
 }

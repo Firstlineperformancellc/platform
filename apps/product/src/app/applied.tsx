@@ -6,19 +6,20 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Screen } from "@/components/ui/Screen";
 import { Body, H1, H3, Label, Small } from "@/components/ui/Text";
-import { resendConfirmation } from "@/lib/signup";
+import { applicantConfirmUrl, resendConfirmation } from "@/lib/signup";
 import { marketingUrl } from "@/lib/site";
 import { colors, fonts, radius, space } from "@/theme/tokens";
 
 // After a mentor application is submitted. With ?confirm=1 the email still needs confirming.
 export default function Applied() {
-  const params = useLocalSearchParams<{ email?: string; confirm?: string }>();
+  const params = useLocalSearchParams<{ email?: string; confirm?: string; confirmed?: string }>();
   // The page is prerendered without query params; read them only after hydration so the first
   // client render matches the static HTML (otherwise React reports a text mismatch).
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
   const email = hydrated ? params.email : undefined;
   const needsConfirm = hydrated && params.confirm === "1";
+  const justConfirmed = hydrated && params.confirmed === "1";
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -28,19 +29,25 @@ export default function Applied() {
     { n: "3", title: "Then you're live", body: "Once approved you'll get an email with your next steps. Your profile goes onto the marketplace and families can start booking you." },
   ];
   return (
-    <Screen title="Application received" width="form" center>
+    <Screen title={justConfirmed ? "Email confirmed" : "Application received"} width="form" center>
       <Brand size={96} />
       <View style={{ alignItems: "center", gap: 6 }}>
         <Label>Mentor application</Label>
-        <H1 center>Thank you for applying.</H1>
-        <Body center style={{ color: colors.muted }}>Your application is in. Here is what happens next.</Body>
+        <H1 center>{justConfirmed ? "Your email is confirmed." : "Thank you for applying."}</H1>
+        <Body center style={{ color: colors.muted }}>{justConfirmed ? "Your account is active and your application is with our team. Nothing more is needed from you right now." : "Your application is in. Here is what happens next."}</Body>
       </View>
+      {justConfirmed ? (
+        <Card style={s.confirm}>
+          <H3 style={{ color: colors.gold }}>Confirmed</H3>
+          <Body>We'll email you{email ? ` at ${email}` : ""} when the review is done or if we need anything else.</Body>
+        </Card>
+      ) : null}
       {needsConfirm ? (
         <Card style={s.confirm}>
           <H3 style={{ color: colors.gold }}>First, confirm your email</H3>
           <Body>We sent a confirmation link{email ? ` to ${email}` : ""}. Opening it activates your account. It can take a couple of minutes to arrive, so check spam too.</Body>
           <View style={s.row}>
-            <Button title="Resend the email" variant="secondary" small loading={busy} onPress={async () => { if (!email) return; setBusy(true); setError(null); try { await resendConfirmation(email); setNote(`Sent again to ${email}.`); } catch (e) { setError((e as Error).message); } setBusy(false); }} />
+            <Button title="Resend the email" variant="secondary" small loading={busy} onPress={async () => { if (!email) return; setBusy(true); setError(null); try { await resendConfirmation(email, applicantConfirmUrl()); setNote(`Sent again to ${email}.`); } catch (e) { setError((e as Error).message); } setBusy(false); }} />
             {note ? <Small style={{ color: colors.ok }}>{note}</Small> : null}
             {error ? <Small style={{ color: colors.danger }}>{error}</Small> : null}
           </View>
@@ -58,7 +65,7 @@ export default function Applied() {
         ))}
       </Card>
       <View style={s.row}>
-        {needsConfirm ? null : <Link href="/sign-in" asChild><Button title="Sign in" /></Link>}
+        {needsConfirm ? null : justConfirmed ? <Link href="/athlete" asChild><Button title="Go to your dashboard" variant="secondary" /></Link> : <Link href="/sign-in" asChild><Button title="Sign in" /></Link>}
         <Button title="Back to firstlineperform.com" variant="ghost" onPress={() => window.open(marketingUrl(""), "_self")} />
       </View>
       <Small center>Questions? Email support@firstlineperform.com.</Small>
