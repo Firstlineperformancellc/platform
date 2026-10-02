@@ -95,8 +95,8 @@ export default function AdminSettings() {
 
       <Card>
         <H3>Prices and mentor levels</H3>
-        <Small>Prices, the mentor's share and the level hierarchy now live in Marketplace, on each level.</Small>
-        <Link href="/admin/marketplace" asChild><Button title="Open Marketplace" variant="secondary" small /></Link>
+        <Small>Prices, the mentor's share and the level hierarchy now live under Levels & tiles, on each level.</Small>
+        <Link href="/admin/marketplace" asChild><Button title="Open levels & tiles" variant="secondary" small /></Link>
       </Card>
 
       <Card>

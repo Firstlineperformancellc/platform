@@ -80,7 +80,7 @@ export default function AdminMarketplace() {
   }, []);
   useFocusEffect(useCallback(() => { load().catch((e) => setError((e as Error).message)); }, [load]));
 
-  if (!settings || !levels || !opts) return <AdminShell title="Marketplace"><Loading /></AdminShell>;
+  if (!settings || !levels || !opts) return <AdminShell title="Mentor levels & tiles"><Loading /></AdminShell>;
 
   async function run(key: string, fn: () => Promise<unknown>, done?: string) {
     setBusy(key); setError(null); setMsg(null);
@@ -134,7 +134,7 @@ export default function AdminMarketplace() {
   );
 
   return (
-    <AdminShell title="Marketplace">
+    <AdminShell title="Mentor levels & tiles">
       {msg ? <Body style={{ color: colors.ok }}>{msg}</Body> : null}
       {error ? <Body style={{ color: colors.danger }}>{error}</Body> : null}
 

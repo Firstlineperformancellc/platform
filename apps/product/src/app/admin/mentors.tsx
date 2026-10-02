@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { GENDER_LABEL, MOTIVATION_LABEL } from "@/lib/types";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, Link } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { AdminShell } from "@/components/AdminShell";
 import { Button } from "@/components/ui/Button";
@@ -26,7 +26,15 @@ export default function AdminMentors() {
   const [tierPick, setTierPick] = useState<Record<string, Tier>>({});
   const [levels, setLevels] = useState<TierAdmin[]>([]);
 
-  const load = useCallback(() => { listAllTiers().then((ls) => setLevels(ls.filter((t) => !t.archived_at))).catch(() => {}); return listMentors().then(setMentors).catch((e) => setError(e.message)); }, []);
+  const [picked, setPicked] = useState(false); // the admin chose a filter; stop choosing for them
+  const load = useCallback(() => {
+    listAllTiers().then((ls) => setLevels(ls.filter((t) => !t.archived_at))).catch(() => {});
+    return listMentors().then((ms) => {
+      setMentors(ms);
+      // open on the list that has people in it: applications when any are waiting, otherwise the approved mentors
+      setFilter((cur) => (picked ? cur : ms.some((m) => m.status === "applied") ? "applied" : "approved"));
+    }).catch((e) => setError(e.message));
+  }, [picked]);
   useFocusEffect(
     useCallback(() => {
       load();
@@ -46,17 +54,27 @@ export default function AdminMentors() {
   }
 
   const shown = (mentors ?? []).filter((m) => (filter === "all" ? true : m.status === filter));
+  const count = (status: string) => (mentors ?? []).filter((m) => m.status === status).length;
 
   return (
     <AdminShell title="FLP Mentors">
+      <Card style={StyleSheet.flatten([{ borderColor: colors.goldDim }])}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space.md }}>
+          <View style={{ flex: 1, minWidth: 220 }}>
+            <H3>Levels, prices and marketplace tiles</H3>
+            <Small>Add or retire mentor levels, set their order, prices and visibility, choose what the tiles show, and control who is listed, featured or custom-priced.</Small>
+          </View>
+          <Link href="/admin/marketplace" asChild><Button title="Open levels & tiles" variant="secondary" small /></Link>
+        </View>
+      </Card>
       <Choice
         label="Show"
-        options={[{ key: "applied", label: "Applications" }, { key: "approved", label: "Approved" }, { key: "suspended", label: "Suspended" }, { key: "deactivated", label: "Deactivated" }, { key: "all", label: "All" }]}
+        options={[{ key: "applied", label: `Applications (${count("applied")})` }, { key: "approved", label: `Approved (${count("approved")})` }, { key: "suspended", label: `Suspended (${count("suspended")})` }, { key: "deactivated", label: `Deactivated (${count("deactivated")})` }, { key: "all", label: `All (${(mentors ?? []).length})` }]}
         value={filter}
-        onChange={(v) => setFilter(v as string)}
+        onChange={(v) => { setPicked(true); setFilter(v as string); }}
       />
       {error ? <Body style={{ color: colors.danger }}>{error}</Body> : null}
-      {!mentors || !settings ? <Loading /> : shown.length === 0 ? <Body style={{ color: colors.muted }}>Nothing here.</Body> : null}
+      {!mentors || !settings ? <Loading /> : shown.length === 0 ? <Body style={{ color: colors.muted }}>{filter === "applied" ? "No applications waiting. Approved mentors are under Approved." : "Nobody in this list."}</Body> : null}
       {mentors && settings
         ? shown.map((m) => {
             const level = settings.taxonomy.levels.find((l) => l.key === m.highest_level);
