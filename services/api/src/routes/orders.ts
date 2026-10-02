@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { admin, userFromBearer } from "../supabase.js";
-import { getSettings, paymentPath, selfServeTier, shareCents, type Tier } from "../settings.js";
+import { getSettings, paymentPath, priceFor, selfServeTier, shareCents, type Tier } from "../settings.js";
 import { stripe, stripeConfigured } from "../stripe.js";
 import { openJobForOrder } from "../jobs.js";
 import { env } from "../env.js";
@@ -43,7 +43,8 @@ orders.post("/", async (c) => {
   const tier = first.tier as Tier;
   const level = selfServeTier(s, tier);
   if (!level.ok) return c.json({ error: level.error, contact: level.status === 409 }, level.status);
-  const price = s.breakdown_prices[tier];
+  const { data: own } = await admin.from("athletes").select("price_overrides").eq("user_id", first.user_id).maybeSingle();
+  const price = priceFor(s, tier, own?.price_overrides as Record<string, unknown> | null, "breakdown");
   if (!price) return c.json({ error: "pricing is not set for this mentor's level yet" }, 400);
   const share = shareCents(price, s.mentor_share_pct[tier]);
 

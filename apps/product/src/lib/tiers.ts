@@ -8,11 +8,12 @@ export type TierAdmin = {
   breakdown_price_cents: number; mentor_share_pct: number;
   film_room_30_cents: number | null; film_room_60_cents: number | null; addon_30_cents: number | null; season_arc_cents: number | null;
   archived_at: string | null;
+  direct_link: boolean; turnaround_hours: number | null; capacity_default: number | null; color: string | null;
 };
 export type TierPatch = Partial<Omit<TierAdmin, "key" | "archived_at">>;
 
 export async function listAllTiers(): Promise<TierAdmin[]> {
-  const { data, error } = await supabase.from("mentor_tiers").select("key, name, description, sort, visible, price_visible, breakdown_price_cents, mentor_share_pct, film_room_30_cents, film_room_60_cents, addon_30_cents, season_arc_cents, archived_at").order("sort").order("name");
+  const { data, error } = await supabase.from("mentor_tiers").select("key, name, description, sort, visible, price_visible, breakdown_price_cents, mentor_share_pct, film_room_30_cents, film_room_60_cents, addon_30_cents, season_arc_cents, archived_at, direct_link, turnaround_hours, capacity_default, color").order("sort").order("name");
   if (error) throw new Error(error.message);
   const rows = (data ?? []) as TierAdmin[];
   registerTierNames(rows);
@@ -27,3 +28,10 @@ export const reorderTiers = (keys: string[]) => after(api<{ ok: true }>("/admin/
 export const deleteTier = (key: string) => after(api<{ ok: true; archived?: boolean; deleted?: boolean }>(`/admin/tiers/${key}`, { method: "DELETE" }));
 export const restoreTier = (key: string) => after(api<{ ok: true }>(`/admin/tiers/${key}/restore`, { method: "POST" }));
 export const saveMarketplaceOptions = (marketplace: MarketplaceOptions) => after(api<{ ok: true }>("/admin/settings", { method: "PATCH", body: JSON.stringify({ marketplace }) }));
+
+// Who moved a mentor between levels, and when. Newest first.
+export type TierChange = { id: string; athlete_id: string; from_tier: string | null; to_tier: string | null; changed_at: string; by: { full_name: string } | null };
+export async function listTierHistory(athleteId: string): Promise<TierChange[]> {
+  const { data } = await supabase.from("mentor_tier_history").select("id, athlete_id, from_tier, to_tier, changed_at, by:changed_by(full_name)").eq("athlete_id", athleteId).order("changed_at", { ascending: false });
+  return (data ?? []) as unknown as TierChange[];
+}

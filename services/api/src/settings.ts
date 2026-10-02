@@ -6,6 +6,7 @@ export type TierRow = {
   breakdown_price_cents: number; mentor_share_pct: number;
   film_room_30_cents: number | null; film_room_60_cents: number | null; addon_30_cents: number | null; season_arc_cents: number | null;
   archived_at: string | null;
+  direct_link: boolean; turnaround_hours: number | null; capacity_default: number | null; color: string | null;
 };
 export const SESSION_FORMAT_COLUMNS = { film_room_30: "film_room_30_cents", film_room_60: "film_room_60_cents", addon_30: "addon_30_cents", season_arc: "season_arc_cents" } as const;
 
@@ -39,7 +40,7 @@ export async function getSettings(): Promise<Settings> {
   if (cache && Date.now() - cache.at < 60_000) return cache.value;
   const [{ data, error }, { data: tiers, error: tierError }] = await Promise.all([
     admin.from("settings").select("rules, taxonomy, marketplace, currency").eq("id", 1).single(),
-    admin.from("mentor_tiers").select("key, name, description, sort, visible, price_visible, breakdown_price_cents, mentor_share_pct, film_room_30_cents, film_room_60_cents, addon_30_cents, season_arc_cents, archived_at").order("sort").order("name"),
+    admin.from("mentor_tiers").select("key, name, description, sort, visible, price_visible, breakdown_price_cents, mentor_share_pct, film_room_30_cents, film_room_60_cents, addon_30_cents, season_arc_cents, archived_at, direct_link, turnaround_hours, capacity_default, color").order("sort").order("name"),
   ]);
   if (error || !data) throw new Error("settings unavailable: " + error?.message);
   if (tierError) throw new Error("mentor levels unavailable: " + tierError.message);
@@ -63,6 +64,19 @@ export async function getSettings(): Promise<Settings> {
 // Level and settings edits must be seen at once, not a minute later.
 export function invalidateSettings() {
   cache = null;
+}
+
+// What a parent pays: the mentor's own price where FLP set one, else the level's.
+export type PriceKind = "breakdown" | "film_room_30" | "film_room_60" | "addon_30" | "season_arc";
+export const PRICE_KINDS: PriceKind[] = ["breakdown", "film_room_30", "film_room_60", "addon_30", "season_arc"];
+export function priceFor(s: Settings, tierKey: string, overrides: Record<string, unknown> | null | undefined, kind: PriceKind): number {
+  const o = overrides?.[kind];
+  if (typeof o === "number" && Number.isInteger(o) && o >= 0) return o;
+  return kind === "breakdown" ? (s.breakdown_prices[tierKey] ?? 0) : (s.session_prices[kind]?.[tierKey] ?? 0);
+}
+// Hours to deliver a breakdown: the level's own figure where set, else the platform rule.
+export function turnaroundHours(s: Settings, tierKey: string | null | undefined): number {
+  return s.tiers.find((t) => t.key === tierKey)?.turnaround_hours ?? s.rules.turnaround_hours;
 }
 
 // A live level a parent can pay for on their own: exists, not retired, price shown.

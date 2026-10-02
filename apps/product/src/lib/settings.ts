@@ -9,6 +9,7 @@ export type Tier = string;
 export type TierInfo = {
   key: string; name: string; description: string; sort: number; price_visible: boolean;
   breakdown_price_cents: number | null; film_room_30_cents: number | null; film_room_60_cents: number | null; addon_30_cents: number | null; season_arc_cents: number | null;
+  visible?: boolean; color?: string | null; turnaround_hours?: number | null;
 };
 // What the marketplace tiles show and how the list is ordered.
 export type MarketplaceOptions = {
@@ -84,7 +85,7 @@ export async function loadSettings(): Promise<Settings> {
     inflight = (async () => {
       const [{ data, error }, { data: tiers }] = await Promise.all([
         supabase.from("settings").select("rules, taxonomy, marketplace, currency").eq("id", 1).single(),
-        supabase.from("mentor_tiers_public").select("key, name, description, sort, price_visible, breakdown_price_cents, film_room_30_cents, film_room_60_cents, addon_30_cents, season_arc_cents").order("sort").order("name"),
+        supabase.from("mentor_tiers_public").select("key, name, description, sort, price_visible, breakdown_price_cents, film_room_30_cents, film_room_60_cents, addon_30_cents, season_arc_cents, visible, color, turnaround_hours").order("sort").order("name"),
       ]);
       if (error || !data) throw new Error(error?.message ?? "settings unavailable");
       const rows = (tiers ?? []) as TierInfo[];

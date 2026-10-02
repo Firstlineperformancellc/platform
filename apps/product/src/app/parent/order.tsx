@@ -12,7 +12,7 @@ import { TextField } from "@/components/ui/TextField";
 import { Body, H1, H2, H3, Label, Small } from "@/components/ui/Text";
 import { api } from "@/lib/api";
 import { Loading } from "@/lib/auth";
-import { listMentors, type MarketplaceMentor } from "@/lib/mentors";
+import { getMentor, listMentors, priceOf, type MarketplaceMentor } from "@/lib/mentors";
 import { listPlayers, playerName, type Player } from "@/lib/players";
 import { money, useSettings } from "@/lib/settings";
 import { colors, space } from "@/theme/tokens";
@@ -54,8 +54,13 @@ export default function OrderWizard() {
 
   useEffect(() => {
     if (!player) return;
-    listMentors(player.position).then((all) => {
+    listMentors(player.position).then(async (all) => {
       const ms = all.filter((m) => m.price_visible !== false); // by-arrangement mentors are set up through FLP
+      // a mentor on a direct-link level is not in the list; the link that brought the parent here adds them
+      if (params.mentor && !ms.some((x) => x.slug === params.mentor)) {
+        const direct = await getMentor(String(params.mentor));
+        if (direct && direct.price_visible !== false) ms.unshift(direct);
+      }
       setMentors(ms);
       if (params.mentor && !first) {
         const m = ms.find((x) => x.slug === params.mentor);
@@ -76,7 +81,7 @@ export default function OrderWizard() {
 
   const firstMentor = mentors?.find((m) => m.slug === first) ?? null;
   const secondMentor = mentors?.find((m) => m.slug === second) ?? null;
-  const price = settings && firstMentor ? settings.breakdown_prices[firstMentor.tier] : null;
+  const price = settings && firstMentor ? priceOf(firstMentor, settings, "breakdown") : null;
 
   if (!settings || !players) return <Loading />;
 

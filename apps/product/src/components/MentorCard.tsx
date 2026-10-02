@@ -4,7 +4,7 @@ import { avatarUrl } from "@/lib/mentorProfile";
 import { Card } from "./ui/Card";
 import { Pill } from "./ui/Pill";
 import { Body, H3, Small } from "./ui/Text";
-import { turnaroundLabel, type MarketplaceMentor } from "@/lib/mentors";
+import { priceOf, turnaroundLabel, type MarketplaceMentor } from "@/lib/mentors";
 import { levelLabel, marketOptions, money, TIER_LABEL, type Settings } from "@/lib/settings";
 import { colors, radius, space } from "@/theme/tokens";
 
@@ -17,7 +17,7 @@ type Props = {
 };
 
 export function MentorCard({ mentor: m, settings, selected, onPress, compact }: Props) {
-  const price = settings.breakdown_prices[m.tier];
+  const price = priceOf(m, settings, "breakdown");
   const o = marketOptions(settings);
   const priceHidden = m.price_visible === false;
   const inner = (
@@ -30,7 +30,8 @@ export function MentorCard({ mentor: m, settings, selected, onPress, compact }: 
             {m.featured ? <Pill tone="gold">Featured</Pill> : null}
           </View>
           <Small>
-            {[m.tier_name ?? TIER_LABEL[m.tier], levelLabel(settings, m.highest_level)].filter((x, i, all) => x && all.findIndex((y) => y.toLowerCase() === x.toLowerCase()) === i).join(" · ")}
+            <Small style={[s.level, m.tier_color ? { color: m.tier_color, borderColor: m.tier_color } : null]}>{m.tier_name ?? TIER_LABEL[m.tier]}</Small>
+            {[levelLabel(settings, m.highest_level)].filter((x) => x && x.toLowerCase() !== (m.tier_name ?? TIER_LABEL[m.tier]).toLowerCase()).map((x) => ` · ${x}`).join("")}
             {m.current_team ? ` · ${m.current_team}` : ""}
           </Small>
         </View>
@@ -72,6 +73,7 @@ export function MentorCard({ mentor: m, settings, selected, onPress, compact }: 
 
 const s = StyleSheet.create({
   card: { gap: space.sm },
+  level: { fontFamily: "Barlow_600SemiBold", color: colors.gold },
   avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.panel2 },
   avatarEmpty: { borderWidth: 1, borderColor: colors.line2 },
   head: { flexDirection: "row", gap: space.md, alignItems: "flex-start" },

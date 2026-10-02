@@ -29,7 +29,7 @@ function fields(body: Record<string, unknown>): Record<string, unknown> | string
     if (!Number.isInteger(body.sort)) return "sort must be a whole number";
     p.sort = body.sort;
   }
-  for (const k of ["visible", "price_visible"] as const) {
+  for (const k of ["visible", "price_visible", "direct_link"] as const) {
     if (body[k] !== undefined) {
       if (typeof body[k] !== "boolean") return `${k} must be true or false`;
       p[k] = body[k];
@@ -40,6 +40,18 @@ function fields(body: Record<string, unknown>): Record<string, unknown> | string
     if (body[k] === null && k !== "breakdown_price_cents") { p[k] = null; continue; }
     if (!Number.isInteger(body[k]) || (body[k] as number) < 0 || (body[k] as number) > 100_000_00) return "prices must be whole cents between 0 and 100,000 dollars";
     p[k] = body[k];
+  }
+  if (body.turnaround_hours !== undefined) {
+    if (body.turnaround_hours !== null && (!Number.isInteger(body.turnaround_hours) || (body.turnaround_hours as number) < 1 || (body.turnaround_hours as number) > 720)) return "turnaround is a whole number of hours from 1 to 720, or blank for the platform rule";
+    p.turnaround_hours = body.turnaround_hours;
+  }
+  if (body.capacity_default !== undefined) {
+    if (body.capacity_default !== null && (!Number.isInteger(body.capacity_default) || (body.capacity_default as number) < 1 || (body.capacity_default as number) > 20)) return "jobs on deck is a whole number from 1 to 20, or blank";
+    p.capacity_default = body.capacity_default;
+  }
+  if (body.color !== undefined) {
+    if (body.color !== null && (typeof body.color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(body.color))) return "colour must be a hex value like #D4A32C, or blank";
+    p.color = body.color;
   }
   if (body.mentor_share_pct !== undefined) {
     if (!Number.isInteger(body.mentor_share_pct) || (body.mentor_share_pct as number) < 0 || (body.mentor_share_pct as number) > 100) return "the mentor share is a whole percent from 0 to 100";

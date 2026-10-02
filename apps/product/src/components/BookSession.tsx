@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { priceOf, type PriceKind } from "@/lib/mentors";
 import { Link, useRouter } from "expo-router";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { Button } from "./ui/Button";
@@ -33,8 +34,7 @@ export function BookSession({ mentor, settings, addonBreakdownId }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const isParent = Boolean(session) && profile?.role === "parent";
-  const prices = settings.session_prices;
-  const tier = mentor.tier;
+  const cost = (kind: PriceKind) => priceOf(mentor, settings, kind) ?? 0;
   const first = mentor.display_name.split(" ")[0];
 
   useEffect(() => {
@@ -63,11 +63,11 @@ export function BookSession({ mentor, settings, addonBreakdownId }: Props) {
   }, [slots]);
 
   const formatOptions: { key: SessionFormat; label: string }[] = [
-    { key: "film_room_30", label: `30 min · ${money(prices.film_room_30?.[tier] ?? 0)}` },
-    { key: "film_room_60", label: `60 min · ${money(prices.film_room_60?.[tier] ?? 0)}` },
+    { key: "film_room_30", label: `30 min · ${money(cost("film_room_30"))}` },
+    { key: "film_room_60", label: `60 min · ${money(cost("film_room_60"))}` },
   ];
-  if (addonBreakdownId) formatOptions.unshift({ key: "addon_30", label: `Go through your breakdown live · 30 min · ${money(prices.addon_30?.[tier] ?? 0)}` });
-  const price = usePack ? 0 : (prices[format]?.[tier] ?? 0);
+  if (addonBreakdownId) formatOptions.unshift({ key: "addon_30", label: `Go through your breakdown live · 30 min · ${money(cost("addon_30"))}` });
+  const price = usePack ? 0 : cost(format as PriceKind);
 
   async function book() {
     if (!playerId) return setError("Pick the youth athlete.");
@@ -104,7 +104,7 @@ export function BookSession({ mentor, settings, addonBreakdownId }: Props) {
     setBusy(null);
   }
 
-  const arcPrice = prices.season_arc?.[tier];
+  const arcPrice = priceOf(mentor, settings, "season_arc") ?? undefined;
 
   return (
     <Card>

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { admin, userFromBearer } from "../supabase.js";
-import { getSettings, paymentPath, selfServeTier, shareCents, type Tier } from "../settings.js";
+import { getSettings, paymentPath, priceFor, selfServeTier, shareCents, type PriceKind, type Tier } from "../settings.js";
 import { stripe, stripeConfigured } from "../stripe.js";
 import { env } from "../env.js";
 import { appUrl, notify } from "../notify.js";
@@ -19,7 +19,9 @@ const iso = (t: number) => new Date(t).toISOString();
 
 async function mentorBySlug(slug: string) {
   const { data } = await admin.from("marketplace_mentors").select("user_id, display_name, tier").eq("slug", slug).maybeSingle();
-  return data as { user_id: string; display_name: string; tier: Tier } | null;
+  if (!data) return null;
+  const { data: own } = await admin.from("athletes").select("price_overrides").eq("user_id", data.user_id).maybeSingle();
+  return { ...(data as { user_id: string; display_name: string; tier: Tier }), price_overrides: (own?.price_overrides ?? {}) as Record<string, unknown> };
 }
 
 async function sessionFor(id: string) {
@@ -87,7 +89,7 @@ sessions.post("/", async (c) => {
 
   const format: Format = pack ? "season_arc" : b.format;
   if (!pack) { const level = selfServeTier(s, m.tier); if (!level.ok) return c.json({ error: level.error, contact: level.status === 409 }, level.status); }
-  const price = pack ? 0 : (s.session_prices[format]?.[m.tier] ?? 0);
+  const price = pack ? 0 : priceFor(s, m.tier, m.price_overrides, format as PriceKind);
   if (!pack && !price) return c.json({ error: "session pricing is not set for this mentor's tier yet" }, 400);
   // Pack sessions carry their slice of the pack's mentor share so each completed session pays out.
   const share = pack ? Math.round(pack.mentor_share_cents / pack.sessions_total) : shareCents(price, s.mentor_share_pct[m.tier]);
@@ -359,7 +361,7 @@ sessions.post("/packs", async (c) => {
   if (!player || player.parent_id !== user.id) return c.json({ error: "youth athlete not found" }, 404);
   const arcLevel = selfServeTier(s, m.tier);
   if (!arcLevel.ok) return c.json({ error: arcLevel.error, contact: arcLevel.status === 409 }, arcLevel.status);
-  const price = s.session_prices.season_arc?.[m.tier];
+  const price = priceFor(s, m.tier, m.price_overrides, "season_arc");
   if (!price) return c.json({ error: "Season Arc pricing is not set for this tier" }, 400);
   const total = r.season_arc_sessions ?? 4;
   const { data: pack, error } = await admin

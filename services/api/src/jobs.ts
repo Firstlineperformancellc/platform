@@ -1,5 +1,5 @@
 import { admin } from "./supabase.js";
-import { getSettings } from "./settings.js";
+import { getSettings, turnaroundHours } from "./settings.js";
 import { alreadySent, appUrl, notify } from "./notify.js";
 
 // The assignment engine. Parent picks a mentor; the job is OFFERED to that mentor with an
@@ -44,8 +44,10 @@ export async function offerJob(jobId: string, athleteId: string, rank: 1 | 2 | 3
   const job = await orderOf(jobId);
   await admin.from("orders").update({ status: "offered" }).eq("id", job.order_id);
   const who = await playerLabel(job.orders.player_id);
+  const { data: offered } = await admin.from("athletes").select("tier").eq("user_id", athleteId).maybeSingle();
+  const offerTurnaround = turnaroundHours(s, offered?.tier);
   await notify(athleteId, "offer.new", "New breakdown request",
-    `<p>A parent chose you to break down film for <b>${who}</b>.</p><p>You have ${s.rules.accept_hours} hours to accept. Once you accept, the ${s.rules.turnaround_hours}-hour turnaround starts.</p><p><a href="${appUrl("/athlete")}" style="color:#d4a32c">Open your jobs</a></p>`,
+    `<p>A parent chose you to break down film for <b>${who}</b>.</p><p>You have ${s.rules.accept_hours} hours to accept. Once you accept, the ${offerTurnaround}-hour turnaround starts.</p><p><a href="${appUrl("/athlete")}" style="color:#d4a32c">Open your jobs</a></p>`,
     { targetId: jobId });
 }
 
@@ -105,10 +107,13 @@ export async function respondToOffer(jobId: string, athleteId: string, response:
   await admin.from("job_offers").update({ response, responded_at: iso(now) }).eq("id", offer.id);
   const job = await orderOf(jobId);
   if (response === "accepted") {
-    await admin.from("jobs").update({ status: "accepted", athlete_id: athleteId, accepted_at: iso(now), due_at: iso(now + hours(s.rules.turnaround_hours)), claimed_at: iso(now) }).eq("id", jobId);
+    // the accepting mentor's level sets the delivery clock where it has its own figure
+    const { data: who } = await admin.from("athletes").select("tier").eq("user_id", athleteId).maybeSingle();
+    const turnaround = turnaroundHours(s, who?.tier);
+    await admin.from("jobs").update({ status: "accepted", athlete_id: athleteId, accepted_at: iso(now), due_at: iso(now + hours(turnaround)), claimed_at: iso(now) }).eq("id", jobId);
     await admin.from("orders").update({ status: "accepted" }).eq("id", job.order_id);
     await notify(job.orders.parent_id, "order.accepted", "Your FLP Mentor accepted",
-      `<p>Your breakdown is in progress. Expect it within ${s.rules.turnaround_hours} hours.</p><p><a href="${appUrl(`/parent/orders/${job.order_id}`)}" style="color:#d4a32c">Track it</a></p>`,
+      `<p>Your breakdown is in progress. Expect it within ${turnaround} hours.</p><p><a href="${appUrl(`/parent/orders/${job.order_id}`)}" style="color:#d4a32c">Track it</a></p>`,
       { targetId: job.order_id });
   } else {
     await nextOffer(jobId);

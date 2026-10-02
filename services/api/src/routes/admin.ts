@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { admin, userFromBearer } from "../supabase.js";
-import { getSettings, invalidateSettings } from "../settings.js";
+import { getSettings, invalidateSettings, PRICE_KINDS } from "../settings.js";
 import { offerJob } from "../jobs.js";
 import { stripe } from "../stripe.js";
 import { appUrl, notify } from "../notify.js";
@@ -31,6 +31,8 @@ adminRoutes.patch("/mentors/:id", async (c) => {
   const id = c.req.param("id");
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   const patch: Record<string, unknown> = {};
+  let previousTier: string | null = null;
+  let tierChanged = false;
   if (typeof body.status === "string" && ["applied", "approved", "suspended", "deactivated"].includes(body.status)) {
     patch.status = body.status;
     if (body.status === "approved") {
@@ -43,10 +45,27 @@ adminRoutes.patch("/mentors/:id", async (c) => {
     const levels = (await getSettings()).tiers;
     if (!levels.some((t) => t.key === body.tier && !t.archived_at)) return c.json({ error: "that level does not exist" }, 400);
     patch.tier = body.tier;
+    const lvl = levels.find((t) => t.key === body.tier);
+    const { data: was } = await admin.from("athletes").select("tier").eq("user_id", id).maybeSingle();
+    previousTier = was?.tier ?? null;
+    tierChanged = previousTier !== body.tier;
+    // a mentor joining a level starts on that level's jobs-on-deck, unless this request sets one
+    if (tierChanged && lvl?.capacity_default && typeof body.capacity_on_deck !== "number") patch.capacity_on_deck = lvl.capacity_default;
+  }
+  if (body.price_overrides !== undefined) {
+    if (body.price_overrides === null || typeof body.price_overrides !== "object") return c.json({ error: "price_overrides must be an object" }, 400);
+    const clean: Record<string, number> = {};
+    for (const k of PRICE_KINDS) {
+      const v = (body.price_overrides as Record<string, unknown>)[k];
+      if (v === null || v === undefined || v === "") continue;
+      if (!Number.isInteger(v) || (v as number) < 0 || (v as number) > 100_000_00) return c.json({ error: "custom prices are whole cents between 0 and 100,000 dollars" }, 400);
+      clean[k] = v as number;
+    }
+    patch.price_overrides = clean;
   }
   if (typeof body.listed === "boolean") patch.listed = body.listed;
   if (typeof body.featured === "boolean") patch.featured = body.featured;
-  if (typeof body.capacity_on_deck === "number") patch.capacity_on_deck = Math.max(1, Math.min(5, Math.round(body.capacity_on_deck)));
+  if (typeof body.capacity_on_deck === "number") patch.capacity_on_deck = Math.max(1, Math.min(20, Math.round(body.capacity_on_deck)));
   if (Array.isArray(body.badges)) patch.badges = body.badges.filter((b) => typeof b === "string");
   if (body.block === true) patch.blocked_at = new Date().toISOString();
   if (body.block === false) patch.blocked_at = null;
@@ -62,6 +81,7 @@ adminRoutes.patch("/mentors/:id", async (c) => {
   }
   const { error } = await admin.from("athletes").update(patch).eq("user_id", id);
   if (error) return c.json({ error: error.message }, 500);
+  if (tierChanged) await admin.from("mentor_tier_history").insert({ athlete_id: id, from_tier: previousTier, to_tier: patch.tier, changed_by: me.id });
   await audit(me.id, "mentor.update", "athlete", id, patch);
   if (patch.status === "approved") {
     await notify(id, "mentor.approved", "You're approved as an FLP Mentor",

@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { Screen } from "@/components/ui/Screen";
 import { Body, H1, H3, Label, Small } from "@/components/ui/Text";
 import { Loading, useAuth } from "@/lib/auth";
-import { getMentor, listReviews, type MarketplaceMentor, type MentorReview } from "@/lib/mentors";
+import { getMentor, listReviews, type MarketplaceMentor, type MentorReview, priceOf } from "@/lib/mentors";
 import { money, TIER_LABEL, useSettings } from "@/lib/settings";
 import { colors, radius, space } from "@/theme/tokens";
 
@@ -40,7 +40,8 @@ export default function MentorProfile() {
       </Screen>
     );
 
-  const price = settings.breakdown_prices[mentor.tier];
+  const price = priceOf(mentor, settings, "breakdown") ?? 0;
+  const turnaround = mentor.turnaround_hours ?? settings.rules.turnaround_hours;
   const first = mentor.display_name.split(" ")[0];
   const orderHref = { pathname: "/parent/order" as const, params: { mentor: mentor.slug } };
   const canOrder = !session || profile?.role === "parent";
@@ -91,7 +92,7 @@ export default function MentorProfile() {
         <H3>Order a breakdown with {first}</H3>
         <Body style={{ color: colors.muted }}>
           {money(price)} per game. Upload the film, say what to look for, and get a recorded breakdown plus a Player Development
-          Worksheet back within {settings.rules.turnaround_hours} hours of acceptance.
+          Worksheet back within {turnaround} hours of acceptance.
           {!mentor.available ? " This mentor is at capacity right now; you can join the waitlist and name a second choice." : ""}
         </Body>
         {canOrder ? (

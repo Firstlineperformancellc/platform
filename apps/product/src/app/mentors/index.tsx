@@ -20,6 +20,7 @@ export default function Marketplace() {
   const { settings } = useSettings();
   const [position, setPosition] = useState<HockeyPosition | null>(null);
   const [mentors, setMentors] = useState<MarketplaceMentor[] | null>(null);
+  const [level, setLevel] = useState<string>("");
 
   useEffect(() => {
     listMentors(position ?? undefined).then(setMentors);
@@ -57,12 +58,20 @@ export default function Marketplace() {
           onChange={(v) => setPosition((v as string) ? (v as HockeyPosition) : null)}
         />
       ) : null}
+      {settings && settings.tiers.filter((t) => t.visible !== false).length > 1 ? (
+        <Choice
+          label="Level"
+          options={[{ key: "", label: "All" }, ...settings.tiers.filter((t) => t.visible !== false).map((t) => ({ key: t.key, label: t.name }))]}
+          value={level}
+          onChange={(v) => setLevel(v as string)}
+        />
+      ) : null}
       {!mentors || !settings ? (
         <Loading />
-      ) : mentors.length === 0 ? (
-        <Body style={{ color: colors.muted }}>No mentors listed yet for that position.</Body>
+      ) : mentors.filter((m) => !level || m.tier === level).length === 0 ? (
+        <Body style={{ color: colors.muted }}>No mentors listed yet for that choice.</Body>
       ) : (
-        groups(sortMentors(mentors, marketOptions(settings)), marketOptions(settings).group_by_tier).map((g) => (
+        groups(sortMentors(mentors.filter((m) => !level || m.tier === level), marketOptions(settings)), marketOptions(settings).group_by_tier).map((g) => (
           <View key={g.key} style={{ gap: space.sm }}>
             {g.title ? (
               <View>

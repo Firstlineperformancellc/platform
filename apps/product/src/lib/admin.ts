@@ -13,6 +13,7 @@ export type AdminMentor = {
   eliteprospects_url?: string | null;
   listed?: boolean;
   featured?: boolean;
+  price_overrides?: Partial<Record<"breakdown" | "film_room_30" | "film_room_60" | "addon_30" | "season_arc", number>>;
   application?: { motivations: ("money" | "fulltime" | "help" | "multiple" | "other")[]; motivation_other: string | null; special_circumstances: string | null; age: number | null; gender: "male" | "female" | "nonbinary" | "unspecified" | null } | null;
   current_team: string;
   positions: string[];
@@ -48,7 +49,7 @@ export type MentorStats = {
 export async function listMentors(): Promise<AdminMentor[]> {
   const { data, error } = await supabase
     .from("athletes")
-    .select("user_id, slug, display_name, status, tier, highest_level, current_team, positions, bio, verified, capacity_on_deck, badges, credentials, eliteprospects_url, listed, featured, application:athlete_applications(motivations, motivation_other, special_circumstances, age, gender), blocked_at, created_at, profiles!athletes_user_id_fkey(email, full_name)")
+    .select("user_id, slug, display_name, status, tier, highest_level, current_team, positions, bio, verified, capacity_on_deck, badges, credentials, eliteprospects_url, listed, featured, price_overrides, application:athlete_applications(motivations, motivation_other, special_circumstances, age, gender), blocked_at, created_at, profiles!athletes_user_id_fkey(email, full_name)")
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);

@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { useFocusEffect } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { AdminShell } from "@/components/AdminShell";
 import { MentorCard } from "@/components/MentorCard";
 import { Button } from "@/components/ui/Button";
@@ -15,21 +15,29 @@ import { listMentors as listAdminMentors, patchMentor, type AdminMentor } from "
 import { Loading } from "@/lib/auth";
 import { listMentors, type MarketplaceMentor } from "@/lib/mentors";
 import { MARKETPLACE_DEFAULTS, marketOptions, money, refreshSettings, useSettings, type MarketplaceOptions, type Settings } from "@/lib/settings";
-import { createTier, deleteTier, listAllTiers, reorderTiers, restoreTier, saveMarketplaceOptions, updateTier, type TierAdmin, type TierPatch } from "@/lib/tiers";
+import { createTier, deleteTier, listAllTiers, listTierHistory, reorderTiers, restoreTier, saveMarketplaceOptions, updateTier, type TierAdmin, type TierChange, type TierPatch } from "@/lib/tiers";
 import { colors, radius, space } from "@/theme/tokens";
 
 // What an admin types for a level; money in dollars.
-type Draft = { name: string; description: string; visible: boolean; price_visible: boolean; breakdown: string; share: string; fr30: string; fr60: string; addon: string; arc: string };
+type Draft = { name: string; description: string; visible: boolean; direct_link: boolean; price_visible: boolean; breakdown: string; share: string; fr30: string; fr60: string; addon: string; arc: string; turnaround: string; capacity: string; color: string };
 const dollars = (c: number | null | undefined) => (c == null ? "" : String(c / 100));
 const cents = (s: string) => (s.trim() === "" ? null : Math.round(Number(s) * 100));
-const toDraft = (t: TierAdmin): Draft => ({ name: t.name, description: t.description, visible: t.visible, price_visible: t.price_visible, breakdown: dollars(t.breakdown_price_cents), share: String(t.mentor_share_pct), fr30: dollars(t.film_room_30_cents), fr60: dollars(t.film_room_60_cents), addon: dollars(t.addon_30_cents), arc: dollars(t.season_arc_cents) });
-const EMPTY: Draft = { name: "", description: "", visible: true, price_visible: true, breakdown: "", share: "60", fr30: "", fr60: "", addon: "", arc: "" };
+const toDraft = (t: TierAdmin): Draft => ({ name: t.name, description: t.description, visible: t.visible, direct_link: t.direct_link, price_visible: t.price_visible, breakdown: dollars(t.breakdown_price_cents), share: String(t.mentor_share_pct), fr30: dollars(t.film_room_30_cents), fr60: dollars(t.film_room_60_cents), addon: dollars(t.addon_30_cents), arc: dollars(t.season_arc_cents), turnaround: t.turnaround_hours == null ? "" : String(t.turnaround_hours), capacity: t.capacity_default == null ? "" : String(t.capacity_default), color: t.color ?? "" });
+const EMPTY: Draft = { name: "", description: "", visible: true, direct_link: false, price_visible: true, breakdown: "", share: "60", fr30: "", fr60: "", addon: "", arc: "", turnaround: "", capacity: "", color: "" };
+const SWATCHES: { hex: string; label: string }[] = [
+  { hex: "#D4A32C", label: "Gold" }, { hex: "#C0C6CF", label: "Silver" }, { hex: "#CD7F32", label: "Bronze" }, { hex: "#4C9BE8", label: "Blue" },
+  { hex: "#4CC38A", label: "Green" }, { hex: "#E5484D", label: "Red" }, { hex: "#A78BFA", label: "Purple" }, { hex: "#F2F2F2", label: "White" },
+];
+const KINDS = [
+  { key: "breakdown", label: "Breakdown ($)" }, { key: "film_room_30", label: "Film Room 30 ($)" }, { key: "film_room_60", label: "Film Room 60 ($)" }, { key: "addon_30", label: "Add-on 30 ($)" }, { key: "season_arc", label: "Season Arc ($)" },
+] as const;
 function toPatch(d: Draft): TierPatch | string {
-  const nums = [d.breakdown, d.share, d.fr30, d.fr60, d.addon, d.arc].filter((x) => x.trim() !== "");
+  const nums = [d.breakdown, d.share, d.fr30, d.fr60, d.addon, d.arc, d.turnaround, d.capacity].filter((x) => x.trim() !== "");
   if (nums.some((x) => !Number.isFinite(Number(x)) || Number(x) < 0)) return "Prices and the share must be numbers, zero or more.";
   if (!d.name.trim()) return "Give the level a name.";
   return {
-    name: d.name.trim(), description: d.description.trim(), visible: d.visible, price_visible: d.price_visible,
+    name: d.name.trim(), description: d.description.trim(), visible: d.visible, direct_link: d.visible ? false : d.direct_link, price_visible: d.price_visible,
+    turnaround_hours: d.turnaround.trim() === "" ? null : Math.round(Number(d.turnaround)), capacity_default: d.capacity.trim() === "" ? null : Math.round(Number(d.capacity)), color: d.color || null,
     breakdown_price_cents: cents(d.breakdown) ?? 0, mentor_share_pct: Math.round(Number(d.share || "0")),
     film_room_30_cents: cents(d.fr30), film_room_60_cents: cents(d.fr60), addon_30_cents: cents(d.addon), season_arc_cents: cents(d.arc),
   };
@@ -54,6 +62,10 @@ export default function AdminMarketplace() {
   const [sample, setSample] = useState<MarketplaceMentor | null>(null);
   const [opts, setOpts] = useState<MarketplaceOptions | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
+  const [pricesFor, setPricesFor] = useState<string | null>(null);
+  const [priceDraft, setPriceDraft] = useState<Record<string, string>>({});
+  const [historyFor, setHistoryFor] = useState<string | null>(null);
+  const [history, setHistory] = useState<TierChange[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -95,6 +107,7 @@ export default function AdminMarketplace() {
       </View>
       <View style={s.checks}>
         <Checkbox label="Visible on the marketplace" checked={d.visible} onChange={(v) => on({ visible: v })} hint={d.visible ? "Parents can see mentors on this level." : "Private: mentors on this level are hidden from the public marketplace."} />
+        {!d.visible ? <Checkbox label="Bookable by direct link" checked={d.direct_link} onChange={(v) => on({ direct_link: v })} hint={d.direct_link ? "Not in the marketplace list, but a mentor's profile link works and parents can order from it." : "Fully hidden: profile links do not open and nobody can order."} /> : null}
         <Checkbox label="Show the price" checked={d.price_visible} onChange={(v) => on({ price_visible: v })} hint={d.price_visible ? "Parents see the price and can check out on their own." : "Tiles read \"Please contact for pricing\" and parents are sent to FLP instead of checkout."} />
       </View>
       <View style={s.grid}>
@@ -104,6 +117,18 @@ export default function AdminMarketplace() {
         <View style={s.cell}><TextField label="Film Room 60 min ($)" value={d.fr60} onChangeText={(v) => on({ fr60: v })} keyboardType="decimal-pad" /></View>
         <View style={s.cell}><TextField label="Add-on 30 min ($)" value={d.addon} onChangeText={(v) => on({ addon: v })} keyboardType="decimal-pad" /></View>
         <View style={s.cell}><TextField label="Season Arc pack ($)" value={d.arc} onChangeText={(v) => on({ arc: v })} keyboardType="decimal-pad" /></View>
+        <View style={s.cell}><TextField label="Turnaround (hours)" value={d.turnaround} onChangeText={(v) => on({ turnaround: v.replace(/[^0-9]/g, "") })} keyboardType="number-pad" placeholder={`${settings.rules.turnaround_hours} (platform rule)`} /></View>
+        <View style={s.cell}><TextField label="Jobs on deck for new mentors" value={d.capacity} onChangeText={(v) => on({ capacity: v.replace(/[^0-9]/g, "") })} keyboardType="number-pad" placeholder={`${settings.rules.capacity_default} (platform rule)`} /></View>
+      </View>
+      <View style={{ gap: 6 }}>
+        <Small>Level colour on tiles</Small>
+        <View style={s.swatches}>
+          <Pressable accessibilityRole="button" accessibilityLabel="No colour" onPress={() => on({ color: "" })} style={[s.swatch, s.swatchNone, d.color === "" && s.swatchOn]}><Small>–</Small></Pressable>
+          {SWATCHES.map((c) => (
+            <Pressable key={c.hex} accessibilityRole="button" accessibilityLabel={c.label} onPress={() => on({ color: c.hex })} style={[s.swatch, { backgroundColor: c.hex }, d.color.toLowerCase() === c.hex.toLowerCase() && s.swatchOn]} />
+          ))}
+          <Small style={d.color ? { color: d.color } : undefined}>{d.name || "Level"}{d.color ? "" : " (default gold)"}</Small>
+        </View>
       </View>
     </>
   );
@@ -129,7 +154,7 @@ export default function AdminMarketplace() {
                 <Small>{n} mentor{n === 1 ? "" : "s"} · breakdown {t.price_visible ? money(t.breakdown_price_cents) : "by arrangement"}</Small>
               </View>
               <View style={s.pills}>
-                {!t.visible ? <Pill tone="warn">Private</Pill> : <Pill tone="ok">Visible</Pill>}
+                {t.visible ? <Pill tone="ok">Visible</Pill> : t.direct_link ? <Pill tone="warn">Direct link only</Pill> : <Pill tone="warn">Private</Pill>}
                 {!t.price_visible ? <Pill tone="muted">Contact for pricing</Pill> : null}
               </View>
               <View style={s.pills}>
@@ -205,17 +230,46 @@ export default function AdminMarketplace() {
         {mentors.map((m) => {
           const lvl = levels.find((t) => t.key === m.tier);
           const hidden = m.listed === false || !lvl || !lvl.visible || Boolean(lvl.archived_at);
+          const directOnly = m.listed !== false && lvl && !lvl.visible && lvl.direct_link && !lvl.archived_at;
+          const custom = Object.keys(m.price_overrides ?? {}).length;
           return (
             <View key={m.user_id} style={s.mentor}>
               <View style={{ flex: 1, minWidth: 180 }}>
                 <Body>{m.display_name}</Body>
-                <Small style={{ color: hidden ? colors.warn : colors.ok }}>{hidden ? (m.listed === false ? "Not listed" : "Hidden: its level is private") : "On the marketplace"}</Small>
+                <Small style={{ color: hidden ? colors.warn : colors.ok }}>{directOnly ? "Direct link only" : hidden ? (m.listed === false ? "Not listed" : "Hidden: its level is private") : "On the marketplace"}{custom ? ` · ${custom} custom price${custom === 1 ? "" : "s"}` : ""}</Small>
               </View>
               <View style={{ width: 220 }}>
                 <Dropdown label="Level" single options={live.map((t) => ({ key: t.key, label: t.visible ? t.name : `${t.name} (private)` }))} value={m.tier ? [m.tier] : []} onChange={(v) => v[0] && v[0] !== m.tier && run(`lvl-${m.user_id}`, () => patchMentor(m.user_id, { tier: v[0] }))} />
               </View>
               <Checkbox label="Listed" checked={m.listed !== false} onChange={(v) => run(`list-${m.user_id}`, () => patchMentor(m.user_id, { listed: v }))} />
               <Checkbox label="Featured" checked={Boolean(m.featured)} onChange={(v) => run(`feat-${m.user_id}`, () => patchMentor(m.user_id, { featured: v }))} />
+              <View style={s.pills}>
+                <Button title={pricesFor === m.user_id ? "Hide prices" : "Custom prices"} variant="ghost" small onPress={() => { if (pricesFor === m.user_id) return setPricesFor(null); setPricesFor(m.user_id); setPriceDraft(Object.fromEntries(KINDS.map((k) => [k.key, m.price_overrides?.[k.key] != null ? String((m.price_overrides[k.key] as number) / 100) : ""]))); }} />
+                <Button title={historyFor === m.user_id ? "Hide history" : "Level history"} variant="ghost" small onPress={() => { if (historyFor === m.user_id) return setHistoryFor(null); setHistoryFor(m.user_id); setHistory([]); listTierHistory(m.user_id).then(setHistory).catch(() => {}); }} />
+              </View>
+              {pricesFor === m.user_id ? (
+                <View style={s.sub}>
+                  <Small>Leave a box blank to use the {lvl?.name ?? "level"} price. A custom price applies to this mentor only.</Small>
+                  <View style={s.grid}>
+                    {KINDS.map((k) => {
+                      const base = lvl ? ({ breakdown: lvl.breakdown_price_cents, film_room_30: lvl.film_room_30_cents, film_room_60: lvl.film_room_60_cents, addon_30: lvl.addon_30_cents, season_arc: lvl.season_arc_cents } as Record<string, number | null>)[k.key] : null;
+                      return <View key={k.key} style={s.cell}><TextField label={k.label} value={priceDraft[k.key] ?? ""} onChangeText={(v) => setPriceDraft({ ...priceDraft, [k.key]: v })} keyboardType="decimal-pad" placeholder={base == null ? "not set" : `${base / 100} (level)`} /></View>;
+                    })}
+                  </View>
+                  <View style={s.actions}>
+                    <Button title="Save custom prices" small loading={busy === `ov-${m.user_id}`} onPress={() => { const vals = Object.entries(priceDraft).filter(([, v]) => v.trim() !== ""); if (vals.some(([, v]) => !Number.isFinite(Number(v)) || Number(v) < 0)) return setError("Custom prices must be numbers, zero or more."); run(`ov-${m.user_id}`, () => patchMentor(m.user_id, { price_overrides: Object.fromEntries(vals.map(([k, v]) => [k, Math.round(Number(v) * 100)])) }), `Custom prices saved for ${m.display_name}.`); }} />
+                    <Button title="Clear all" variant="ghost" small onPress={() => run(`ov-${m.user_id}`, async () => { await patchMentor(m.user_id, { price_overrides: {} }); setPricesFor(null); }, `${m.display_name} is back on the level's prices.`)} />
+                  </View>
+                </View>
+              ) : null}
+              {historyFor === m.user_id ? (
+                <View style={s.sub}>
+                  {history.length === 0 ? <Small>No level changes recorded yet. Changes made from here on are kept.</Small> : null}
+                  {history.map((h) => (
+                    <Small key={h.id}>{new Date(h.changed_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })} · {h.from_tier ? (levels.find((t) => t.key === h.from_tier)?.name ?? h.from_tier) : "no level"} → {h.to_tier ? (levels.find((t) => t.key === h.to_tier)?.name ?? h.to_tier) : "no level"} · by {h.by?.full_name || "an admin"}</Small>
+                  ))}
+                </View>
+              ) : null}
             </View>
           );
         })}
@@ -236,5 +290,10 @@ const s = StyleSheet.create({
   actions: { flexDirection: "row", flexWrap: "wrap", gap: space.sm, alignItems: "center" },
   line: { flexDirection: "row", alignItems: "center", gap: space.md, paddingVertical: 6, borderTopWidth: 1, borderTopColor: colors.line },
   mentor: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space.lg, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.line },
+  swatches: { flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center" },
+  swatch: { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: "transparent", alignItems: "center", justifyContent: "center" },
+  swatchNone: { borderColor: colors.line2, backgroundColor: colors.panel2 },
+  swatchOn: { borderColor: colors.ink },
+  sub: { flexBasis: "100%", gap: space.sm, borderLeftWidth: 2, borderLeftColor: colors.line2, paddingLeft: space.md },
   preview: { gap: 6, borderWidth: 1, borderColor: colors.line2, borderStyle: "dashed", borderRadius: radius.md, padding: space.md, maxWidth: 560 },
 });
