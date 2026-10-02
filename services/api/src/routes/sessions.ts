@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { admin, userFromBearer } from "../supabase.js";
-import { getSettings, paymentPath, shareCents, type Tier } from "../settings.js";
+import { getSettings, paymentPath, selfServeTier, shareCents, type Tier } from "../settings.js";
 import { stripe, stripeConfigured } from "../stripe.js";
 import { env } from "../env.js";
 import { appUrl, notify } from "../notify.js";
@@ -86,6 +86,7 @@ sessions.post("/", async (c) => {
   }
 
   const format: Format = pack ? "season_arc" : b.format;
+  if (!pack) { const level = selfServeTier(s, m.tier); if (!level.ok) return c.json({ error: level.error, contact: level.status === 409 }, level.status); }
   const price = pack ? 0 : (s.session_prices[format]?.[m.tier] ?? 0);
   if (!pack && !price) return c.json({ error: "session pricing is not set for this mentor's tier yet" }, 400);
   // Pack sessions carry their slice of the pack's mentor share so each completed session pays out.
@@ -356,6 +357,8 @@ sessions.post("/packs", async (c) => {
   if (!m) return c.json({ error: "mentor not found" }, 404);
   const { data: player } = await admin.from("players").select("id, parent_id").eq("id", b.playerId).maybeSingle();
   if (!player || player.parent_id !== user.id) return c.json({ error: "youth athlete not found" }, 404);
+  const arcLevel = selfServeTier(s, m.tier);
+  if (!arcLevel.ok) return c.json({ error: arcLevel.error, contact: arcLevel.status === 409 }, arcLevel.status);
   const price = s.session_prices.season_arc?.[m.tier];
   if (!price) return c.json({ error: "Season Arc pricing is not set for this tier" }, 400);
   const total = r.season_arc_sessions ?? 4;

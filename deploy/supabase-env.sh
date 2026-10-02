@@ -14,7 +14,7 @@ APP_ENV="apps/product/.env.$ENVNAME"
 [ -f "$API_ENV" ] || cp services/api/.env.example "$API_ENV"
 [ -f "$APP_ENV" ] || cp apps/product/.env.example "$APP_ENV"
 
-keys="$(npx --no-install supabase projects api-keys --project-ref "$REF" -o json)"
+keys="$(npx -y supabase@2.118.0 projects api-keys --project-ref "$REF" -o json)"
 
 python3 - "$REF" "$API_ENV" "$APP_ENV" <<'PY' "$keys"
 import json, re, sys

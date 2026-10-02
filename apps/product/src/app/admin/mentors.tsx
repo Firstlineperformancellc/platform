@@ -11,6 +11,7 @@ import { Body, H3, Small } from "@/components/ui/Text";
 import { listMentors, patchMentor, type AdminMentor } from "@/lib/admin";
 import { Loading } from "@/lib/auth";
 import { levelLabel, TIER_LABEL, useSettings, type Tier } from "@/lib/settings";
+import { listAllTiers, type TierAdmin } from "@/lib/tiers";
 import { colors, space } from "@/theme/tokens";
 
 const pct = (v: number | null | undefined) => (v == null ? "–" : `${Math.round(v * 100)}%`);
@@ -23,8 +24,9 @@ export default function AdminMentors() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tierPick, setTierPick] = useState<Record<string, Tier>>({});
+  const [levels, setLevels] = useState<TierAdmin[]>([]);
 
-  const load = useCallback(() => listMentors().then(setMentors).catch((e) => setError(e.message)), []);
+  const load = useCallback(() => { listAllTiers().then((ls) => setLevels(ls.filter((t) => !t.archived_at))).catch(() => {}); return listMentors().then(setMentors).catch((e) => setError(e.message)); }, []);
   useFocusEffect(
     useCallback(() => {
       load();
@@ -58,7 +60,8 @@ export default function AdminMentors() {
       {mentors && settings
         ? shown.map((m) => {
             const level = settings.taxonomy.levels.find((l) => l.key === m.highest_level);
-            const suggestedTier = (m.tier ?? level?.tier ?? "ncaa") as Tier;
+            const fallback = levels[levels.length - 1]?.key ?? "ncaa";
+            const suggestedTier = (m.tier ?? (level?.tier && levels.some((t) => t.key === level.tier) ? level.tier : fallback)) as Tier;
             const tier = tierPick[m.user_id] ?? suggestedTier;
             const st = m.stats;
             return (
@@ -101,7 +104,7 @@ export default function AdminMentors() {
                 <View style={s.actions}>
                   {m.status === "applied" ? (
                     <>
-                      <Choice label="Tier" options={(["pro", "pwhl", "ncaa"] as Tier[]).map((t) => ({ key: t, label: TIER_LABEL[t] }))} value={tier} onChange={(v) => setTierPick({ ...tierPick, [m.user_id]: v as Tier })} />
+                      <Choice label="Tier" options={levels.map((t) => ({ key: t.key, label: t.visible ? t.name : `${t.name} (private)` }))} value={tier} onChange={(v) => setTierPick({ ...tierPick, [m.user_id]: v as Tier })} />
                       <Button title="Approve" small loading={busy === m.user_id} onPress={() => act(m.user_id, { status: "approved", tier })} />
                       <Button title="Decline" variant="danger" small onPress={() => act(m.user_id, { status: "deactivated" })} />
                     </>

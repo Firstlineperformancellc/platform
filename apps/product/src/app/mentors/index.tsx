@@ -6,10 +6,10 @@ import { MentorCard } from "@/components/MentorCard";
 import { Button } from "@/components/ui/Button";
 import { Choice } from "@/components/ui/Choice";
 import { Screen } from "@/components/ui/Screen";
-import { Body, H1, Label } from "@/components/ui/Text";
+import { Body, H1, H3, Label, Small } from "@/components/ui/Text";
 import { Loading, useAuth } from "@/lib/auth";
-import { listMentors, type MarketplaceMentor } from "@/lib/mentors";
-import { useSettings } from "@/lib/settings";
+import { listMentors, sortMentors, type MarketplaceMentor } from "@/lib/mentors";
+import { marketOptions, useSettings } from "@/lib/settings";
 import type { HockeyPosition } from "@/lib/types";
 import { colors, space } from "@/theme/tokens";
 
@@ -62,16 +62,38 @@ export default function Marketplace() {
       ) : mentors.length === 0 ? (
         <Body style={{ color: colors.muted }}>No mentors listed yet for that position.</Body>
       ) : (
-        <View style={s.grid}>
-          {mentors.map((m) => (
-            <View key={m.user_id} style={s.cell}>
-              <MentorCard mentor={m} settings={settings} onPress={() => router.push({ pathname: "/mentors/[slug]", params: { slug: m.slug } })} />
+        groups(sortMentors(mentors, marketOptions(settings)), marketOptions(settings).group_by_tier).map((g) => (
+          <View key={g.key} style={{ gap: space.sm }}>
+            {g.title ? (
+              <View>
+                <H3>{g.title}</H3>
+                {g.description ? <Small>{g.description}</Small> : null}
+              </View>
+            ) : null}
+            <View style={s.grid}>
+              {g.mentors.map((m) => (
+                <View key={m.user_id} style={s.cell}>
+                  <MentorCard mentor={m} settings={settings} onPress={() => router.push({ pathname: "/mentors/[slug]", params: { slug: m.slug } })} />
+                </View>
+              ))}
             </View>
-          ))}
-        </View>
+          </View>
+        ))
       )}
     </Screen>
   );
+}
+
+// One group for the whole list, or one per level in hierarchy order.
+function groups(list: MarketplaceMentor[], byLevel: boolean): { key: string; title: string | null; description: string | null; mentors: MarketplaceMentor[] }[] {
+  if (!byLevel) return [{ key: "all", title: null, description: null, mentors: list }];
+  const out: { key: string; title: string | null; description: string | null; mentors: MarketplaceMentor[]; sort: number }[] = [];
+  for (const m of list) {
+    let g = out.find((x) => x.key === m.tier);
+    if (!g) { g = { key: m.tier, title: m.tier_name ?? m.tier, description: m.tier_description || null, mentors: [], sort: m.tier_sort ?? 999 }; out.push(g); }
+    g.mentors.push(m);
+  }
+  return out.sort((a, b) => a.sort - b.sort);
 }
 
 const s = StyleSheet.create({

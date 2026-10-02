@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { admin, userFromBearer } from "../supabase.js";
-import { getSettings, paymentPath, shareCents, type Tier } from "../settings.js";
+import { getSettings, paymentPath, selfServeTier, shareCents, type Tier } from "../settings.js";
 import { stripe, stripeConfigured } from "../stripe.js";
 import { openJobForOrder } from "../jobs.js";
 import { env } from "../env.js";
@@ -41,7 +41,10 @@ orders.post("/", async (c) => {
   if (s.rules.second_choice_required && !second) return c.json({ error: "a second choice is required" }, 400);
 
   const tier = first.tier as Tier;
+  const level = selfServeTier(s, tier);
+  if (!level.ok) return c.json({ error: level.error, contact: level.status === 409 }, level.status);
   const price = s.breakdown_prices[tier];
+  if (!price) return c.json({ error: "pricing is not set for this mentor's level yet" }, 400);
   const share = shareCents(price, s.mentor_share_pct[tier]);
 
   const { data: order, error } = await admin
@@ -73,7 +76,7 @@ orders.post("/", async (c) => {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       customer_email: user.email ?? undefined,
-      line_items: [{ quantity: 1, price_data: { currency: s.currency, unit_amount: price, product_data: { name: `FLP breakdown · ${tier.toUpperCase()} mentor` } } }],
+      line_items: [{ quantity: 1, price_data: { currency: s.currency, unit_amount: price, product_data: { name: `FLP breakdown · ${level.tier.name} mentor` } } }],
       metadata: { orderId: order.id },
       success_url: appUrl(`/parent/orders/${order.id}?paid=1`),
       cancel_url: appUrl(`/parent/order?cancelled=1&order=${order.id}`),

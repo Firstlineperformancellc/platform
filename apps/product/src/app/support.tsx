@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react";
-import { Link, useFocusEffect } from "expo-router";
+import { useCallback, useState, useEffect } from "react";
+import { Link, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { Brand } from "@/components/Brand";
 import { Button } from "@/components/ui/Button";
@@ -19,6 +19,8 @@ export default function Support() {
   const [open, setOpen] = useState<string | null>(null);
   const [thread, setThread] = useState<Record<string, Message[]>>({});
   const [subject, setSubject] = useState("");
+  const linked = useLocalSearchParams<{ subject?: string }>();
+  useEffect(() => { if (linked.subject) setSubject(String(linked.subject).slice(0, 200)); }, [linked.subject]);
   const [body, setBody] = useState("");
   const [reply, setReply] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);

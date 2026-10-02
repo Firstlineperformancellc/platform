@@ -56,7 +56,7 @@ export default function MentorProfile() {
         </Link>
       </View>
       <View>
-        <Label>FLP Mentor · {TIER_LABEL[mentor.tier]}</Label>
+        <Label>FLP Mentor · {mentor.tier_name ?? TIER_LABEL[mentor.tier]}</Label>
         <H1>{mentor.display_name}</H1>
       </View>
       <MentorCard mentor={mentor} settings={settings} />
@@ -77,6 +77,16 @@ export default function MentorProfile() {
         </Card>
       ) : null}
 
+      {mentor.price_visible === false ? (
+        <Card>
+          <H3>Work with {first}</H3>
+          <Body style={{ color: colors.muted }}>Pricing for {first} is by arrangement. Tell us what you're looking for and FLP will set it up with you.</Body>
+          <Link href={{ pathname: "/support", params: { subject: `Pricing for ${mentor.display_name}` } }} asChild>
+            <Button title="Contact FLP for pricing" />
+          </Link>
+        </Card>
+      ) : (
+      <>
       <Card>
         <H3>Order a breakdown with {first}</H3>
         <Body style={{ color: colors.muted }}>
@@ -94,6 +104,8 @@ export default function MentorProfile() {
       </Card>
 
       <BookSession mentor={mentor} settings={settings} addonBreakdownId={addon ?? null} />
+      </>
+      )}
 
       {reviews.length > 0 ? (
         <Card>

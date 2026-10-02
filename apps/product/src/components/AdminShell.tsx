@@ -1,4 +1,6 @@
 import { Link, usePathname } from "expo-router";
+import { useEffect } from "react";
+import { listAllTiers } from "@/lib/tiers";
 import { StyleSheet, Text, View } from "react-native";
 import { Brand } from "./Brand";
 import { Button } from "./ui/Button";
@@ -12,6 +14,7 @@ const NAV = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/mentors", label: "Mentors" },
+  { href: "/admin/marketplace", label: "Marketplace" },
   { href: "/admin/jobs", label: "Orders & jobs" },
   { href: "/admin/sessions", label: "Film Room" },
   { href: "/admin/audits", label: "Audits" },
@@ -25,6 +28,7 @@ export function AdminShell({ title, children }: { title: string; children: React
   const { signOut } = useAuth();
   const { settings } = useSettings();
   const path = usePathname();
+  useEffect(() => { listAllTiers().catch(() => {}); }, []); // registers every level name for labels across admin
   return (
     <Screen width="page">
       <View style={s.topbar}>

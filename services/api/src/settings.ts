@@ -1,6 +1,13 @@
 import { admin } from "./supabase.js";
 
-export type Tier = "pro" | "pwhl" | "ncaa";
+export type Tier = string;
+export type TierRow = {
+  key: string; name: string; description: string; sort: number; visible: boolean; price_visible: boolean;
+  breakdown_price_cents: number; mentor_share_pct: number;
+  film_room_30_cents: number | null; film_room_60_cents: number | null; addon_30_cents: number | null; season_arc_cents: number | null;
+  archived_at: string | null;
+};
+export const SESSION_FORMAT_COLUMNS = { film_room_30: "film_room_30_cents", film_room_60: "film_room_60_cents", addon_30: "addon_30_cents", season_arc: "season_arc_cents" } as const;
 
 export type Settings = {
   breakdown_prices: Record<Tier, number>;
@@ -20,6 +27,8 @@ export type Settings = {
     [k: string]: unknown;
   };
   taxonomy: Record<string, unknown>;
+  marketplace: Record<string, unknown>;
+  tiers: TierRow[];
   currency: string;
 };
 
@@ -28,14 +37,40 @@ let cache: { at: number; value: Settings } | null = null;
 // Settings change rarely and every request needs them; cache for a minute.
 export async function getSettings(): Promise<Settings> {
   if (cache && Date.now() - cache.at < 60_000) return cache.value;
-  const { data, error } = await admin
-    .from("settings")
-    .select("breakdown_prices, mentor_share_pct, session_prices, rules, taxonomy, currency")
-    .eq("id", 1)
-    .single();
+  const [{ data, error }, { data: tiers, error: tierError }] = await Promise.all([
+    admin.from("settings").select("rules, taxonomy, marketplace, currency").eq("id", 1).single(),
+    admin.from("mentor_tiers").select("key, name, description, sort, visible, price_visible, breakdown_price_cents, mentor_share_pct, film_room_30_cents, film_room_60_cents, addon_30_cents, season_arc_cents, archived_at").order("sort").order("name"),
+  ]);
   if (error || !data) throw new Error("settings unavailable: " + error?.message);
-  cache = { at: Date.now(), value: data as Settings };
+  if (tierError) throw new Error("mentor levels unavailable: " + tierError.message);
+  const rows = (tiers ?? []) as TierRow[];
+  // The per-level maps the pricing code reads, rebuilt from the levels table.
+  const session_prices: Record<string, Record<string, number>> = {};
+  for (const [format, col] of Object.entries(SESSION_FORMAT_COLUMNS)) {
+    session_prices[format] = Object.fromEntries(rows.filter((t) => t[col] != null).map((t) => [t.key, t[col] as number]));
+  }
+  const value: Settings = {
+    ...(data as Pick<Settings, "rules" | "taxonomy" | "marketplace" | "currency">),
+    tiers: rows,
+    breakdown_prices: Object.fromEntries(rows.map((t) => [t.key, t.breakdown_price_cents])),
+    mentor_share_pct: Object.fromEntries(rows.map((t) => [t.key, t.mentor_share_pct])),
+    session_prices,
+  };
+  cache = { at: Date.now(), value };
   return cache.value;
+}
+
+// Level and settings edits must be seen at once, not a minute later.
+export function invalidateSettings() {
+  cache = null;
+}
+
+// A live level a parent can pay for on their own: exists, not retired, price shown.
+export function selfServeTier(s: Settings, key: string | null | undefined): { ok: true; tier: TierRow } | { ok: false; status: 400 | 409; error: string } {
+  const tier = s.tiers.find((t) => t.key === key);
+  if (!tier || tier.archived_at) return { ok: false, status: 400, error: "this mentor's level is not available right now" };
+  if (!tier.price_visible) return { ok: false, status: 409, error: "Pricing for this mentor is by arrangement. Contact FLP and we'll set it up." };
+  return { ok: true, tier };
 }
 
 // Free preview (admin switch) lets demos and beta testers complete orders without a card.

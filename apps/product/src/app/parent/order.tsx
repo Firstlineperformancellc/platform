@@ -54,7 +54,8 @@ export default function OrderWizard() {
 
   useEffect(() => {
     if (!player) return;
-    listMentors(player.position).then((ms) => {
+    listMentors(player.position).then((all) => {
+      const ms = all.filter((m) => m.price_visible !== false); // by-arrangement mentors are set up through FLP
       setMentors(ms);
       if (params.mentor && !first) {
         const m = ms.find((x) => x.slug === params.mentor);

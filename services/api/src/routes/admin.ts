@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { admin, userFromBearer } from "../supabase.js";
-import { getSettings } from "../settings.js";
+import { getSettings, invalidateSettings } from "../settings.js";
 import { offerJob } from "../jobs.js";
 import { stripe } from "../stripe.js";
 import { appUrl, notify } from "../notify.js";
@@ -24,7 +24,7 @@ async function audit(actorId: string, action: string, targetType: string, target
 }
 
 // --- Mentors ---------------------------------------------------------------
-// PATCH /admin/mentors/:id  { status?, verified?, tier?, capacity_on_deck?, badges?, block?, remove? }
+// PATCH /admin/mentors/:id  { status?, verified?, tier?, listed?, featured?, capacity_on_deck?, badges?, block?, remove? }
 adminRoutes.patch("/mentors/:id", async (c) => {
   const me = await requireAdmin(c.req.header("authorization"));
   if (!me) return c.json({ error: "admin only" }, 403);
@@ -39,7 +39,13 @@ adminRoutes.patch("/mentors/:id", async (c) => {
     }
   }
   if (typeof body.verified === "boolean") patch.verified = body.verified;
-  if (typeof body.tier === "string" && ["pro", "pwhl", "ncaa"].includes(body.tier)) patch.tier = body.tier;
+  if (typeof body.tier === "string") {
+    const levels = (await getSettings()).tiers;
+    if (!levels.some((t) => t.key === body.tier && !t.archived_at)) return c.json({ error: "that level does not exist" }, 400);
+    patch.tier = body.tier;
+  }
+  if (typeof body.listed === "boolean") patch.listed = body.listed;
+  if (typeof body.featured === "boolean") patch.featured = body.featured;
   if (typeof body.capacity_on_deck === "number") patch.capacity_on_deck = Math.max(1, Math.min(5, Math.round(body.capacity_on_deck)));
   if (Array.isArray(body.badges)) patch.badges = body.badges.filter((b) => typeof b === "string");
   if (body.block === true) patch.blocked_at = new Date().toISOString();
@@ -352,14 +358,14 @@ adminRoutes.post("/users/:id/delete", async (c) => {
 });
 
 // --- Settings ----------------------------------------------------------------
-// PATCH /admin/settings { breakdown_prices?, mentor_share_pct?, session_prices?, rules?, taxonomy? }  (shallow-merged per key)
+// PATCH /admin/settings { rules?, taxonomy?, marketplace? }  (shallow-merged per key). Prices live on the mentor levels.
 adminRoutes.patch("/settings", async (c) => {
   const me = await requireAdmin(c.req.header("authorization"));
   if (!me) return c.json({ error: "admin only" }, 403);
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   const current = await getSettings();
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  for (const key of ["breakdown_prices", "mentor_share_pct", "session_prices", "rules", "taxonomy"] as const) {
+  for (const key of ["rules", "taxonomy", "marketplace"] as const) {
     if (body[key] && typeof body[key] === "object") patch[key] = { ...(current[key] as object), ...(body[key] as object) };
   }
   const mode = (patch.rules as Record<string, unknown> | undefined)?.payments_mode;
@@ -368,6 +374,7 @@ adminRoutes.patch("/settings", async (c) => {
   if (typeof body.currency === "string") patch.currency = body.currency;
   const { error } = await admin.from("settings").update(patch).eq("id", 1);
   if (error) return c.json({ error: error.message }, 500);
+  invalidateSettings();
   await audit(me.id, "settings.update", "settings", null, { keys: Object.keys(patch) });
   return c.json({ ok: true });
 });

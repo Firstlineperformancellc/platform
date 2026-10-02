@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { AdminShell } from "@/components/AdminShell";
 import { Button } from "@/components/ui/Button";
@@ -9,10 +10,9 @@ import { Pill } from "@/components/ui/Pill";
 import { Body, H3, Small } from "@/components/ui/Text";
 import { grantAdmin, patchSettings } from "@/lib/admin";
 import { Loading } from "@/lib/auth";
-import { TIER_LABEL, useSettings, type Tier } from "@/lib/settings";
+import { useSettings } from "@/lib/settings";
 import { colors, space } from "@/theme/tokens";
 
-const TIERS: Tier[] = ["pro", "pwhl", "ncaa"];
 const RULES: { key: string; label: string; hint: string }[] = [
   { key: "accept_hours", label: "Hours to accept an offer", hint: "Then it moves to the second choice." },
   { key: "accept_nudge_hours", label: "Nudge mentors after (hours)", hint: "Reminder before the window closes." },
@@ -33,12 +33,6 @@ const RULES: { key: string; label: string; hint: string }[] = [
   { key: "season_arc_sessions", label: "Sessions in a Season Arc", hint: "" },
   { key: "season_arc_weeks", label: "Weeks to use a Season Arc", hint: "" },
 ];
-const FORMATS: { key: string; label: string }[] = [
-  { key: "film_room_30", label: "Film Room · 30 min" },
-  { key: "film_room_60", label: "Film Room · 60 min" },
-  { key: "addon_30", label: "Add-on after a breakdown · 30 min" },
-  { key: "season_arc", label: "Season Arc (whole pack)" },
-];
 const LISTS: { key: string; label: string }[] = [
   { key: "age_groups", label: "Age groups" },
   { key: "skill_levels", label: "Skill levels" },
@@ -49,9 +43,6 @@ const LISTS: { key: string; label: string }[] = [
 // Prices, splits, rules, and lists. Everything here changes the product without a deploy.
 export default function AdminSettings() {
   const { settings } = useSettings();
-  const [prices, setPrices] = useState<Record<string, string>>({});
-  const [shares, setShares] = useState<Record<string, string>>({});
-  const [sessionPrices, setSessionPrices] = useState<Record<string, string>>({});
   const [rules, setRules] = useState<Record<string, string>>({});
   const [lists, setLists] = useState<Record<string, string>>({});
   const [adminEmail, setAdminEmail] = useState("");
@@ -61,9 +52,6 @@ export default function AdminSettings() {
 
   useEffect(() => {
     if (!settings) return;
-    setPrices(Object.fromEntries(TIERS.map((t) => [t, String(settings.breakdown_prices[t] / 100)])));
-    setShares(Object.fromEntries(TIERS.map((t) => [t, String(settings.mentor_share_pct[t])])));
-    setSessionPrices(Object.fromEntries(FORMATS.flatMap((f) => TIERS.map((t) => [`${f.key}.${t}`, String((settings.session_prices[f.key]?.[t] ?? 0) / 100)]))));
     setRules(Object.fromEntries(RULES.map((r) => [r.key, String((settings.rules as Record<string, unknown>)[r.key] ?? "")])));
     setLists(Object.fromEntries(LISTS.map((l) => [l.key, ((settings.taxonomy as Record<string, unknown>)[l.key] as string[]).join(", ")])));
   }, [settings]);
@@ -106,54 +94,9 @@ export default function AdminSettings() {
       </Card>
 
       <Card>
-        <H3>Breakdown prices and mentor share</H3>
-        <View style={s.grid}>
-          {TIERS.map((t) => (
-            <View key={t} style={s.cell}>
-              <Small>{TIER_LABEL[t]}</Small>
-              <TextField label="Price (dollars)" value={prices[t] ?? ""} onChangeText={(v) => setPrices({ ...prices, [t]: v })} keyboardType="decimal-pad" />
-              <TextField label="Mentor share (%)" value={shares[t] ?? ""} onChangeText={(v) => setShares({ ...shares, [t]: v })} keyboardType="number-pad" />
-            </View>
-          ))}
-        </View>
-        <Button
-          title="Save prices"
-          small
-          loading={busy === "prices"}
-          onPress={() =>
-            save("prices", {
-              breakdown_prices: Object.fromEntries(TIERS.map((t) => [t, Math.round(Number(prices[t]) * 100)])),
-              mentor_share_pct: Object.fromEntries(TIERS.map((t) => [t, Math.round(Number(shares[t]))])),
-            })
-          }
-        />
-      </Card>
-
-      <Card>
-        <H3>Film Room session prices</H3>
-        <Small>Per tier, in dollars. The mentor's share follows the same split as breakdowns.</Small>
-        {FORMATS.map((f) => (
-          <View key={f.key} style={{ gap: space.xs }}>
-            <Small style={{ color: colors.ink }}>{f.label}</Small>
-            <View style={s.grid}>
-              {TIERS.map((t) => (
-                <View key={t} style={s.cell}>
-                  <TextField label={TIER_LABEL[t]} value={sessionPrices[`${f.key}.${t}`] ?? ""} onChangeText={(v) => setSessionPrices({ ...sessionPrices, [`${f.key}.${t}`]: v })} keyboardType="decimal-pad" />
-                </View>
-              ))}
-            </View>
-          </View>
-        ))}
-        <Button
-          title="Save session prices"
-          small
-          loading={busy === "sessions"}
-          onPress={() =>
-            save("sessions", {
-              session_prices: Object.fromEntries(FORMATS.map((f) => [f.key, Object.fromEntries(TIERS.map((t) => [t, Math.round(Number(sessionPrices[`${f.key}.${t}`]) * 100)]))])),
-            })
-          }
-        />
+        <H3>Prices and mentor levels</H3>
+        <Small>Prices, the mentor's share and the level hierarchy now live in Marketplace, on each level.</Small>
+        <Link href="/admin/marketplace" asChild><Button title="Open Marketplace" variant="secondary" small /></Link>
       </Card>
 
       <Card>
