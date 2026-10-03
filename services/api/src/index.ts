@@ -1,5 +1,6 @@
 import { serve } from "@hono/node-server";
-import { Hono } from "hono";
+import { userFromBearer } from "./supabase.js";
+import { Hono, type MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { env } from "./env.js";
@@ -39,6 +40,17 @@ app.use(
     maxAge: 600,
   }),
 );
+
+// Admin routes: a missing, expired or revoked session is told so plainly (401), so the app can send the
+// person to sign in. "admin only" (403) is kept for a valid session that is not an admin.
+const sessionGate: MiddlewareHandler = async (c, next) => {
+  if (c.req.method === "OPTIONS") return next();
+  const user = await userFromBearer(c.req.header("authorization"));
+  if (!user) return c.json({ error: "Your session has ended. Sign in again.", code: "session_ended" }, 401);
+  await next();
+};
+app.use("/admin/*", sessionGate);
+app.use("/support/admin/*", sessionGate);
 
 app.get("/", (c) => c.json({ service: "flp-api", env: env.appEnv }));
 

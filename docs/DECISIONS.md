@@ -152,3 +152,9 @@ Junior levels (OHL/WHL/QMJHL, USHL/NAHL/BCHL) are selectable as "highest level p
 - **Privacy:** the levels table is admin-only. Everyone else reads `mentor_tiers_public`, which leaves out private and retired levels, the mentor share, and the prices of by-arrangement levels. A mentor always sees their own level's name. Mentors cannot list or feature themselves.
 - **Extras Scott chose (migration 0025):** a mentor can carry **custom prices** that override their level's (admin only; orders, Film Room and Season Arc all charge them; the mentor's share still follows the level's percentage). A private level can be **bookable by direct link**: out of the marketplace list, but a mentor's profile link opens and parents can order from it. Each level can set its own **turnaround hours** (drives the delivery clock and the wording parents see) and **jobs on deck** a mentor starts with when they join it. Each level can have a **colour** for its name on the tiles. Parents get a **Level filter** on the marketplace. Every level change is kept in **mentor_tier_history** with who made it, shown per mentor in the control center.
 - **Tooling:** the deploy scripts pin the Supabase CLI version (`npx -y supabase@2.118.0`), because each new CLI release broke the cached unpinned one.
+
+## 2026-10-03 — Sign-out ends one device, and an ended session says so
+
+- **What happened:** Alex was working in the level controls on one device, signed out on another, and his next saves were refused with "admin only". Supabase's default sign-out ends every session a person has, on every device.
+- **Sign out is now local** to the device it is pressed on.
+- **An ended or invalid session gets its own answer** on all admin routes (401, "Your session has ended. Sign in again.") before the role check; the app clears the dead session and returns to sign-in. "admin only" (403) now means only that: a valid session that is not an admin.

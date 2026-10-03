@@ -14,7 +14,12 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
       ...(init.headers ?? {}),
     },
   });
-  const body = (await res.json().catch(() => ({}))) as T & { error?: string };
+  const body = (await res.json().catch(() => ({}))) as T & { error?: string; code?: string };
+  if (res.status === 401 && body.code === "session_ended") {
+    // the session was ended elsewhere or expired: clear it here so the app returns to sign-in
+    await supabase.auth.signOut({ scope: "local" }).catch(() => {});
+    throw new Error("Your session has ended. Sign in again to continue.");
+  }
   if (!res.ok) throw new Error(body.error ?? `API error ${res.status}`);
   return body;
 }

@@ -58,7 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    // this device only: the default ends the person's sessions everywhere, which signs them out of a second device mid-task
+    await supabase.auth.signOut({ scope: "local" });
     setSession(null);
     setProfile(null);
   }, []);
