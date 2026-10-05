@@ -70,7 +70,7 @@ export type AdminJob = {
   on_time: boolean | null;
   created_at: string;
   orders: {
-    id: string; status: string; tier: string; price_cents: number; position: string; age_group: string; skill_level: string;
+    id: string; status: string; tier: string; price_cents: number; refunded_cents?: number; stripe_payment_intent_id?: string | null; position: string; age_group: string; skill_level: string;
     paid_at: string | null; waitlisted_at: string | null; wait_days: number | null; film_media_id: string | null; film_youtube_url: string | null;
     players: { first_name: string; last_name: string } | null;
     parent: { email: string; full_name: string } | null;
@@ -85,7 +85,7 @@ export async function listJobs(): Promise<AdminJob[]> {
   const { data, error } = await supabase
     .from("jobs")
     .select(
-      "id, status, athlete_id, accepted_at, due_at, delivered_at, on_time, created_at, mentor:athletes!jobs_athlete_id_fkey(display_name), job_offers(athlete_id, rank, response, expires_at, athletes(display_name)), orders(id, status, tier, price_cents, position, age_group, skill_level, paid_at, waitlisted_at, wait_days, film_media_id, film_youtube_url, players(first_name, last_name), parent:profiles!orders_parent_id_fkey(email, full_name), first:athletes!orders_first_choice_athlete_id_fkey(display_name), second:athletes!orders_second_choice_athlete_id_fkey(display_name))",
+      "id, status, athlete_id, accepted_at, due_at, delivered_at, on_time, created_at, mentor:athletes!jobs_athlete_id_fkey(display_name), job_offers(athlete_id, rank, response, expires_at, athletes(display_name)), orders(id, status, tier, price_cents, refunded_cents, stripe_payment_intent_id, position, age_group, skill_level, paid_at, waitlisted_at, wait_days, film_media_id, film_youtube_url, players(first_name, last_name), parent:profiles!orders_parent_id_fkey(email, full_name), first:athletes!orders_first_choice_athlete_id_fkey(display_name), second:athletes!orders_second_choice_athlete_id_fkey(display_name))",
     )
     .order("created_at", { ascending: false })
     .limit(200);
@@ -134,6 +134,8 @@ export type AdminPayout = {
   created_at: string;
   paid_at: string | null;
   stripe_transfer_id: string | null;
+  error?: string | null;
+  attempted_at?: string | null;
   athletes: { display_name: string; stripe_account_id: string | null; payouts_enabled: boolean } | null;
   jobs: { id: string; delivered_at: string | null; orders: { players: { first_name: string; last_name: string } | null } } | null;
   sessions: { id: string; scheduled_at: string | null; players: { first_name: string; last_name: string } | null } | null;
@@ -142,7 +144,7 @@ export type AdminPayout = {
 export async function listPayouts(): Promise<AdminPayout[]> {
   const { data, error } = await supabase
     .from("payouts")
-    .select("id, status, amount_cents, currency, held_reason, note, created_at, paid_at, stripe_transfer_id, athletes(display_name, stripe_account_id, payouts_enabled), jobs(id, delivered_at, orders(players(first_name, last_name))), sessions(id, scheduled_at, players(first_name, last_name))")
+    .select("id, status, amount_cents, currency, held_reason, note, created_at, paid_at, stripe_transfer_id, error, attempted_at, athletes(display_name, stripe_account_id, payouts_enabled), jobs(id, delivered_at, orders(players(first_name, last_name))), sessions(id, scheduled_at, players(first_name, last_name))")
     .order("created_at", { ascending: false })
     .limit(300);
   if (error) throw new Error(error.message);
@@ -200,6 +202,8 @@ export const adminCompleteSession = (id: string) => api<{ ok: true }>(`/admin/se
 export const moderateReview = (id: string, status: "published" | "hidden", kind: "breakdown" | "session" = "breakdown") =>
   api<{ ok: true }>(`/admin/reviews/${id}`, { method: "POST", body: JSON.stringify({ status, kind }) });
 
+// Refund a paid order (all of what is left, or an amount in cents). Goes back through Stripe when the order was charged there.
+export const refundOrder = (orderId: string, amountCents?: number, reason?: string) => api<{ ok: true; refundedCents: number; totalRefundedCents: number; full: boolean; charged: boolean; mentorPaidCents: number }>(`/admin/orders/${orderId}/refund`, { method: "POST", body: JSON.stringify({ amountCents, reason }) });
 export const patchSettings = (patch: Record<string, unknown>) => api<{ ok: true }>("/admin/settings", { method: "PATCH", body: JSON.stringify(patch) });
 export const grantAdmin = (email: string) => api<{ ok: true }>("/admin/admins", { method: "POST", body: JSON.stringify({ email }) });
 

@@ -3,6 +3,7 @@ import { admin, userFromBearer } from "../supabase.js";
 import { getSettings, invalidateSettings, PRICE_KINDS } from "../settings.js";
 import { offerJob } from "../jobs.js";
 import { stripe } from "../stripe.js";
+import { payPayoutViaStripe, refundPayment } from "../billing.js";
 import { appUrl, notify } from "../notify.js";
 import { cancelAndRefund, completeSession } from "./sessions.js";
 
@@ -174,8 +175,9 @@ adminRoutes.post("/audits/:id/close", async (c) => {
     refundCents = body.outcome === "refund_full" ? order?.price_cents ?? 0 : Math.round(Number(body.refundCents ?? 0));
     if (!(refundCents > 0)) return c.json({ error: "refund amount required" }, 400);
     if (stripe && order?.stripe_payment_intent_id) {
-      const r = await stripe.refunds.create({ payment_intent: order.stripe_payment_intent_id, amount: refundCents });
-      refundId = r.id;
+      const r = await refundPayment(order.stripe_payment_intent_id, refundCents, `qca_${id}`);
+      if (!r.ok) return c.json({ error: `Stripe refused the refund: ${r.error}` }, 502);
+      refundId = r.refundId;
     }
     if (q.breakdowns) {
       await admin.from("orders").update({ status: body.outcome === "refund_full" ? "refunded" : "delivered", refunded_at: now }).eq("id", q.breakdowns.jobs.order_id);
@@ -205,6 +207,46 @@ adminRoutes.post("/audits/:id/close", async (c) => {
 });
 
 // --- Payout ledger -----------------------------------------------------------
+// POST /admin/orders/:id/refund { amountCents?, reason }  — refund a paid order outside an audit.
+// No amount means everything not yet refunded. A full refund closes the order and voids the mentor's payout.
+adminRoutes.post("/orders/:id/refund", async (c) => {
+  const me = await requireAdmin(c.req.header("authorization"));
+  if (!me) return c.json({ error: "admin only" }, 403);
+  const id = c.req.param("id");
+  const body = (await c.req.json().catch(() => ({}))) as { amountCents?: number; reason?: string };
+  const { data: o } = await admin.from("orders").select("id, status, price_cents, refunded_cents, paid_at, parent_id, stripe_payment_intent_id").eq("id", id).maybeSingle();
+  if (!o) return c.json({ error: "not found" }, 404);
+  if (!o.paid_at) return c.json({ error: "this order was never paid" }, 400);
+  const left = o.price_cents - (o.refunded_cents ?? 0);
+  if (left <= 0) return c.json({ error: "this order is already refunded in full" }, 400);
+  const amount = body.amountCents === undefined ? left : Math.round(Number(body.amountCents));
+  if (!Number.isInteger(amount) || amount <= 0 || amount > left) return c.json({ error: `the refund must be between $0.01 and $${(left / 100).toFixed(2)}` }, 400);
+  let refundId: string | null = null;
+  if (o.stripe_payment_intent_id) {
+    const r = await refundPayment(o.stripe_payment_intent_id, amount, `order_${id}_${(o.refunded_cents ?? 0) + amount}`);
+    if (!r.ok) return c.json({ error: `Stripe refused the refund: ${r.error}` }, 502);
+    refundId = r.refundId;
+  }
+  const total = (o.refunded_cents ?? 0) + amount;
+  const full = total >= o.price_cents;
+  await admin.from("orders").update({ refunded_cents: total, ...(full ? { status: "refunded", refunded_at: new Date().toISOString() } : {}) }).eq("id", id);
+  const { data: jobs } = await admin.from("jobs").select("id, status").eq("order_id", id);
+  if (full) {
+    for (const j of jobs ?? []) {
+      await admin.from("payouts").update({ status: "voided", note: "order refunded in full" }).eq("job_id", j.id).in("status", ["owed", "held"]);
+      if (!["delivered", "closed"].includes(j.status)) await admin.from("jobs").update({ status: "closed" }).eq("id", j.id);
+    }
+  }
+  // A payout that already went out is not pulled back: the admin is told, and decides what to do about it.
+  const jobIds = (jobs ?? []).map((j) => j.id);
+  const { data: paidOut } = jobIds.length ? await admin.from("payouts").select("amount_cents").in("job_id", jobIds).eq("status", "paid") : { data: [] as { amount_cents: number }[] };
+  const mentorPaidCents = (paidOut ?? []).reduce((n, p) => n + p.amount_cents, 0);
+  await audit(me.id, "order.refund", "order", id, { amount, total, full, refundId, mentorPaidCents, reason: body.reason ?? "", charged: Boolean(o.stripe_payment_intent_id) });
+  await notify(o.parent_id, "order.refunded", full ? "Your FLP order was refunded" : "A partial refund on your FLP order",
+    `<p>FLP refunded $${(amount / 100).toFixed(2)}${body.reason ? `: ${body.reason}` : "."}</p><p>It can take a few business days to show on your statement.</p>`, { targetId: id });
+  return c.json({ ok: true, refundedCents: amount, totalRefundedCents: total, full, refundId, mentorPaidCents, charged: Boolean(o.stripe_payment_intent_id) });
+});
+
 // POST /admin/payouts/:id/pay { method: "stripe" | "manual", note? }
 adminRoutes.post("/payouts/:id/pay", async (c) => {
   const me = await requireAdmin(c.req.header("authorization"));
@@ -217,12 +259,12 @@ adminRoutes.post("/payouts/:id/pay", async (c) => {
   if (payout.status !== "owed") return c.json({ error: `payout is ${payout.status}` }, 400);
   let transferId: string | null = null;
   if (body.method === "stripe") {
-    if (!stripe) return c.json({ error: "Stripe is not configured" }, 503);
-    if (!payout.athletes?.stripe_account_id || !payout.athletes.payouts_enabled) return c.json({ error: "mentor has not finished Stripe onboarding" }, 400);
-    const t = await stripe.transfers.create({ amount: payout.amount_cents, currency: payout.currency, destination: payout.athletes.stripe_account_id, metadata: { payoutId: id } });
-    transferId = t.id;
+    const res = await payPayoutViaStripe(id, me.id);
+    if (!res.ok) return c.json({ error: res.error }, 400);
+    transferId = res.transferId;
+  } else {
+    await admin.from("payouts").update({ status: "paid", paid_at: new Date().toISOString(), paid_by: me.id, note: body.note ?? "paid outside Stripe", error: null }).eq("id", id);
   }
-  await admin.from("payouts").update({ status: "paid", paid_at: new Date().toISOString(), paid_by: me.id, stripe_transfer_id: transferId, note: body.note ?? (body.method === "manual" ? "paid outside Stripe" : "") }).eq("id", id);
   await audit(me.id, "payout.pay", "payout", id, { method: body.method ?? "manual", transferId });
   return c.json({ ok: true, transferId });
 });
@@ -388,6 +430,10 @@ adminRoutes.patch("/settings", async (c) => {
   for (const key of ["rules", "taxonomy", "marketplace"] as const) {
     if (body[key] && typeof body[key] === "object") patch[key] = { ...(current[key] as object), ...(body[key] as object) };
   }
+  const pr = patch.rules as Record<string, unknown> | undefined;
+  if (pr?.payout_mode !== undefined && pr.payout_mode !== "manual" && pr.payout_mode !== "auto") return c.json({ error: "payout_mode must be manual or auto" }, 400);
+  if (pr?.payout_delay_days !== undefined && (!Number.isInteger(pr.payout_delay_days) || (pr.payout_delay_days as number) < 0 || (pr.payout_delay_days as number) > 60)) return c.json({ error: "payout delay is a whole number of days from 0 to 60" }, 400);
+  if (pr?.payout_mode !== undefined && pr.payout_mode !== (current.rules as Record<string, unknown>).payout_mode) await audit(me.id, "settings.payout_mode", "settings", null, { mode: pr.payout_mode });
   const mode = (patch.rules as Record<string, unknown> | undefined)?.payments_mode;
   if (mode !== undefined && mode !== "stripe" && mode !== "free_preview") return c.json({ error: "payments_mode must be stripe or free_preview" }, 400);
   if (mode !== undefined && mode !== current.rules.payments_mode) await audit(me.id, "settings.payments_mode", "settings", null, { mode });

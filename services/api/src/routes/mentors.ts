@@ -24,6 +24,7 @@ mentors.post("/me/connect", async (c) => {
   if (!accountId) {
     const acct = await stripe.accounts.create({
       type: "express",
+      country: "US",
       email: m.user.email ?? undefined,
       capabilities: { transfers: { requested: true } },
       business_type: "individual",
@@ -39,6 +40,19 @@ mentors.post("/me/connect", async (c) => {
     return_url: appUrl("/athlete/profile?connect=return"),
   });
   return c.json({ url: link.url });
+});
+
+// POST /mentors/me/connect/dashboard — a one-time link into the mentor's own Stripe dashboard (payouts, tax forms, bank details).
+mentors.post("/me/connect/dashboard", async (c) => {
+  const m = await mentorOf(c.req.header("authorization"));
+  if (!m) return c.json({ error: "sign in as a mentor" }, 401);
+  if (!stripe || !m.athlete.stripe_account_id) return c.json({ error: "payout setup is not finished yet" }, 400);
+  try {
+    const link = await stripe.accounts.createLoginLink(m.athlete.stripe_account_id);
+    return c.json({ url: link.url });
+  } catch (e) {
+    return c.json({ error: "Finish payout setup first, then your Stripe dashboard opens here." }, 400);
+  }
 });
 
 // GET /mentors/me/connect — refresh payouts_enabled from Stripe.

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { openExternal } from "@/lib/open";
 import { Link, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
 import { Linking, Platform, StyleSheet, View } from "react-native";
@@ -14,7 +15,7 @@ import { ContactDetails } from "@/components/ContactDetails";
 import { TextField } from "@/components/ui/TextField";
 import { Body, H1, H3, Label, Small } from "@/components/ui/Text";
 import { Loading } from "@/lib/auth";
-import { avatarUrl, connectStatus, DOW, getMyProfile, saveMyProfile, startConnect, uploadAvatar, type AvailabilityWindow, type MentorProfile } from "@/lib/mentorProfile";
+import { avatarUrl, connectStatus, stripeDashboard, DOW, getMyProfile, saveMyProfile, startConnect, uploadAvatar, type AvailabilityWindow, type MentorProfile } from "@/lib/mentorProfile";
 import { levelLabel, TIER_LABEL, useSettings, type Tier } from "@/lib/settings";
 import type { HockeyPosition } from "@/lib/types";
 import { colors, radius, space } from "@/theme/tokens";
@@ -193,7 +194,11 @@ export default function MentorProfileScreen() {
         {payout?.payouts_enabled ? (
           <>
             <Pill tone="ok">Payouts enabled</Pill>
-            <Body style={{ color: colors.muted }}>FLP pays your share after each delivered breakdown through Stripe.</Body>
+            <Body style={{ color: colors.muted }}>FLP pays your share through Stripe after each delivered breakdown and completed Film Room. Your Stripe dashboard shows every deposit, your bank details and your tax forms.</Body>
+            <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+              <Button title="Open my Stripe dashboard" variant="secondary" small loading={busy === "dash"} onPress={() => { setBusy("dash"); openExternal(async () => (await stripeDashboard()).url).catch((e) => setError((e as Error).message)).finally(() => setBusy(null)); }} />
+              <Link href="/athlete/earnings" asChild><Button title="My earnings" variant="ghost" small /></Link>
+            </View>
           </>
         ) : payout?.connected ? (
           <>

@@ -97,6 +97,7 @@ export default function AdminLedger() {
                   {r.paid_at ? ` · paid ${new Date(r.paid_at).toLocaleDateString()}${r.stripe_transfer_id ? " via Stripe" : " manually"}` : ""}
                 </Small>
                 {r.held_reason ? <Small style={{ color: colors.warn }}>Held: {r.held_reason}</Small> : null}
+                {r.error && r.status === "owed" ? <Small style={{ color: colors.danger }}>Last attempt did not go through: {r.error}</Small> : null}
                 {r.note ? <Small>{r.note}</Small> : null}
               </View>
               <Pill tone={r.status === "paid" ? "ok" : r.status === "held" ? "warn" : r.status === "voided" ? "danger" : "gold"}>{r.status}</Pill>

@@ -61,6 +61,7 @@ export function avatarUrl(path: string | null | undefined) {
 }
 
 export const startConnect = () => api<{ url: string }>("/mentors/me/connect", { method: "POST" });
+export const stripeDashboard = () => api<{ url: string }>("/mentors/me/connect/dashboard", { method: "POST" });
 export const connectStatus = () => api<{ configured: boolean; connected: boolean; payouts_enabled: boolean; requirements?: string[] }>("/mentors/me/connect");
 
 export const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

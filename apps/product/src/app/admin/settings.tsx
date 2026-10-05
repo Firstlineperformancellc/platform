@@ -44,6 +44,7 @@ const LISTS: { key: string; label: string }[] = [
 export default function AdminSettings() {
   const { settings } = useSettings();
   const [rules, setRules] = useState<Record<string, string>>({});
+  const [payoutDays, setPayoutDays] = useState("");
   const [lists, setLists] = useState<Record<string, string>>({});
   const [adminEmail, setAdminEmail] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -52,6 +53,7 @@ export default function AdminSettings() {
 
   useEffect(() => {
     if (!settings) return;
+    setPayoutDays(settings.rules.payout_delay_days != null ? String(settings.rules.payout_delay_days) : "");
     setRules(Object.fromEntries(RULES.map((r) => [r.key, String((settings.rules as Record<string, unknown>)[r.key] ?? "")])));
     setLists(Object.fromEntries(LISTS.map((l) => [l.key, ((settings.taxonomy as Record<string, unknown>)[l.key] as string[]).join(", ")])));
   }, [settings]);
@@ -91,6 +93,28 @@ export default function AdminSettings() {
           value={settings.rules.payments_mode ?? "stripe"}
           onChange={(v) => save("payments", { rules: { payments_mode: v } })}
         />
+      </Card>
+
+      <Card>
+        <View style={s.row}>
+          <H3>Mentor payouts</H3>
+          <Pill tone={settings.rules.payout_mode === "auto" ? "ok" : "muted"}>{settings.rules.payout_mode === "auto" ? "Automatic" : "Manual"}</Pill>
+        </View>
+        <Small>
+          Manual: an admin presses Pay via Stripe on the Ledger for each payout. Automatic: every owed payout is sent to the mentor on its own once the waiting period has passed, unless it is on hold. Held and disputed payouts are never sent automatically.
+        </Small>
+        <Choice
+          label="How mentors are paid"
+          options={[{ key: "manual", label: "Manual (admin releases each one)" }, { key: "auto", label: "Automatic after the waiting period" }]}
+          value={settings.rules.payout_mode ?? "manual"}
+          onChange={(v) => save("payouts", { rules: { payout_mode: v } })}
+        />
+        <View style={s.grid}>
+          <View style={s.cell}>
+            <TextField label="Waiting period (days after delivery)" value={payoutDays} onChangeText={(v) => setPayoutDays(v.replace(/[^0-9]/g, ""))} keyboardType="number-pad" placeholder={String(settings.rules.qca_window_days)} hint="Blank uses the audit window, so a parent's audit can still stop the payout." />
+          </View>
+        </View>
+        <Button title="Save waiting period" small loading={busy === "payoutDays"} onPress={() => save("payoutDays", { rules: { payout_delay_days: payoutDays.trim() === "" ? settings.rules.qca_window_days : Number(payoutDays) } })} />
       </Card>
 
       <Card>

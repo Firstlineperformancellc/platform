@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { TextField } from "@/components/ui/TextField";
 import { useFocusEffect } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { AdminShell } from "@/components/AdminShell";
@@ -7,7 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { Choice } from "@/components/ui/Choice";
 import { Pill } from "@/components/ui/Pill";
 import { Body, H3, Small } from "@/components/ui/Text";
-import { assignJob, extendJob, listJobs, type AdminJob } from "@/lib/admin";
+import { assignJob, extendJob, listJobs, refundOrder, type AdminJob } from "@/lib/admin";
 import { Loading } from "@/lib/auth";
 import { listMentors, type MarketplaceMentor } from "@/lib/mentors";
 import { money, TIER_LABEL, type Tier } from "@/lib/settings";
@@ -24,6 +25,10 @@ export default function AdminJobs() {
   const [assign, setAssign] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [refundFor, setRefundFor] = useState<string | null>(null);
+  const [refundAmount, setRefundAmount] = useState("");
+  const [refundReason, setRefundReason] = useState("");
+  const [note, setNote] = useState<string | null>(null);
 
   const load = useCallback(() => {
     listJobs().then(setJobs).catch((e) => setError(e.message));
@@ -63,6 +68,7 @@ export default function AdminJobs() {
         onChange={(v) => setFilter(v as string)}
       />
       {error ? <Body style={{ color: colors.danger }}>{error}</Body> : null}
+      {note ? <Body style={{ color: colors.ok }}>{note}</Body> : null}
       {!jobs ? <Loading /> : shown.length === 0 ? <Body style={{ color: colors.muted }}>Nothing needs you.</Body> : null}
       {shown.map((j) => {
         const o = j.orders;
@@ -107,6 +113,25 @@ export default function AdminJobs() {
                 {j.status === "accepted" ? <Button title="Extend 24h" variant="secondary" small onPress={() => run(j.id, () => extendJob(j.id, 24))} /> : null}
               </View>
             ) : null}
+            {j.orders?.paid_at ? (() => {
+              const o = j.orders!;
+              const left = o.price_cents - (o.refunded_cents ?? 0);
+              return (
+                <View style={{ gap: 6 }}>
+                  {(o.refunded_cents ?? 0) > 0 ? <Small style={{ color: colors.warn }}>Refunded {money(o.refunded_cents ?? 0)} of {money(o.price_cents)}</Small> : null}
+                  {left > 0 && refundFor !== j.id ? <View style={s.actions}><Button title="Refund order" variant="ghost" small onPress={() => { setRefundFor(j.id); setRefundAmount(""); setRefundReason(""); setNote(null); }} /></View> : null}
+                  {refundFor === j.id ? (
+                    <View style={s.actions}>
+                      <TextField label={`Amount ($), blank for all ${money(left)}`} value={refundAmount} onChangeText={setRefundAmount} keyboardType="decimal-pad" style={{ minWidth: 200 }} />
+                      <TextField label="Reason (emailed to the parent)" value={refundReason} onChangeText={setRefundReason} style={{ minWidth: 240 }} />
+                      <Button title="Refund" variant="danger" small loading={busy === `r-${j.id}`} onPress={() => { const amt = refundAmount.trim() === "" ? undefined : Math.round(Number(refundAmount) * 100); if (amt !== undefined && (!Number.isFinite(amt) || amt <= 0)) return setError("Enter a refund amount above zero, or leave it blank for the full amount."); run(`r-${j.id}`, async () => { const r = await refundOrder(o.id, amt, refundReason.trim() || undefined); setRefundFor(null); setNote(`Refunded ${money(r.refundedCents)}${r.full ? "; the order is closed and the mentor's payout is voided" : ""}${r.charged ? "" : ". This order was not charged through Stripe, so no money moved"}.${r.mentorPaidCents > 0 ? ` The mentor was already paid ${money(r.mentorPaidCents)} for this order; that payment stands.` : ""}`); }); }} />
+                      <Button title="Cancel" variant="ghost" small onPress={() => setRefundFor(null)} />
+                      <Small style={{ flexBasis: "100%" }}>{o.stripe_payment_intent_id ? "The money goes back to the parent's card through Stripe. A full refund closes the order and voids the mentor's payout." : "This order was not charged through Stripe (free preview), so this only records the refund."}</Small>
+                    </View>
+                  ) : null}
+                </View>
+              );
+            })() : null}
           </Card>
         );
       })}

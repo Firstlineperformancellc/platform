@@ -79,6 +79,8 @@ orders.post("/", async (c) => {
       customer_email: user.email ?? undefined,
       line_items: [{ quantity: 1, price_data: { currency: s.currency, unit_amount: price, product_data: { name: `FLP breakdown · ${level.tier.name} mentor` } } }],
       metadata: { orderId: order.id },
+      client_reference_id: order.id,
+      payment_intent_data: { metadata: { orderId: order.id }, transfer_group: `order_${order.id}`, receipt_email: user.email ?? undefined, description: `FLP breakdown ${order.id}` },
       success_url: appUrl(`/parent/orders/${order.id}?paid=1`),
       cancel_url: appUrl(`/parent/order?cancelled=1&order=${order.id}`),
     });

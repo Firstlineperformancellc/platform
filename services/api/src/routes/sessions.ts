@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { admin, userFromBearer } from "../supabase.js";
 import { getSettings, paymentPath, priceFor, selfServeTier, shareCents, type PriceKind, type Tier } from "../settings.js";
 import { stripe, stripeConfigured } from "../stripe.js";
+import { notifyAdmins, refundPayment } from "../billing.js";
 import { env } from "../env.js";
 import { appUrl, notify } from "../notify.js";
 import { slotsForMentor } from "../slots.js";
@@ -120,6 +121,9 @@ sessions.post("/", async (c) => {
       customer_email: user.email ?? undefined,
       line_items: [{ quantity: 1, price_data: { currency: s.currency, unit_amount: price, product_data: { name: `FLP Film Room · ${minutes} min with ${m.display_name}` } } }],
       metadata: { sessionId: sess.id },
+      client_reference_id: sess.id,
+      payment_intent_data: { metadata: { sessionId: sess.id }, transfer_group: `session_${sess.id}`, receipt_email: user.email ?? undefined, description: `FLP Film Room ${sess.id}` },
+      expires_at: Math.floor(Date.now() / 1000) + 31 * 60, // the slot is held while they pay; let it go if they leave
       success_url: appUrl(`/parent/sessions/${sess.id}?paid=1`),
       cancel_url: appUrl(`/mentors/${b.mentorSlug}?cancelled=1`),
     });
@@ -196,18 +200,25 @@ export async function cancelAndRefund(sessionId: string, status: string, reason:
   const sess = await sessionFor(sessionId);
   if (!sess) return;
   let refunded = false;
+  let refundPending = false;
   if (sess.pack_id) {
     const { data: p } = await admin.from("session_packs").select("sessions_used").eq("id", sess.pack_id).maybeSingle();
     if (p && p.sessions_used > 0) await admin.from("session_packs").update({ sessions_used: p.sessions_used - 1 }).eq("id", sess.pack_id);
     refunded = true;
   } else if (stripe && sess.stripe_payment_intent_id) {
-    await stripe.refunds.create({ payment_intent: sess.stripe_payment_intent_id }).catch((e) => console.error("refund failed", e));
-    refunded = true;
+    const r = await refundPayment(sess.stripe_payment_intent_id, undefined, `session_cancel_${sess.id}`);
+    refunded = r.ok;
+    if (r.ok) await admin.from("sessions").update({ refunded_cents: r.amount, refund_error: null }).eq("id", sessionId);
+    else {
+      refundPending = true;
+      await admin.from("sessions").update({ refund_error: r.error }).eq("id", sessionId);
+      await notifyAdmins("refund.failed", "A Film Room refund did not go through", `<p>The session was cancelled but Stripe refused the refund: ${r.error}</p><p>Refund it from the Stripe dashboard; the platform will pick it up.</p><p><a href="${appUrl("/admin/sessions")}" style="color:#d4a32c">Film Room sessions</a></p>`, sessionId);
+    }
   }
   if (sess.daily_room_name) await deleteRoom(sess.daily_room_name);
   await admin.from("sessions").update({ status, cancel_reason: reason, cancelled_at: iso(Date.now()), cancelled_by: cancelledBy }).eq("id", sessionId);
   await notify(sess.parent_id, "session.cancelled", "Your Film Room was cancelled",
-    `<p>${reason}.${refunded ? " You've been refunded in full." : ""}</p>`, { targetId: sessionId });
+    `<p>${reason}.${refunded ? " You've been refunded in full." : refundPending ? " FLP is processing your refund and will confirm it by email." : ""}</p>`, { targetId: sessionId });
 }
 
 // POST /sessions/:id/cancel — parent (free before the window, forfeit inside) or mentor (refund + mark)
@@ -376,6 +387,8 @@ sessions.post("/packs", async (c) => {
       mode: "payment", customer_email: user.email ?? undefined,
       line_items: [{ quantity: 1, price_data: { currency: s.currency, unit_amount: price, product_data: { name: `FLP Season Arc · ${total} Film Rooms with ${m.display_name}` } } }],
       metadata: { packId: pack.id },
+      client_reference_id: pack.id,
+      payment_intent_data: { metadata: { packId: pack.id }, transfer_group: `pack_${pack.id}`, receipt_email: user.email ?? undefined, description: `FLP Season Arc ${pack.id}` },
       success_url: appUrl(`/mentors/${b.mentorSlug}?pack=${pack.id}`), cancel_url: appUrl(`/mentors/${b.mentorSlug}?cancelled=1`),
     });
     await admin.from("session_packs").update({ stripe_checkout_session_id: checkout.id }).eq("id", pack.id);

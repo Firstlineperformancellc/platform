@@ -25,6 +25,8 @@ export const env = {
   muxSigningKeyPrivate: optional("MUX_SIGNING_KEY_PRIVATE"),
   stripeSecretKey: optional("STRIPE_SECRET_KEY"),
   stripeWebhookSecret: optional("STRIPE_WEBHOOK_SECRET"),
+  // events from mentors' connected accounts arrive on a second endpoint with its own signing secret
+  stripeConnectWebhookSecret: optional("STRIPE_CONNECT_WEBHOOK_SECRET"),
   dailyApiKey: optional("DAILY_API_KEY"),
   dailyWebhookSecret: optional("DAILY_WEBHOOK_SECRET"),
   // Daily allows one webhook per domain: production receives it and relays events for rooms it

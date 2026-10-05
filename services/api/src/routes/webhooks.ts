@@ -2,7 +2,10 @@ import { Hono } from "hono";
 import { admin } from "../supabase.js";
 import { mux } from "../mux.js";
 import { env } from "../env.js";
+import type Stripe from "stripe";
 import { stripe } from "../stripe.js";
+import { notifyAdmins } from "../billing.js";
+import { appUrl } from "../notify.js";
 import { openJobForOrder } from "../jobs.js";
 import { afterPayment, completeSession } from "./sessions.js";
 import { createHmac, timingSafeEqual } from "node:crypto";
@@ -73,39 +76,115 @@ webhooks.post("/stripe", async (c) => {
   if (!stripe || !env.stripeWebhookSecret) return c.json({ error: "stripe not configured" }, 503);
   const sig = c.req.header("stripe-signature");
   const raw = await c.req.text();
-  let event;
-  try {
-    event = stripe.webhooks.constructEvent(raw, sig ?? "", env.stripeWebhookSecret);
-  } catch (err) {
-    console.warn("stripe webhook rejected:", (err as Error).message);
+  // Two endpoints point here: FLP's own account, and events from mentors' connected accounts.
+  let event: Stripe.Event | null = null;
+  for (const secret of [env.stripeWebhookSecret, env.stripeConnectWebhookSecret]) {
+    if (!secret || event) continue;
+    try { event = stripe.webhooks.constructEvent(raw, sig ?? "", secret); } catch { /* try the other secret */ }
+  }
+  if (!event) {
+    console.warn("stripe webhook rejected: bad signature");
     return c.json({ error: "bad signature" }, 400);
   }
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object;
-    const orderId = session.metadata?.orderId;
-    const sessionId = session.metadata?.sessionId;
-    const packId = session.metadata?.packId;
-    const pi = typeof session.payment_intent === "string" ? session.payment_intent : null;
-    if (sessionId && session.payment_status === "paid") {
-      await admin.from("sessions").update({ stripe_payment_intent_id: pi }).eq("id", sessionId).is("paid_at", null);
-      await afterPayment(sessionId);
+  // Stripe retries; handle each event once.
+  const { error: seen } = await admin.from("stripe_events").insert({ id: event.id, type: event.type });
+  if (seen) return c.json({ received: true, duplicate: true });
+
+  try {
+    if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
+      await onCheckoutPaid(event.data.object);
+    } else if (event.type === "checkout.session.expired") {
+      await onCheckoutExpired(event.data.object);
+    } else if (event.type === "charge.refunded") {
+      await onChargeRefunded(event.data.object);
+    } else if (event.type === "charge.dispute.created") {
+      await onDispute(event.data.object);
+    } else if (event.type === "account.updated") {
+      const acct = event.data.object;
+      await admin.from("athletes").update({ payouts_enabled: Boolean(acct.payouts_enabled) }).eq("stripe_account_id", acct.id);
     }
-    if (packId && session.payment_status === "paid") {
-      await admin.from("session_packs").update({ paid_at: new Date().toISOString(), stripe_payment_intent_id: pi }).eq("id", packId).is("paid_at", null);
-    }
-    if (orderId && session.payment_status === "paid") {
-      const { data: o } = await admin.from("orders").select("id, status").eq("id", orderId).maybeSingle();
-      if (o && o.status === "draft") {
-        await admin.from("orders").update({
-          status: "paid", paid_at: new Date().toISOString(),
-          stripe_payment_intent_id: typeof session.payment_intent === "string" ? session.payment_intent : null,
-        }).eq("id", orderId);
-        await openJobForOrder(orderId);
-      }
-    }
+  } catch (err) {
+    // let Stripe retry: forget that we saw it
+    await admin.from("stripe_events").delete().eq("id", event.id);
+    console.error("stripe webhook failed:", event.type, (err as Error).message);
+    return c.json({ error: "handler failed" }, 500);
   }
   return c.json({ received: true, type: event.type });
 });
+
+async function onCheckoutPaid(session: Stripe.Checkout.Session) {
+  if (session.payment_status !== "paid") return;
+  const { orderId, sessionId, packId } = session.metadata ?? {};
+  const pi = typeof session.payment_intent === "string" ? session.payment_intent : null;
+  if (sessionId) {
+    await admin.from("sessions").update({ stripe_payment_intent_id: pi }).eq("id", sessionId).is("paid_at", null);
+    await afterPayment(sessionId);
+  }
+  if (packId) await admin.from("session_packs").update({ paid_at: new Date().toISOString(), stripe_payment_intent_id: pi }).eq("id", packId).is("paid_at", null);
+  if (orderId) {
+    const { data: o } = await admin.from("orders").select("id, status").eq("id", orderId).maybeSingle();
+    if (o && o.status === "draft") {
+      await admin.from("orders").update({ status: "paid", paid_at: new Date().toISOString(), stripe_payment_intent_id: pi }).eq("id", orderId);
+      await openJobForOrder(orderId);
+    }
+  }
+}
+
+// The parent left checkout without paying: free the Film Room slot and drop the unpaid pack.
+async function onCheckoutExpired(session: Stripe.Checkout.Session) {
+  const { sessionId, packId } = session.metadata ?? {};
+  if (sessionId) await admin.from("sessions").update({ status: "expired", cancel_reason: "checkout was not completed", cancelled_at: new Date().toISOString() }).eq("id", sessionId).eq("status", "requested").is("paid_at", null);
+  if (packId) await admin.from("session_packs").delete().eq("id", packId).is("paid_at", null);
+}
+
+type Paid = { kind: "order" | "session" | "pack"; id: string; price_cents: number };
+async function paymentTarget(paymentIntent: string | null): Promise<Paid | null> {
+  if (!paymentIntent) return null;
+  const { data: o } = await admin.from("orders").select("id, price_cents").eq("stripe_payment_intent_id", paymentIntent).maybeSingle();
+  if (o) return { kind: "order", id: o.id, price_cents: o.price_cents };
+  const { data: se } = await admin.from("sessions").select("id, price_cents").eq("stripe_payment_intent_id", paymentIntent).maybeSingle();
+  if (se) return { kind: "session", id: se.id, price_cents: se.price_cents };
+  const { data: pk } = await admin.from("session_packs").select("id, price_cents").eq("stripe_payment_intent_id", paymentIntent).maybeSingle();
+  if (pk) return { kind: "pack", id: pk.id, price_cents: pk.price_cents };
+  return null;
+}
+
+// A refund made anywhere (the admin panel, or straight in the Stripe dashboard) lands here, so the
+// platform's record always matches Stripe's.
+async function onChargeRefunded(charge: Stripe.Charge) {
+  const target = await paymentTarget(typeof charge.payment_intent === "string" ? charge.payment_intent : null);
+  if (!target) return;
+  const refunded = charge.amount_refunded ?? 0;
+  const full = Boolean(charge.refunded) || refunded >= target.price_cents;
+  if (target.kind === "order") {
+    await admin.from("orders").update({ refunded_cents: refunded, ...(full ? { status: "refunded", refunded_at: new Date().toISOString() } : {}) }).eq("id", target.id);
+    if (full) {
+      const { data: jobs } = await admin.from("jobs").select("id").eq("order_id", target.id);
+      for (const j of jobs ?? []) await admin.from("payouts").update({ status: "voided", note: "order refunded in full" }).eq("job_id", j.id).in("status", ["owed", "held"]);
+    }
+  } else if (target.kind === "session") {
+    await admin.from("sessions").update({ refunded_cents: refunded, refund_error: null }).eq("id", target.id);
+    if (full) await admin.from("payouts").update({ status: "voided", note: "session refunded in full" }).eq("session_id", target.id).in("status", ["owed", "held"]);
+  } else {
+    await admin.from("session_packs").update({ refunded_cents: refunded }).eq("id", target.id);
+  }
+  await admin.from("audit_log").insert({ actor_id: null, action: "stripe.refund", target_type: target.kind, target_id: target.id, meta: { refunded_cents: refunded, full, charge: charge.id } });
+}
+
+// A card dispute: hold the mentor's money for that sale and tell the admins, who answer it in Stripe.
+async function onDispute(dispute: Stripe.Dispute) {
+  const target = await paymentTarget(typeof dispute.payment_intent === "string" ? dispute.payment_intent : null);
+  if (!target) return;
+  if (target.kind === "order") {
+    const { data: jobs } = await admin.from("jobs").select("id").eq("order_id", target.id);
+    for (const j of jobs ?? []) await admin.from("payouts").update({ status: "held", held_reason: "card dispute" }).eq("job_id", j.id).eq("status", "owed");
+  } else if (target.kind === "session") {
+    await admin.from("payouts").update({ status: "held", held_reason: "card dispute" }).eq("session_id", target.id).eq("status", "owed");
+  }
+  await admin.from("audit_log").insert({ actor_id: null, action: "stripe.dispute", target_type: target.kind, target_id: target.id, meta: { dispute: dispute.id, amount: dispute.amount, reason: dispute.reason } });
+  await notifyAdmins("stripe.dispute", "A card payment is being disputed",
+    `<p>A parent's bank opened a dispute for ${(dispute.amount / 100).toFixed(2)} ${dispute.currency.toUpperCase()} (${dispute.reason}). The mentor's payout for it is on hold. Answer the dispute in the Stripe dashboard before its deadline.</p><p><a href="${appUrl("/admin/ledger")}" style="color:#d4a32c">Open the ledger</a></p>`, target.id);
+}
 
 // Daily: HMAC-signed (X-Webhook-Signature = hmac(secret, `${timestamp}.${body}`), base64 or hex).
 webhooks.post("/daily", async (c) => {
