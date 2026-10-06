@@ -14,6 +14,8 @@ How FLP's payments are wired, and how to stand them up in a new environment. Par
 
 FLP is the merchant of record. Stripe holds the money; FLP's database records what happened.
 
+The Stripe account was opened by Alex under Firstlineperformance.team@gmail.com (2026-10-05). The account email can be changed later in Stripe's settings; the keys and webhooks are unaffected by that.
+
 ## Environment keys (`services/api/.env.dev`, `.env.prod`, never in git)
 
 | Key | What it is |
