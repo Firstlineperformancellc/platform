@@ -21,24 +21,54 @@
   var btn = document.querySelector(".menu"), nav = document.querySelector(".nav");
   if (btn && nav) btn.addEventListener("click", function () { nav.classList.toggle("open"); });
 
-  // Prices: the settings row is public and is what the app charges from. Static numbers stay if the fetch fails.
-  var SUPABASE = "https://uspbmbvoxotbelribjgo.supabase.co";
-  var ANON = document.documentElement.getAttribute("data-anon");
+  // Prices and rules come from the same tables the app charges from, read through the public view the
+  // marketplace uses, so a change in the admin control center shows here at once. Per host, like the
+  // app links: the dev preview reads the dev project, every production host reads production.
+  var DEV = /^(dev\.|localhost)/.test(location.hostname);
+  var SUPABASE = DEV ? "https://uspbmbvoxotbelribjgo.supabase.co" : "https://sbvojmprxienxacwrsfp.supabase.co";
+  var ANON = document.documentElement.getAttribute(DEV ? "data-anon" : "data-anon-prod");
+  var headers = { apikey: ANON, authorization: "Bearer " + ANON };
   var money = function (cents) { return "$" + Math.round(cents / 100).toLocaleString("en-US"); };
-  if (ANON && document.querySelector("[data-price]")) {
-    fetch(SUPABASE + "/rest/v1/settings?select=breakdown_prices,session_prices,rules&id=eq.1", { headers: { apikey: ANON, authorization: "Bearer " + ANON } })
-      .then(function (r) { return r.json(); })
-      .then(function (rows) {
-        var s = rows && rows[0]; if (!s) return;
-        document.querySelectorAll("[data-price]").forEach(function (el) {
-          var path = el.getAttribute("data-price").split("."); // e.g. breakdown.pro or film_room_30.ncaa
-          var v = path[0] === "breakdown" ? s.breakdown_prices[path[1]] : (s.session_prices[path[0]] || {})[path[1]];
-          if (typeof v === "number") el.textContent = money(v);
+  var esc = function (t) { return String(t == null ? "" : t).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
+  var get = function (path) { return fetch(SUPABASE + "/rest/v1/" + path, { headers: headers }).then(function (r) { return r.ok ? r.json() : []; }); };
+  var ASK = "Please contact for pricing";
+  var FORMATS = [["film_room_30_cents", 0], ["film_room_60_cents", 1], ["addon_30_cents", 2], ["season_arc_cents", 3]];
+
+  var levelsBox = document.getElementById("levels"), table = document.getElementById("level-prices");
+  var names = document.querySelectorAll("[data-level-names]"), rules = document.querySelectorAll("[data-rule]");
+  if (ANON && (levelsBox || table || names.length || rules.length)) {
+    Promise.all([
+      (levelsBox || table || names.length) ? get("mentor_tiers_public?select=key,name,description,sort,price_visible,breakdown_price_cents,film_room_30_cents,film_room_60_cents,addon_30_cents,season_arc_cents,color,turnaround_hours&visible=eq.true&order=sort.asc") : [],
+      get("settings?select=rules&id=eq.1")
+    ]).then(function (res) {
+      var levels = res[0] || [], r = (res[1] && res[1][0] && res[1][0].rules) || {};
+      rules.forEach(function (el) { var v = r[el.getAttribute("data-rule")]; if (v != null) el.textContent = v; });
+      if (!levels.length) return; // the static fallback stays
+      if (levelsBox) levelsBox.innerHTML = levels.map(function (l, i) {
+        var hours = l.turnaround_hours || r.turnaround_hours || 72;
+        var price = l.price_visible && typeof l.breakdown_price_cents === "number" ? money(l.breakdown_price_cents) + "<small>per game</small>" : '<span class="ask">' + ASK + "</span>";
+        return '<div class="tier' + (i === 0 ? " top" : "") + '"' + (l.color ? ' style="--lc:' + esc(l.color) + '"' : "") + ">" +
+          (i === 0 ? '<span class="badge">Highest level</span>' : "") + "<h3>" + esc(l.name) + "</h3>" +
+          '<p class="who">' + esc(l.description || "") + "</p>" + '<div class="price">' + price + "</div>" +
+          "<ul><li>Recorded breakdown</li><li>Player Development Worksheet PDF</li><li>" + esc(hours) + " hour turnaround from acceptance</li></ul></div>";
+      }).join("");
+      if (table) {
+        var head = table.querySelector("thead tr"), rows = table.querySelectorAll("tbody tr");
+        head.innerHTML = "<th>Session</th>" + levels.map(function (l) { return "<th>" + esc(l.name) + "</th>"; }).join("");
+        FORMATS.forEach(function (f) {
+          var row = rows[f[1]]; if (!row) return;
+          row.querySelectorAll("td.num").forEach(function (td) { td.remove(); });
+          row.insertAdjacentHTML("beforeend", levels.map(function (l) {
+            var v = l[f[0]];
+            return '<td class="num">' + (l.price_visible && typeof v === "number" ? money(v) : '<span class="ask">' + ASK + "</span>") + "</td>";
+          }).join(""));
         });
-        document.querySelectorAll("[data-rule]").forEach(function (el) {
-          var v = s.rules[el.getAttribute("data-rule")]; if (v != null) el.textContent = v;
-        });
-      })
-      .catch(function () {});
+      }
+      if (names.length) {
+        var list = levels.map(function (l) { return l.name; });
+        var text = list.length > 1 ? list.slice(0, -1).join(", ") + " and " + list[list.length - 1] : list.join("");
+        names.forEach(function (el) { el.textContent = text; });
+      }
+    }).catch(function () {});
   }
 })();

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-anon="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzcGJtYnZveG90YmVscmliamdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk3NTQ2MTAsImV4cCI6MjEwNTMzMDYxMH0.We-AWR71hKbfj6gNJZ3vjEPkFMNZ97Ba7pih0wIGsPI">
+<html lang="en" data-anon="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzcGJtYnZveG90YmVscmliamdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk3NTQ2MTAsImV4cCI6MjEwNTMzMDYxMH0.We-AWR71hKbfj6gNJZ3vjEPkFMNZ97Ba7pih0wIGsPI" data-anon-prod="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNidm9qbXByeGllbnhhY3dyc2ZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxNzAxOTEsImV4cCI6MjEwNTc0NjE5MX0.XqEMiWwS7pIS9mzY0CErOMBs1IWueGdpg1zRZNF2OJM">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -30,16 +30,14 @@
       <p class="kicker">Pricing</p>
       <h1>One game. <span class="gold">One price.</span></h1>
       <div class="rule"></div>
-      <p class="lead">You pay per breakdown, by the tier of the mentor you choose. No subscription, no bundles you don't need. Charged at checkout through Stripe.</p>
+      <p class="lead">You pay per breakdown, by the level of the mentor you choose. No subscription, no bundles you don't need. Charged at checkout through Stripe.</p>
     </div>
   </div>
 </section>
 <section class="tight">
   <div class="wrap">
-    <div class="tiers">
-      <div class="tier"><h3>NCAA</h3><p class="who">Played NCAA Division 1 or 3, or U Sports</p><div class="price"><span data-price="breakdown.ncaa">$175</span><small>per game</small></div><ul><li>Recorded breakdown</li><li>Player Development Worksheet PDF</li><li><span data-rule="turnaround_hours">72</span> hour turnaround from acceptance</li></ul></div>
-      <div class="tier"><h3>PWHL</h3><p class="who">Played in the Professional Women's Hockey League</p><div class="price"><span data-price="breakdown.pwhl">$250</span><small>per game</small></div><ul><li>Recorded breakdown</li><li>Player Development Worksheet PDF</li><li><span data-rule="turnaround_hours">72</span> hour turnaround from acceptance</li></ul></div>
-      <div class="tier pro"><span class="badge">Highest level</span><h3>Pro</h3><p class="who">Played NHL, AHL, ECHL or top European pro leagues</p><div class="price"><span data-price="breakdown.pro">$1,000</span><small>per game</small></div><ul><li>Recorded breakdown</li><li>Player Development Worksheet PDF</li><li><span data-rule="turnaround_hours">72</span> hour turnaround from acceptance</li></ul></div>
+    <div class="tiers" id="levels">
+      <p class="muted" data-fallback>Pricing is set by the level your mentor played at. <a data-app="/mentors" href="#">Browse FLP Mentors</a> to see each level's price.</p>
     </div>
   </div>
 </section>
@@ -48,22 +46,22 @@
     <p class="kicker">Live</p>
     <h2>Film Room sessions</h2>
     <p class="muted">Booked from a mentor's profile inside their posted hours. Recorded, with a written recap within <span data-rule="recap_due_hours">24</span> hours.</p>
-    <table>
-      <thead><tr><th>Session</th><th>NCAA</th><th>PWHL</th><th>Pro</th></tr></thead>
+    <div class="scroll"><table id="level-prices">
+      <thead><tr><th>Session</th></tr></thead>
       <tbody>
-        <tr><td>Film Room · 30 minutes</td><td class="num" data-price="film_room_30.ncaa">$89</td><td class="num" data-price="film_room_30.pwhl">$119</td><td class="num" data-price="film_room_30.pro">$349</td></tr>
-        <tr><td>Film Room · 60 minutes</td><td class="num" data-price="film_room_60.ncaa">$149</td><td class="num" data-price="film_room_60.pwhl">$199</td><td class="num" data-price="film_room_60.pro">$599</td></tr>
-        <tr><td>Add-on · 30 minutes, within <span data-rule="addon_window_days">14</span> days of a breakdown</td><td class="num" data-price="addon_30.ncaa">$69</td><td class="num" data-price="addon_30.pwhl">$99</td><td class="num" data-price="addon_30.pro">$299</td></tr>
-        <tr><td>Season Arc · <span data-rule="season_arc_sessions">4</span> sessions over <span data-rule="season_arc_weeks">8</span> weeks</td><td class="num" data-price="season_arc.ncaa">$299</td><td class="num" data-price="season_arc.pwhl">$399</td><td class="num" data-price="season_arc.pro">$1,199</td></tr>
+        <tr><td>Film Room · 30 minutes</td></tr>
+        <tr><td>Film Room · 60 minutes</td></tr>
+        <tr><td>Add-on · 30 minutes, within <span data-rule="addon_window_days">14</span> days of a breakdown</td></tr>
+        <tr><td>Season Arc · <span data-rule="season_arc_sessions">4</span> sessions over <span data-rule="season_arc_weeks">8</span> weeks</td></tr>
       </tbody>
-    </table>
+    </table></div>
     <p class="small" style="margin-top:14px">Free cancellation up to <span data-rule="session_cancel_hours">24</span> hours before a session. If a mentor can't confirm within <span data-rule="session_accept_hours">24</span> hours, you're refunded in full. Prices in US dollars.</p>
   </div>
 </section>
 <section>
   <div class="wrap" style="text-align:center">
     <h2>Pick the mentor first</h2>
-    <p class="lead" style="margin:0 auto 24px">Every mentor's profile shows their tier, turnaround and reviews before you pay anything.</p>
+    <p class="lead" style="margin:0 auto 24px">Every mentor's profile shows their level, turnaround and reviews before you pay anything.</p>
     <div class="btns" style="justify-content:center"><a class="btn primary" data-app="/mentors" href="#">Browse FLP Mentors</a></div>
   </div>
 </section>

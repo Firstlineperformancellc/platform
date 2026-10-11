@@ -169,3 +169,9 @@ Junior levels (OHL/WHL/QMJHL, USHL/NAHL/BCHL) are selectable as "highest level p
 - **Mentors** see their earnings (paid, on its way, on hold) and can open their Stripe Express dashboard from their profile.
 - **Two webhook endpoints, two secrets:** one for FLP's own account, one for connected accounts. `services/api/deploy/stripe-webhook.sh` creates both and writes the signing secrets into the env file, so no secret is copied by hand.
 - **Not built, by decision pending:** sales tax collection, pulling money back from a mentor after a refund, and mentor tax forms beyond what Stripe Express provides.
+
+## 2026-10-11 — The marketing site's pricing follows the levels table
+
+- **What happened:** Alex hid the NHL level's price and added a level in the control center; beta.firstlineperform.com/pricing kept showing three hand-typed cards. The page was filling its numbers from the old `settings` price columns, from the **dev** database on every host.
+- **Now:** the pricing page renders its level cards and the Film Room table from `mentor_tiers_public` (the same public view the marketplace reads) plus `settings.rules`, chosen by host: the dev preview reads the dev project, every production host reads production. A hidden price reads "Please contact for pricing", the top of the hierarchy carries the "Highest level" badge, level colours and per-level turnaround apply, empty descriptions are hidden, and the for-mentors page's list of level names follows the table. If the fetch fails the page shows a line pointing to the marketplace rather than stale numbers.
+- Both anon keys are baked in by `site/build.py` (they are public by design; the web app ships them to every browser). `build.py` refuses to build without the production key.

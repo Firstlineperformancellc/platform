@@ -6,11 +6,20 @@ import os, pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parent
 OUT = ROOT / "www"
-env_path = ROOT.parent / "apps" / "product" / ".env"
-ANON = ""
-for line in env_path.read_text().splitlines():
-    if line.startswith("EXPO_PUBLIC_SUPABASE_ANON_KEY="):
-        ANON = line.split("=", 1)[1].strip()
+# Anon keys are public by design (the web app ships them to every browser). The page picks the
+# project by host: the dev preview reads the dev database, every production host reads production.
+def anon_key(name):
+    path = ROOT.parent / "apps" / "product" / name
+    if not path.exists():
+        return ""
+    for line in path.read_text().splitlines():
+        if line.startswith("EXPO_PUBLIC_SUPABASE_ANON_KEY="):
+            return line.split("=", 1)[1].strip()
+    return ""
+ANON = anon_key(".env")
+ANON_PROD = anon_key(".env.prod")
+if not ANON_PROD:
+    raise SystemExit("apps/product/.env.prod is missing or has no anon key; the production site would have no prices")
 
 NAV = [("index.html", "Home"), ("how-it-works.html", "How it works"), ("for-mentors.html", "For mentors"), ("pricing.html", "Pricing"), ("faq.html", "FAQ")]
 
@@ -21,7 +30,7 @@ def frame(title, desc, body, current):
         links.append(f'<a href="{href}"{cur}>{label}</a>')
     nav = "".join(links)
     return f'''<!doctype html>
-<html lang="en" data-anon="{ANON}">
+<html lang="en" data-anon="{ANON}" data-anon-prod="{ANON_PROD}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -204,7 +213,7 @@ PAGES["for-mentors.html"] = ("Become an FLP Mentor", "Played NCAA, PWHL or pro? 
 <section class="tight">
   <div class="wrap">
     <div class="grid cols3">
-      <div class="card"><h3>Your tier is your level</h3><p class="muted">Tiers follow the highest level you played: Pro (NHL, AHL, ECHL, European pro), PWHL, and NCAA. Parents pay by tier, and you keep the majority of every dollar. The exact split is shown when you apply.</p></div>
+      <div class="card"><h3>Your tier is your level</h3><p class="muted">Levels follow the highest level you played: <span data-level-names>Pro, PWHL and NCAA</span>. Parents pay by tier, and you keep the majority of every dollar. The exact split is shown when you apply.</p></div>
       <div class="card"><h3>Your schedule</h3><p class="muted">Set how many breakdowns you'll hold at once (up to <span data-rule="capacity_max">5</span>) and the weekly windows when parents can book a Film Room. When you're full, the marketplace says so.</p></div>
       <div class="card"><h3>Your tools</h3><p class="muted">Watch the film in the browser or download it, record the breakdown with whatever you already use, fill in the worksheet, deliver. FLP turns the worksheet into a branded PDF.</p></div>
     </div>
@@ -256,16 +265,14 @@ PAGES["pricing.html"] = ("Pricing", "One flat price per breakdown by mentor tier
       <p class="kicker">Pricing</p>
       <h1>One game. <span class="gold">One price.</span></h1>
       <div class="rule"></div>
-      <p class="lead">You pay per breakdown, by the tier of the mentor you choose. No subscription, no bundles you don't need. Charged at checkout through Stripe.</p>
+      <p class="lead">You pay per breakdown, by the level of the mentor you choose. No subscription, no bundles you don't need. Charged at checkout through Stripe.</p>
     </div>
   </div>
 </section>
 <section class="tight">
   <div class="wrap">
-    <div class="tiers">
-      <div class="tier"><h3>NCAA</h3><p class="who">Played NCAA Division 1 or 3, or U Sports</p><div class="price"><span data-price="breakdown.ncaa">$175</span><small>per game</small></div><ul><li>Recorded breakdown</li><li>Player Development Worksheet PDF</li><li><span data-rule="turnaround_hours">72</span> hour turnaround from acceptance</li></ul></div>
-      <div class="tier"><h3>PWHL</h3><p class="who">Played in the Professional Women's Hockey League</p><div class="price"><span data-price="breakdown.pwhl">$250</span><small>per game</small></div><ul><li>Recorded breakdown</li><li>Player Development Worksheet PDF</li><li><span data-rule="turnaround_hours">72</span> hour turnaround from acceptance</li></ul></div>
-      <div class="tier pro"><span class="badge">Highest level</span><h3>Pro</h3><p class="who">Played NHL, AHL, ECHL or top European pro leagues</p><div class="price"><span data-price="breakdown.pro">$1,000</span><small>per game</small></div><ul><li>Recorded breakdown</li><li>Player Development Worksheet PDF</li><li><span data-rule="turnaround_hours">72</span> hour turnaround from acceptance</li></ul></div>
+    <div class="tiers" id="levels">
+      <p class="muted" data-fallback>Pricing is set by the level your mentor played at. <a data-app="/mentors" href="#">Browse FLP Mentors</a> to see each level's price.</p>
     </div>
   </div>
 </section>
@@ -274,22 +281,22 @@ PAGES["pricing.html"] = ("Pricing", "One flat price per breakdown by mentor tier
     <p class="kicker">Live</p>
     <h2>Film Room sessions</h2>
     <p class="muted">Booked from a mentor's profile inside their posted hours. Recorded, with a written recap within <span data-rule="recap_due_hours">24</span> hours.</p>
-    <table>
-      <thead><tr><th>Session</th><th>NCAA</th><th>PWHL</th><th>Pro</th></tr></thead>
+    <div class="scroll"><table id="level-prices">
+      <thead><tr><th>Session</th></tr></thead>
       <tbody>
-        <tr><td>Film Room · 30 minutes</td><td class="num" data-price="film_room_30.ncaa">$89</td><td class="num" data-price="film_room_30.pwhl">$119</td><td class="num" data-price="film_room_30.pro">$349</td></tr>
-        <tr><td>Film Room · 60 minutes</td><td class="num" data-price="film_room_60.ncaa">$149</td><td class="num" data-price="film_room_60.pwhl">$199</td><td class="num" data-price="film_room_60.pro">$599</td></tr>
-        <tr><td>Add-on · 30 minutes, within <span data-rule="addon_window_days">14</span> days of a breakdown</td><td class="num" data-price="addon_30.ncaa">$69</td><td class="num" data-price="addon_30.pwhl">$99</td><td class="num" data-price="addon_30.pro">$299</td></tr>
-        <tr><td>Season Arc · <span data-rule="season_arc_sessions">4</span> sessions over <span data-rule="season_arc_weeks">8</span> weeks</td><td class="num" data-price="season_arc.ncaa">$299</td><td class="num" data-price="season_arc.pwhl">$399</td><td class="num" data-price="season_arc.pro">$1,199</td></tr>
+        <tr><td>Film Room · 30 minutes</td></tr>
+        <tr><td>Film Room · 60 minutes</td></tr>
+        <tr><td>Add-on · 30 minutes, within <span data-rule="addon_window_days">14</span> days of a breakdown</td></tr>
+        <tr><td>Season Arc · <span data-rule="season_arc_sessions">4</span> sessions over <span data-rule="season_arc_weeks">8</span> weeks</td></tr>
       </tbody>
-    </table>
+    </table></div>
     <p class="small" style="margin-top:14px">Free cancellation up to <span data-rule="session_cancel_hours">24</span> hours before a session. If a mentor can't confirm within <span data-rule="session_accept_hours">24</span> hours, you're refunded in full. Prices in US dollars.</p>
   </div>
 </section>
 <section>
   <div class="wrap" style="text-align:center">
     <h2>Pick the mentor first</h2>
-    <p class="lead" style="margin:0 auto 24px">Every mentor's profile shows their tier, turnaround and reviews before you pay anything.</p>
+    <p class="lead" style="margin:0 auto 24px">Every mentor's profile shows their level, turnaround and reviews before you pay anything.</p>
     <div class="btns" style="justify-content:center"><a class="btn primary" data-app="/mentors" href="#">Browse FLP Mentors</a></div>
   </div>
 </section>
