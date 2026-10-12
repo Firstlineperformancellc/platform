@@ -8,7 +8,8 @@ import { Card } from "@/components/ui/Card";
 import { Choice } from "@/components/ui/Choice";
 import { Pill } from "@/components/ui/Pill";
 import { Body, H3, Small } from "@/components/ui/Text";
-import { listMentors, patchMentor, type AdminMentor } from "@/lib/admin";
+import { deleteMentor, listDeletedMentors, listMentors, patchMentor, restoreMentor, type AdminMentor, type DeletedMentor } from "@/lib/admin";
+import { TextField } from "@/components/ui/TextField";
 import { Loading } from "@/lib/auth";
 import { levelLabel, TIER_LABEL, useSettings, type Tier } from "@/lib/settings";
 import { listAllTiers, type TierAdmin } from "@/lib/tiers";
@@ -25,10 +26,15 @@ export default function AdminMentors() {
   const [error, setError] = useState<string | null>(null);
   const [tierPick, setTierPick] = useState<Record<string, Tier>>({});
   const [levels, setLevels] = useState<TierAdmin[]>([]);
+  const [deleted, setDeleted] = useState<DeletedMentor[] | null>(null);
+  const [confirm, setConfirm] = useState<string | null>(null);
+  const [reason, setReason] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
 
   const [picked, setPicked] = useState(false); // the admin chose a filter; stop choosing for them
   const load = useCallback(() => {
     listAllTiers().then((ls) => setLevels(ls.filter((t) => !t.archived_at))).catch(() => {});
+    listDeletedMentors().then(setDeleted).catch(() => setDeleted([]));
     return listMentors().then((ms) => {
       setMentors(ms);
       // open on the list that has people in it: applications when any are waiting, otherwise the approved mentors
@@ -53,7 +59,38 @@ export default function AdminMentors() {
     setBusy(null);
   }
 
-  const shown = (mentors ?? []).filter((m) => (filter === "all" ? true : m.status === filter));
+  async function remove(m: AdminMentor) {
+    setBusy(m.user_id);
+    setError(null);
+    setMsg(null);
+    try {
+      await deleteMentor(m.user_id, reason);
+      setConfirm(null);
+      setReason("");
+      setMsg(`${m.display_name} deleted. Their email is free to sign up again, and their record is under Deleted.`);
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+    setBusy(null);
+  }
+
+  async function restore(d: DeletedMentor) {
+    setBusy(d.id);
+    setError(null);
+    setMsg(null);
+    try {
+      await restoreMentor(d.id);
+      setMsg(`${d.display_name || d.email} restored.`);
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+    setBusy(null);
+  }
+
+  const shown = filter === "deleted" ? [] : (mentors ?? []).filter((m) => (filter === "all" ? true : m.status === filter));
+  const deletedOpen = (deleted ?? []).filter((d) => !d.restored_at);
   const count = (status: string) => (mentors ?? []).filter((m) => m.status === status).length;
 
   return (
@@ -69,12 +106,37 @@ export default function AdminMentors() {
       </Card>
       <Choice
         label="Show"
-        options={[{ key: "applied", label: `Applications (${count("applied")})` }, { key: "approved", label: `Approved (${count("approved")})` }, { key: "suspended", label: `Suspended (${count("suspended")})` }, { key: "deactivated", label: `Deactivated (${count("deactivated")})` }, { key: "all", label: `All (${(mentors ?? []).length})` }]}
+        options={[{ key: "applied", label: `Applications (${count("applied")})` }, { key: "approved", label: `Approved (${count("approved")})` }, { key: "suspended", label: `Suspended (${count("suspended")})` }, { key: "deactivated", label: `Deactivated (${count("deactivated")})` }, { key: "all", label: `All (${(mentors ?? []).length})` }, { key: "deleted", label: `Deleted (${deletedOpen.length})` }]}
         value={filter}
         onChange={(v) => { setPicked(true); setFilter(v as string); }}
       />
       {error ? <Body style={{ color: colors.danger }}>{error}</Body> : null}
-      {!mentors || !settings ? <Loading /> : shown.length === 0 ? <Body style={{ color: colors.muted }}>{filter === "applied" ? "No applications waiting. Approved mentors are under Approved." : "Nobody in this list."}</Body> : null}
+      {msg ? <Body style={{ color: colors.ok }}>{msg}</Body> : null}
+      {filter === "deleted" ? (
+        !deleted ? <Loading /> : deleted.length === 0 ? <Body style={{ color: colors.muted }}>No deleted mentors.</Body> : (
+          deleted.map((d) => (
+            <Card key={d.id}>
+              <View style={s.head}>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <H3>{d.display_name || d.full_name || d.email}</H3>
+                  <Small>{d.email}{d.phone ? ` · ${d.phone}` : ""}{d.snapshot?.athlete?.current_team ? ` · ${d.snapshot.athlete.current_team}` : ""}</Small>
+                  <Small>Deleted {new Date(d.deleted_at).toLocaleString()}{d.deleter?.full_name || d.deleter?.email ? ` by ${d.deleter?.full_name || d.deleter?.email}` : ""}{d.snapshot?.athlete?.status ? ` · was ${d.snapshot.athlete.status}` : ""}</Small>
+                  {d.reason ? <Small>Reason: {d.reason}</Small> : null}
+                </View>
+                <Pill tone={d.restored_at ? "ok" : "danger"}>{d.restored_at ? "restored" : "deleted"}</Pill>
+              </View>
+              {d.restored_at ? (
+                <Small>Restored {new Date(d.restored_at).toLocaleString()}.</Small>
+              ) : (
+                <View style={s.actions}>
+                  <Button title="Restore" small loading={busy === d.id} disabled={!d.user_id} onPress={() => restore(d)} />
+                  <Small style={{ color: colors.muted }}>Puts their name, email, phone and profile back as they were, if that email hasn't signed up again.</Small>
+                </View>
+              )}
+            </Card>
+          ))
+        )
+      ) : !mentors || !settings ? <Loading /> : shown.length === 0 ? <Body style={{ color: colors.muted }}>{filter === "applied" ? "No applications waiting. Approved mentors are under Approved." : "Nobody in this list."}</Body> : null}
       {mentors && settings
         ? shown.map((m) => {
             const level = settings.taxonomy.levels.find((l) => l.key === m.highest_level);
@@ -140,12 +202,21 @@ export default function AdminMentors() {
                     </>
                   ) : null}
                   {m.status === "deactivated" ? (
-                    <>
-                      <Button title="Reactivate" small onPress={() => act(m.user_id, { status: "approved", block: false })} />
-                      <Button title="Delete account" variant="danger" small onPress={() => act(m.user_id, { remove: true })} />
-                    </>
+                    <Button title="Reactivate" small onPress={() => act(m.user_id, { status: "approved", block: false })} />
                   ) : null}
+                  {confirm === m.user_id ? null : <Button title="Delete" variant="ghost" small onPress={() => { setConfirm(m.user_id); setReason(""); setError(null); }} />}
                 </View>
+                {confirm === m.user_id ? (
+                  <View style={s.confirm}>
+                    <Body style={{ color: colors.danger, fontWeight: "700" }}>Are you sure you want to delete this user?</Body>
+                    <Small>{m.display_name} ({m.profiles?.email}) will be removed from FLP and their email freed so they can sign up again from scratch. A full record is kept under Deleted, where you can restore it.</Small>
+                    <TextField label="Reason (for the record)" value={reason} onChangeText={setReason} placeholder="optional" />
+                    <View style={s.actions}>
+                      <Button title="Yes, delete" variant="danger" small loading={busy === m.user_id} onPress={() => remove(m)} />
+                      <Button title="Cancel" variant="ghost" small onPress={() => setConfirm(null)} />
+                    </View>
+                  </View>
+                ) : null}
               </Card>
             );
           })
@@ -168,4 +239,5 @@ const s = StyleSheet.create({
   stats: { flexDirection: "row", flexWrap: "wrap", gap: space.lg },
   stat: { minWidth: 120 },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: space.sm, alignItems: "flex-end" },
+  confirm: { gap: space.sm, padding: space.md, borderWidth: 1, borderColor: colors.danger, borderRadius: 8 },
 });

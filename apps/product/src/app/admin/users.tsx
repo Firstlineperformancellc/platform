@@ -8,7 +8,7 @@ import { Choice } from "@/components/ui/Choice";
 import { Pill } from "@/components/ui/Pill";
 import { TextField } from "@/components/ui/TextField";
 import { Body, H3, Small } from "@/components/ui/Text";
-import { deleteUser, listUsers, suspendUser, unsuspendUser, userActivity, type ActivityRow, type AdminUser } from "@/lib/admin";
+import { deleteMentor, deleteUser, listUsers, suspendUser, unsuspendUser, userActivity, type ActivityRow, type AdminUser } from "@/lib/admin";
 import { contactUser } from "@/lib/support";
 import { useAuth } from "@/lib/auth";
 import { money } from "@/lib/settings";
@@ -170,8 +170,12 @@ export default function AdminUsers() {
               {canAct ? (
                 confirm === u.id ? (
                   <>
-                    <Small style={{ color: colors.danger }}>Delete {u.email}? Accounts with orders or sessions are deactivated instead of erased.</Small>
-                    <Button title="Yes, delete" variant="danger" small loading={busy === `d-${u.id}`} onPress={() => run(`d-${u.id}`, async () => { const r = await deleteUser(u.id); setMsg(r.mode === "deleted" ? "Account deleted." : "Account deactivated (it has history)."); })} />
+                    <Small style={{ color: colors.danger, fontWeight: "700" }}>Are you sure you want to delete this user?</Small>
+                    <Small style={{ color: colors.danger }}>{u.role === "athlete" ? `${u.email} will be removed and their email freed so they can sign up again. A full record is kept under Mentors → Deleted.` : `${u.email} will be deleted. Accounts with orders or sessions are deactivated instead of erased.`}</Small>
+                    <Button title="Yes, delete" variant="danger" small loading={busy === `d-${u.id}`} onPress={() => run(`d-${u.id}`, async () => {
+                      if (u.role === "athlete") { await deleteMentor(u.id, ""); setMsg(`${u.email} deleted. Their record is under Mentors → Deleted.`); return; }
+                      const r = await deleteUser(u.id); setMsg(r.mode === "deleted" ? "Account deleted." : "Account deactivated (it has history).");
+                    })} />
                     <Button title="Keep" variant="ghost" small onPress={() => setConfirm(null)} />
                   </>
                 ) : (

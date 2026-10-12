@@ -419,6 +419,112 @@ adminRoutes.post("/users/:id/delete", async (c) => {
   return c.json({ ok: true, mode: "deactivated" });
 });
 
+// --- Delete a mentor so they can start over ------------------------------------------------------
+// The live account is wiped and hidden and its email moves to a placeholder, so the same email and
+// phone can sign up again. Everything it held is stored in deleted_accounts, where an admin can read
+// it and restore it. Orders, payouts and reviews keep pointing at the wiped account, so history stays.
+const DELETED_DOMAIN = "deleted.firstlineperform.com";
+const DELETED_NAME = "Deleted mentor";
+
+adminRoutes.post("/mentors/:id/delete", async (c) => {
+  const me = await requireAdmin(c.req.header("authorization"));
+  if (!me) return c.json({ error: "admin only" }, 403);
+  const id = c.req.param("id");
+  const { reason } = (await c.req.json().catch(() => ({}))) as { reason?: string };
+  if (id === me.id) return c.json({ error: "you can't delete your own account" }, 400);
+
+  const [{ data: profile }, { data: athlete }, { data: application }, { data: auth }] = await Promise.all([
+    admin.from("profiles").select("*").eq("id", id).maybeSingle(),
+    admin.from("athletes").select("*").eq("user_id", id).maybeSingle(),
+    admin.from("athlete_applications").select("*").eq("user_id", id).maybeSingle(),
+    admin.auth.admin.getUserById(id),
+  ]);
+  if (!profile || !athlete) return c.json({ error: "mentor not found" }, 404);
+  if (profile.role === "admin") return c.json({ error: "admins are managed from Settings" }, 400);
+  if (String(profile.email ?? "").endsWith(`@${DELETED_DOMAIN}`)) return c.json({ error: "this mentor is already deleted" }, 400);
+
+  // Never pull someone out from under a family: open work has to be finished or reassigned first.
+  const [jobs, offers, sessions] = await Promise.all([
+    admin.from("jobs").select("id", { count: "exact", head: true }).eq("athlete_id", id).in("status", ["offered", "accepted"]),
+    admin.from("job_offers").select("id", { count: "exact", head: true }).eq("athlete_id", id).is("response", null),
+    admin.from("sessions").select("id", { count: "exact", head: true }).eq("athlete_id", id).in("status", ["requested", "scheduled", "in_progress"]),
+  ]);
+  const open = [
+    jobs.count ? `${jobs.count} breakdown${jobs.count === 1 ? "" : "s"} in progress` : "",
+    offers.count ? `${offers.count} open request${offers.count === 1 ? "" : "s"}` : "",
+    sessions.count ? `${sessions.count} upcoming Film Room${sessions.count === 1 ? "" : "s"}` : "",
+  ].filter(Boolean);
+  if (open.length) return c.json({ error: `Reassign or finish their open work first: ${open.join(", ")}.` }, 409);
+
+  const authUser = auth?.user;
+  const { data: record, error: recErr } = await admin.from("deleted_accounts").insert({
+    user_id: id, role: profile.role, email: authUser?.email ?? profile.email, full_name: profile.full_name, phone: profile.phone,
+    display_name: athlete.display_name, reason: (reason ?? "").trim().slice(0, 500) || null, deleted_by: me.id,
+    snapshot: {
+      profile, athlete, application: application ?? null,
+      auth: authUser ? { email: authUser.email, phone: authUser.phone, email_confirmed_at: authUser.email_confirmed_at, created_at: authUser.created_at, user_metadata: authUser.user_metadata, banned_until: (authUser as { banned_until?: string }).banned_until ?? null } : null,
+    },
+  }).select("id").single();
+  if (recErr || !record) return c.json({ error: "could not save the record: " + (recErr?.message ?? "unknown") }, 500);
+
+  // Free the email: move the sign-in to a placeholder that never receives mail, and block it.
+  const tag = `${id.slice(0, 8)}-${Date.now().toString(36)}`;
+  const { error: authErr } = await admin.auth.admin.updateUserById(id, {
+    email: `deleted-${tag}@${DELETED_DOMAIN}`, email_confirm: true, ban_duration: "876000h",
+    user_metadata: { full_name: null, application: null, deleted: true },
+  });
+  if (authErr) {
+    await admin.from("deleted_accounts").delete().eq("id", record.id);
+    return c.json({ error: "could not free the email: " + authErr.message }, 500);
+  }
+  const now = new Date().toISOString();
+  await admin.from("profiles").update({ full_name: DELETED_NAME, phone: null, address: null, deleted_at: now, suspended_at: now, suspended_reason: "deleted by admin" }).eq("id", id);
+  await admin.from("athletes").update({ display_name: DELETED_NAME, slug: `deleted-${tag}`, status: "deactivated", listed: false, featured: false, blocked_at: now, deleted_at: now }).eq("user_id", id);
+  await audit(me.id, "mentor.delete", "athlete", id, { record: record.id, email: authUser?.email ?? profile.email, reason: reason ?? null });
+  return c.json({ ok: true, record: record.id });
+});
+
+// Bring a deleted mentor back exactly as they were, if their email hasn't been used to sign up again.
+adminRoutes.post("/deleted/:recordId/restore", async (c) => {
+  const me = await requireAdmin(c.req.header("authorization"));
+  if (!me) return c.json({ error: "admin only" }, 403);
+  const { data: rec } = await admin.from("deleted_accounts").select("*").eq("id", c.req.param("recordId")).maybeSingle();
+  if (!rec) return c.json({ error: "record not found" }, 404);
+  if (rec.restored_at) return c.json({ error: "already restored" }, 400);
+  if (!rec.user_id) return c.json({ error: "the original account no longer exists; this record is read-only" }, 400);
+
+  const { data: clash } = await admin.from("profiles").select("id, created_at").ilike("email", rec.email).neq("id", rec.user_id).maybeSingle();
+  if (clash) {
+    const when = new Date(clash.created_at).toLocaleDateString("en-US", { timeZone: "America/Detroit", month: "short", day: "numeric" });
+    return c.json({ error: `${rec.email} signed up again on ${when}, so the old account can't take it back. Keep the new account, or delete it first and then restore this one.` }, 409);
+  }
+
+  const snap = rec.snapshot as { profile: Record<string, unknown>; athlete: Record<string, unknown>; auth: { user_metadata?: Record<string, unknown> } | null };
+  const p = snap.profile ?? {};
+  const a = snap.athlete ?? {};
+  const wasSuspended = Boolean(p.suspended_at);
+  const { error: authErr } = await admin.auth.admin.updateUserById(rec.user_id, {
+    email: rec.email, email_confirm: true, ban_duration: wasSuspended ? "876000h" : "none",
+    user_metadata: { ...(snap.auth?.user_metadata ?? {}), deleted: null },
+  });
+  if (authErr) return c.json({ error: "could not restore the email: " + authErr.message }, 500);
+
+  let slug = String(a.slug ?? "");
+  const { data: slugTaken } = await admin.from("athletes").select("user_id").eq("slug", slug).neq("user_id", rec.user_id).maybeSingle();
+  if (!slug || slugTaken) slug = `${slug || "mentor"}-r${Math.random().toString(16).slice(2, 6)}`;
+  await admin.from("profiles").update({
+    full_name: p.full_name ?? null, phone: p.phone ?? null, address: p.address ?? null,
+    deleted_at: p.deleted_at ?? null, suspended_at: p.suspended_at ?? null, suspended_reason: p.suspended_reason ?? null,
+  }).eq("id", rec.user_id);
+  await admin.from("athletes").update({
+    display_name: a.display_name, slug, status: a.status, listed: a.listed ?? true, featured: a.featured ?? false,
+    blocked_at: a.blocked_at ?? null, deleted_at: a.deleted_at ?? null,
+  }).eq("user_id", rec.user_id);
+  await admin.from("deleted_accounts").update({ restored_at: new Date().toISOString(), restored_by: me.id }).eq("id", rec.id);
+  await audit(me.id, "mentor.restore", "athlete", rec.user_id, { record: rec.id, email: rec.email });
+  return c.json({ ok: true, userId: rec.user_id });
+});
+
 // --- Settings ----------------------------------------------------------------
 // PATCH /admin/settings { rules?, taxonomy?, marketplace? }  (shallow-merged per key). Prices live on the mentor levels.
 adminRoutes.patch("/settings", async (c) => {

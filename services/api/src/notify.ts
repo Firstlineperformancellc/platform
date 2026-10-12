@@ -8,13 +8,14 @@ const resend = env.resendApiKey ? new Resend(env.resendApiKey) : null;
 const FROM = process.env.MAIL_FROM ?? "First Line Performance <no-reply@mail.firstlineperform.com>";
 
 export async function notify(userId: string, template: string, subject: string, html: string, payload: Record<string, unknown> = {}) {
-  const { data: profile } = await admin.from("profiles").select("email, full_name").eq("id", userId).maybeSingle();
+  const { data: profile } = await admin.from("profiles").select("email, full_name, deleted_at").eq("id", userId).maybeSingle();
   const { data: row } = await admin
     .from("notifications")
     .insert({ user_id: userId, channel: "email", template, payload: { subject, ...payload } })
     .select("id")
     .single();
-  if (!resend || !profile?.email) return;
+  // A deleted account's address is a placeholder that receives nothing; never mail it.
+  if (!resend || !profile?.email || profile.deleted_at) return;
   try {
     await resend.emails.send({ from: FROM, to: profile.email, subject, html: shell(subject, html) });
     if (row) await admin.from("notifications").update({ sent_at: new Date().toISOString() }).eq("id", row.id);

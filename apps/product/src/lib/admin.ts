@@ -196,6 +196,26 @@ export const suspendUser = (id: string, reason: string) => api<{ ok: true }>(`/a
 export const unsuspendUser = (id: string) => api<{ ok: true }>(`/admin/users/${id}/unsuspend`, { method: "POST" });
 export const deleteUser = (id: string) => api<{ ok: true; mode: "deleted" | "deactivated" }>(`/admin/users/${id}/delete`, { method: "POST" });
 
+// Delete a mentor so they can start over: the account is wiped, the email freed, and a full record kept.
+export const deleteMentor = (id: string, reason: string) => api<{ ok: true; record: string }>(`/admin/mentors/${id}/delete`, { method: "POST", body: JSON.stringify({ reason }) });
+export const restoreMentor = (recordId: string) => api<{ ok: true; userId: string }>(`/admin/deleted/${recordId}/restore`, { method: "POST" });
+export type DeletedMentor = {
+  id: string; user_id: string | null; email: string; full_name: string | null; phone: string | null; display_name: string | null;
+  reason: string | null; deleted_at: string; restored_at: string | null;
+  snapshot: { athlete?: { status?: string; tier?: string | null; current_team?: string | null; created_at?: string } | null };
+  deleter: { full_name: string | null; email: string | null } | null;
+};
+export async function listDeletedMentors(): Promise<DeletedMentor[]> {
+  const { data, error } = await supabase
+    .from("deleted_accounts")
+    .select("id, user_id, email, full_name, phone, display_name, reason, deleted_at, restored_at, snapshot, deleter:profiles!deleted_accounts_deleted_by_fkey(full_name, email)")
+    .eq("role", "athlete")
+    .order("deleted_at", { ascending: false })
+    .limit(200);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as DeletedMentor[];
+}
+
 export const adminCancelSession = (id: string, reason: string) => api<{ ok: true }>(`/admin/sessions/${id}/cancel`, { method: "POST", body: JSON.stringify({ reason }) });
 export const adminNoShow = (id: string, who: "mentor" | "parent") => api<{ ok: true }>(`/admin/sessions/${id}/no-show`, { method: "POST", body: JSON.stringify({ who }) });
 export const adminCompleteSession = (id: string) => api<{ ok: true }>(`/admin/sessions/${id}/complete`, { method: "POST" });
