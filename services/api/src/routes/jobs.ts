@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { userFromBearer } from "../supabase.js";
 import { respondToOffer, tick } from "../jobs.js";
+import { notifyTeamOfNewApplicants } from "../applicants.js";
 import { healthTick } from "../health.js";
 import { autoPayoutsTick, releaseUnpaidSessions } from "../billing.js";
 import { sessionsTick } from "../sessionsTick.js";
@@ -40,5 +41,6 @@ internal.get("/tick", async (c) => {
   const healthReport = await healthTick().catch((e) => ({ ran: false, error: (e as Error).message }));
   const released = await releaseUnpaidSessions().catch(() => 0);
   const payouts = await autoPayoutsTick().catch((e) => ({ mode: "error", paid: 0, failed: 0, error: (e as Error).message }));
-  return c.json({ ok: true, ...report, sessions: sessionReport, health: healthReport, unpaidSessionsReleased: released, payouts, at: new Date().toISOString() });
+  const applicants = await notifyTeamOfNewApplicants().catch((e) => ({ sent: 0, error: (e as Error).message }));
+  return c.json({ ok: true, ...report, sessions: sessionReport, health: healthReport, unpaidSessionsReleased: released, payouts, applicants, at: new Date().toISOString() });
 });

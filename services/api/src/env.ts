@@ -37,4 +37,6 @@ export const env = {
   // shared secret the inbound-mail script presents.
   supportFrom: optional("SUPPORT_FROM"),
   inboundEmailSecret: optional("INBOUND_EMAIL_SECRET"),
+  // Who hears about new mentor applications (comma-separated). Prod defaults to team@firstlineperform.com.
+  teamNotifyEmail: optional("TEAM_NOTIFY_EMAIL"),
 };
