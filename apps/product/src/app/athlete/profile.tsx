@@ -15,7 +15,7 @@ import { ContactDetails } from "@/components/ContactDetails";
 import { TextField } from "@/components/ui/TextField";
 import { Body, H1, H3, Label, Small } from "@/components/ui/Text";
 import { Loading } from "@/lib/auth";
-import { avatarUrl, connectStatus, stripeDashboard, DOW, getMyProfile, saveMyProfile, startConnect, uploadAvatar, type AvailabilityWindow, type MentorProfile } from "@/lib/mentorProfile";
+import { avatarUrl, BIO_MAX, connectStatus, SECTION_MAX, stripeDashboard, DOW, getMyProfile, saveMyProfile, startConnect, uploadAvatar, type AvailabilityWindow, type MentorProfile } from "@/lib/mentorProfile";
 import { levelLabel, TIER_LABEL, useSettings, type Tier } from "@/lib/settings";
 import type { HockeyPosition } from "@/lib/types";
 import { colors, radius, space } from "@/theme/tokens";
@@ -141,12 +141,14 @@ export default function MentorProfileScreen() {
         <Choice label="Positions you review" options={settings.taxonomy.positions} value={p.positions} onChange={(v) => set({ positions: v as HockeyPosition[] })} multiple />
         <Choice label="Credentials" options={settings.taxonomy.badges} value={p.badges} onChange={(v) => set({ badges: v as string[] })} multiple hint="Shown as a badge. FLP may verify." />
         <TextField label="Specialties (comma-separated)" value={p.specialties.join(", ")} onChangeText={(v) => set({ specialties: v.split(",").map((x) => x.trim()).filter(Boolean) })} placeholder="e.g. Breakouts, gap control, reading the play" />
-        <TextField label="Bio" value={p.bio} onChangeText={(v) => set({ bio: v })} multiline style={s.multi} placeholder="Where you've played, what you're best at teaching, who you want to help." />
+        <TextField label="Bio" value={p.bio} onChangeText={(v) => set({ bio: v.slice(0, BIO_MAX) })} multiline maxLength={BIO_MAX} style={s.bio} placeholder="Where you've played, how you coach, what a family can expect from you. Blank lines make paragraphs." hint={`${p.bio.length.toLocaleString()} / ${BIO_MAX.toLocaleString()} · shown in full on your public page`} />
+        <TextField label="What I'm best at teaching (optional)" value={p.teaching_focus ?? ""} onChangeText={(v) => set({ teaching_focus: v.slice(0, SECTION_MAX) })} multiline maxLength={SECTION_MAX} style={s.multi} placeholder="e.g. Reading the play in the defensive zone, puck protection along the boards." hint={`${(p.teaching_focus ?? "").length} / ${SECTION_MAX} · a headed section on your public page`} />
+        <TextField label="Who I want to help (optional)" value={p.who_i_help ?? ""} onChangeText={(v) => set({ who_i_help: v.slice(0, SECTION_MAX) })} multiline maxLength={SECTION_MAX} style={s.multi} placeholder="e.g. U12 to U16 defensemen who want to make the jump to AAA." hint={`${(p.who_i_help ?? "").length} / ${SECTION_MAX}`} />
         <Button
           title="Save profile"
           small
           loading={busy === "profile"}
-          onPress={() => save("profile", { display_name: p.display_name.trim(), current_team: p.current_team.trim(), highest_level: p.highest_level, positions: p.positions, badges: p.badges, specialties: p.specialties, bio: p.bio.trim() })}
+          onPress={() => save("profile", { display_name: p.display_name.trim(), current_team: p.current_team.trim(), highest_level: p.highest_level, positions: p.positions, badges: p.badges, specialties: p.specialties, bio: p.bio.trim(), teaching_focus: p.teaching_focus?.trim() || null, who_i_help: p.who_i_help?.trim() || null })}
         />
       </Card>
 
@@ -226,5 +228,6 @@ const s = StyleSheet.create({
   avatar: { width: 88, height: 88, borderRadius: 44, backgroundColor: colors.panel2 },
   avatarEmpty: { borderWidth: 1, borderColor: colors.line2 },
   multi: { height: 120, paddingTop: space.sm, textAlignVertical: "top" },
+  bio: { height: 220, paddingTop: space.sm, textAlignVertical: "top" },
   window: { borderWidth: 1, borderColor: colors.line, borderRadius: radius.md, padding: space.md, gap: space.sm },
 });

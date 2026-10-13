@@ -61,6 +61,30 @@ export default function MentorProfile() {
         <H1>{mentor.display_name}</H1>
       </View>
       <MentorCard mentor={mentor} settings={settings} />
+      {mentor.bio.trim() || mentor.teaching_focus || mentor.who_i_help ? (
+        <Card>
+          <H3>About {first}</H3>
+          {paragraphs(mentor.bio).map((t, i) => (
+            <Body key={i}>{t}</Body>
+          ))}
+          {mentor.teaching_focus ? (
+            <View style={s.section}>
+              <Label>What I'm best at teaching</Label>
+              {paragraphs(mentor.teaching_focus).map((t, i) => (
+                <Body key={i}>{t}</Body>
+              ))}
+            </View>
+          ) : null}
+          {mentor.who_i_help ? (
+            <View style={s.section}>
+              <Label>Who I want to help</Label>
+              {paragraphs(mentor.who_i_help).map((t, i) => (
+                <Body key={i}>{t}</Body>
+              ))}
+            </View>
+          ) : null}
+        </Card>
+      ) : null}
       {mentor.eliteprospects_url ? (
         <Small style={{ color: colors.gold }} onPress={() => window.open(mentor.eliteprospects_url!, "_blank", "noopener")}>Elite Prospects profile ↗</Small>
       ) : null}
@@ -128,8 +152,12 @@ export default function MentorProfile() {
   );
 }
 
+// A bio keeps its paragraphs: blank lines (or single line breaks) split it.
+const paragraphs = (text: string | null | undefined) => (text ?? "").split(/\n+/).map((t) => t.trim()).filter(Boolean);
+
 const s = StyleSheet.create({
   topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  section: { gap: 4, marginTop: space.xs },
   row: { flexDirection: "row", alignItems: "center", gap: space.md, flexWrap: "wrap" },
   review: { borderTopWidth: 1, borderTopColor: colors.line, paddingTop: space.sm, gap: 4 },
 });

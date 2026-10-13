@@ -9,6 +9,8 @@ export type MentorProfile = {
   slug: string;
   display_name: string;
   bio: string;
+  teaching_focus: string | null;
+  who_i_help: string | null;
   specialties: string[];
   positions: HockeyPosition[];
   current_team: string;
@@ -27,7 +29,7 @@ export type MentorProfile = {
   payouts_enabled: boolean;
 };
 
-const COLS = "user_id, slug, display_name, bio, specialties, positions, current_team, highest_level, badges, eliteprospects_url, tier, status, verified, capacity_on_deck, availability, timezone, photo_path, video_media_id, stripe_account_id, payouts_enabled";
+const COLS = "user_id, slug, display_name, bio, teaching_focus, who_i_help, specialties, positions, current_team, highest_level, badges, eliteprospects_url, tier, status, verified, capacity_on_deck, availability, timezone, photo_path, video_media_id, stripe_account_id, payouts_enabled";
 
 export async function getMyProfile(): Promise<MentorProfile | null> {
   const { data: auth } = await supabase.auth.getUser();
@@ -36,11 +38,18 @@ export async function getMyProfile(): Promise<MentorProfile | null> {
   return (data as MentorProfile | null) ?? null;
 }
 
-export type MentorProfilePatch = Partial<Pick<MentorProfile, "display_name" | "bio" | "specialties" | "positions" | "current_team" | "eliteprospects_url" | "highest_level" | "badges" | "capacity_on_deck" | "availability" | "timezone" | "photo_path" | "video_media_id">>;
+export type MentorProfilePatch = Partial<Pick<MentorProfile, "display_name" | "bio" | "teaching_focus" | "who_i_help" | "specialties" | "positions" | "current_team" | "eliteprospects_url" | "highest_level" | "badges" | "capacity_on_deck" | "availability" | "timezone" | "photo_path" | "video_media_id">>;
+
+export const BIO_MAX = 3000;
+export const SECTION_MAX = 500;
 
 export async function saveMyProfile(patch: MentorProfilePatch) {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) throw new Error("sign in first");
+  if (patch.bio !== undefined && patch.bio.length > BIO_MAX) throw new Error(`Keep your bio under ${BIO_MAX.toLocaleString()} characters.`);
+  for (const k of ["teaching_focus", "who_i_help"] as const) {
+    if ((patch[k] ?? "").length > SECTION_MAX) throw new Error(`Keep that section under ${SECTION_MAX} characters.`);
+  }
   const { error } = await supabase.from("athletes").update(patch).eq("user_id", auth.user.id);
   if (error) throw new Error(error.message);
 }
