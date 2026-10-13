@@ -76,7 +76,7 @@ Write one file: `docs/UPDATE_SPEC_<YYYY-MM-DD>.md`, dated the day of the review 
 
 **B. Decisions made.** Anything Bryan and Scott actually settled, as a numbered list with the timestamp. These bind the build.
 
-**C. Requested changes.** The heart of the document. One entry per change, numbered `U-01`, `U-02`, … in the order they were raised, and grouped under these headings: Marketing site · Accounts and sign-up · Parent experience and order flow · Mentor experience · Breakdown delivery and worksheet · Film Room · Admin panel · Payments and payouts · Notifications and email · Native apps · Content, copy and design · Operations and support. Each entry has exactly these fields:
+**C. Requested changes.** The heart of the document. One entry per change, numbered `U-01`, `U-02`, ... in the order they were raised, and grouped under these headings: Marketing site · Accounts and sign-up · Parent experience and order flow · Mentor experience · Breakdown delivery and worksheet · Film Room · Admin panel · Payments and payouts · Notifications and email · Native apps · Content, copy and design · Operations and support. Each entry has exactly these fields:
 
 - **Title.** Imperative, specific.
 - **Asked by / when.** Who, and the transcript timestamp(s). Quote the key sentence when the wording matters.
