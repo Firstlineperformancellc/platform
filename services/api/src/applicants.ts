@@ -24,7 +24,7 @@ const multiline = (s: string) => esc(s).replace(/\n/g, "<br/>");
 const row = (label: string, value: string) =>
   `<tr><td style="padding:4px 14px 4px 0;color:#9a9a9a;vertical-align:top;white-space:nowrap">${label}</td><td style="padding:4px 0;color:#f2f2f2">${value}</td></tr>`;
 
-type AppAnswers = { motivations: string[] | null; motivation_other: string | null; special_circumstances: string | null; age: number | null; gender: string | null };
+type AppAnswers = { motivations: string[] | null; motivation_other: string | null; special_circumstances: string | null; age: number | null; gender: string | null; agreement_signed_name?: string | null; agreement_signed_at?: string | null; agreement_residence?: string | null; agreement_guardian_name?: string | null };
 export type Applicant = {
   user_id: string; display_name: string; status: string; created_at: string;
   highest_level: string | null; current_team: string | null; positions: string[] | null; eliteprospects_url: string | null;
@@ -40,7 +40,7 @@ export async function notifyTeamOfNewApplicants() {
   const since = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
   const { data, error } = await admin
     .from("athletes")
-    .select("user_id, display_name, status, created_at, highest_level, current_team, positions, eliteprospects_url, profiles!athletes_user_id_fkey(email, phone, full_name), application:athlete_applications(motivations, motivation_other, special_circumstances, age, gender)")
+    .select("user_id, display_name, status, created_at, highest_level, current_team, positions, eliteprospects_url, profiles!athletes_user_id_fkey(email, phone, full_name), application:athlete_applications(motivations, motivation_other, special_circumstances, age, gender, agreement_signed_name, agreement_signed_at, agreement_residence, agreement_guardian_name)")
     .is("team_notified_at", null)
     .gte("created_at", since)
     .order("created_at")
@@ -98,6 +98,9 @@ export function buildNotice(a: Applicant, levels: { key: string; label: string }
       a.eliteprospects_url ? row("Elite Prospects", `<a href="${esc(a.eliteprospects_url)}" style="color:#d4a32c">profile</a>`) : "",
       why.length ? row("Why", esc(why.join("; "))) : "",
       app?.special_circumstances ? row("Special circumstances", `<span style="color:#f0b84a">${multiline(app.special_circumstances)}</span>`) : "",
+      row("Contractor agreement", app?.agreement_signed_at
+        ? esc(`Signed as "${app.agreement_signed_name ?? ""}"${app.agreement_residence ? `, ${app.agreement_residence}` : ""}${app.agreement_guardian_name ? ` (guardian: ${app.agreement_guardian_name})` : ""}`)
+        : `<span style="color:#f0b84a">Not signed</span>`),
       row("Applied", `${esc(applied)} ET`),
       row("Email confirmed", confirmed ? "Yes" : `<span style="color:#f0b84a">Not yet. They can't sign in until they click the link in their confirmation email.</span>`),
     ].join("");

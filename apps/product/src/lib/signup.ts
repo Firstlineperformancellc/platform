@@ -1,5 +1,6 @@
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
+import type { AgreementSignature } from "./legal";
 
 // After supabase.auth.signUp with email confirmations on, three things can come back:
 // a session (confirmations off), a user with no identities (the address already has a confirmed
@@ -24,6 +25,7 @@ export async function resendConfirmation(email: string, redirectTo?: string) {
 export type ApplicationPayload = {
   bio: string; positions: string[]; team: string; eliteprospects_url: string | null;
   motivations: string[]; motivation_other: string | null; special_circumstances: string | null; age: number | null; gender: string | null;
+  agreement?: AgreementSignature | null;
 };
 const slugify = (name: string) => `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "mentor"}-${Math.random().toString(36).slice(2, 6)}`;
 
@@ -35,7 +37,12 @@ export async function saveApplicationRows(userId: string, fullName: string, a: A
     credentials: a.team ? [{ label: a.team }] : [], current_team: a.team, eliteprospects_url: a.eliteprospects_url,
   });
   if (error) throw new Error(error.message);
-  await supabase.from("athlete_applications").insert({ user_id: userId, motivations: a.motivations, motivation_other: a.motivation_other, special_circumstances: a.special_circumstances, age: a.age, gender: a.gender });
+  const g = a.agreement;
+  await supabase.from("athlete_applications").insert({
+    user_id: userId, motivations: a.motivations, motivation_other: a.motivation_other, special_circumstances: a.special_circumstances, age: a.age, gender: a.gender,
+    agreement_version: g?.version ?? null, agreement_signed_name: g?.signed_name ?? null, agreement_residence: g?.residence ?? null,
+    agreement_guardian_name: g?.guardian_name ?? null, agreement_signed_at: g?.signed_name ? g.signed_at : null, agreement_user_agent: g?.user_agent ?? null,
+  });
 }
 
 // When the account already existed (unconfirmed) the database cannot save the answers at sign-up, so

@@ -14,6 +14,7 @@ import { Loading } from "@/lib/auth";
 import { levelLabel, TIER_LABEL, useSettings, type Tier } from "@/lib/settings";
 import { latestTierChanges, listAllTiers, type TierAdmin, type TierChange } from "@/lib/tiers";
 import { Dropdown } from "@/components/ui/Dropdown";
+import { AGREEMENT, openAgreement } from "@/lib/legal";
 import { colors, space } from "@/theme/tokens";
 
 const pct = (v: number | null | undefined) => (v == null ? "–" : `${Math.round(v * 100)}%`);
@@ -186,6 +187,14 @@ export default function AdminMentors() {
                 {m.application?.age || m.application?.gender ? <Small>{[m.application?.age ? `Age ${m.application.age}` : null, m.application?.gender ? GENDER_LABEL[m.application.gender] : null].filter(Boolean).join(" · ")}</Small> : null}
                 {m.application?.motivations?.length ? <Small>Why they want to mentor: {m.application.motivations.map((k) => MOTIVATION_LABEL[k].replace(" (multiple fields selectable)", "")).join(" · ")}{m.application.motivations.includes("other") && m.application.motivation_other ? ` — ${m.application.motivation_other}` : ""}</Small> : null}
                 {m.eliteprospects_url ? <Small style={{ color: colors.gold }} onPress={() => window.open(m.eliteprospects_url!, "_blank", "noopener")}>Elite Prospects profile ↗</Small> : <Small style={{ color: colors.faint }}>No Elite Prospects link given.</Small>}
+                {m.application?.agreement_signed_at ? (
+                  <Small>
+                    Contractor agreement signed {new Date(m.application.agreement_signed_at).toLocaleDateString()} as “{m.application.agreement_signed_name}”{m.application.agreement_residence ? `, ${m.application.agreement_residence}` : ""}{m.application.agreement_guardian_name ? ` · guardian ${m.application.agreement_guardian_name}` : ""}{m.application.agreement_version && m.application.agreement_version !== AGREEMENT.version ? ` · version ${m.application.agreement_version}` : ""}.{" "}
+                    <Small style={{ color: colors.gold }} onPress={openAgreement}>Open the agreement ↗</Small>
+                  </Small>
+                ) : (
+                  <Small style={{ color: colors.warn }}>No signed contractor agreement on file (applied before signing was part of the form).</Small>
+                )}
 
                 {m.status !== "applied" && st ? (
                   <View style={s.stats}>

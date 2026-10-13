@@ -14,6 +14,8 @@ import { applicantConfirmUrl, EXISTS_MESSAGE, resendConfirmation, saveApplicatio
 import { useEffect } from "react";
 import { GENDERS, MOTIVATIONS, normaliseEliteProspects, POSITIONS, type Gender, type HockeyPosition, type Motivation } from "@/lib/types";
 import { Dropdown } from "@/components/ui/Dropdown";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { AGREEMENT, openAgreement, type AgreementSignature } from "@/lib/legal";
 import { colors, fonts, radius, space } from "@/theme/tokens";
 
 
@@ -44,6 +46,10 @@ export default function Apply() {
   const [gender, setGender] = useState<Gender | null>(null);
   const [motivationOther, setMotivationOther] = useState("");
   const [special, setSpecial] = useState("");
+  const [agreed, setAgreed] = useState(false);
+  const [signedName, setSignedName] = useState("");
+  const [residence, setResidence] = useState("");
+  const [guardianName, setGuardianName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -66,7 +72,17 @@ export default function Apply() {
     if (!partial && !gender) return setError("Pick a gender, or \"Prefer not to say\".");
     const ep = normaliseEliteProspects(epUrl);
     if (epUrl.trim() && !ep) return setError("That doesn't look like an eliteprospects.com link.");
-    const application = { bio: bio.trim(), positions, team: team.trim(), eliteprospects_url: ep, motivations, motivation_other: motivations.includes("other") ? motivationOther.trim() : null, special_circumstances: special.trim() || null, age: ageNum, gender };
+    // The agreement is signed by every applicant, complete or not.
+    const minor = ageNum !== null && ageNum < 18;
+    if (!agreed) return setError("Read the Independent Contractor Agreement and tick the box to agree to it.");
+    if (signedName.trim().split(/\s+/).length < 2) return setError("Type your full legal name as your signature.");
+    if (!residence.trim()) return setError("Enter the state or province you live in; the agreement names it.");
+    if (minor && guardianName.trim().split(/\s+/).length < 2) return setError("Applicants under 18 need a parent or guardian to sign too. Type their full name.");
+    const agreement: AgreementSignature = {
+      version: AGREEMENT.version, signed_name: signedName.trim(), residence: residence.trim(), guardian_name: minor ? guardianName.trim() : null,
+      signed_at: new Date().toISOString(), user_agent: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 400) : null,
+    };
+    const application = { bio: bio.trim(), positions, team: team.trim(), eliteprospects_url: ep, motivations, motivation_other: motivations.includes("other") ? motivationOther.trim() : null, special_circumstances: special.trim() || null, age: ageNum, gender, agreement };
     if (finishing) {
       setBusy(true);
       setError(null);
@@ -195,6 +211,25 @@ export default function Apply() {
           style={s.threeLines}
           hint={`Optional. If you fill this in, you can submit without completing every field above. ${special.length} / 1000`}
         />
+        <View style={s.agreement}>
+          <Label>Independent Contractor Agreement</Label>
+          <Body style={{ color: colors.muted }}>Every FLP mentor works under the {AGREEMENT.title}. It covers how you're paid, who owns the breakdowns, confidentiality, and keeping young athletes safe. Read it in full, then sign below. Your typed name is your signature.</Body>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
+            <Button title="Open the agreement (PDF)" variant="secondary" small onPress={openAgreement} />
+          </View>
+          <Checkbox label={`I have read the ${AGREEMENT.title} in full and agree to its terms.`} checked={agreed} onChange={setAgreed} />
+          <TextField label="Your full legal name, typed as your signature" value={signedName} onChangeText={setSignedName} autoComplete="name" placeholder="First Last" />
+          <TextField label="State or province where you live" value={residence} onChangeText={setResidence} placeholder="e.g. Michigan" />
+          {age.trim() && Number(age) < 18 ? (
+            <TextField label="Parent or guardian's full name, typed as their signature" value={guardianName} onChangeText={setGuardianName} placeholder="First Last" hint="Applicants under 18 need a parent or guardian to consent to the agreement." />
+          ) : null}
+          {signedName.trim() ? (
+            <View style={s.sigLine}>
+              <Text style={s.sig}>{signedName.trim()}</Text>
+              <Small>Signed {new Date().toLocaleDateString()} · agreement version {AGREEMENT.version}</Small>
+            </View>
+          ) : null}
+        </View>
         {error ? <Body style={{ color: colors.danger }}>{error}</Body> : null}
         {notice ? <Body style={{ color: colors.ok }}>{notice}</Body> : null}
         {sentTo ? (
@@ -236,5 +271,8 @@ const s = StyleSheet.create({
   chipOn: { borderColor: colors.gold, backgroundColor: colors.goldSoft },
   chipText: { fontFamily: fonts.semibold, fontSize: 15, color: colors.muted },
   chipTextOn: { color: colors.gold },
+  agreement: { gap: space.md, padding: space.md, borderWidth: 1, borderColor: colors.goldDim, borderRadius: radius.md },
+  sigLine: { paddingTop: space.sm, borderTopWidth: 1, borderTopColor: colors.line2, gap: 2 },
+  sig: { fontFamily: fonts.semibold, fontStyle: "italic", fontSize: 24, color: colors.gold },
   link: { color: colors.gold, fontFamily: "Barlow_600SemiBold" },
 });
