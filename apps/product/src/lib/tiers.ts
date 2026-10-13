@@ -31,6 +31,13 @@ export const saveMarketplaceOptions = (marketplace: MarketplaceOptions) => after
 
 // Who moved a mentor between levels, and when. Newest first.
 export type TierChange = { id: string; athlete_id: string; from_tier: string | null; to_tier: string | null; changed_at: string; by: { full_name: string } | null };
+// The most recent level change for every mentor who has one.
+export async function latestTierChanges(): Promise<Record<string, TierChange>> {
+  const { data } = await supabase.from("mentor_tier_history").select("id, athlete_id, from_tier, to_tier, changed_at, by:changed_by(full_name)").order("changed_at", { ascending: false }).limit(1000);
+  const out: Record<string, TierChange> = {};
+  for (const row of (data ?? []) as unknown as TierChange[]) if (!out[row.athlete_id]) out[row.athlete_id] = row;
+  return out;
+}
 export async function listTierHistory(athleteId: string): Promise<TierChange[]> {
   const { data } = await supabase.from("mentor_tier_history").select("id, athlete_id, from_tier, to_tier, changed_at, by:changed_by(full_name)").eq("athlete_id", athleteId).order("changed_at", { ascending: false });
   return (data ?? []) as unknown as TierChange[];

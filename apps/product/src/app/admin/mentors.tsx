@@ -12,7 +12,8 @@ import { deleteMentor, listDeletedMentors, listMentors, patchMentor, restoreMent
 import { TextField } from "@/components/ui/TextField";
 import { Loading } from "@/lib/auth";
 import { levelLabel, TIER_LABEL, useSettings, type Tier } from "@/lib/settings";
-import { listAllTiers, type TierAdmin } from "@/lib/tiers";
+import { latestTierChanges, listAllTiers, type TierAdmin, type TierChange } from "@/lib/tiers";
+import { Dropdown } from "@/components/ui/Dropdown";
 import { colors, space } from "@/theme/tokens";
 
 const pct = (v: number | null | undefined) => (v == null ? "–" : `${Math.round(v * 100)}%`);
@@ -30,11 +31,14 @@ export default function AdminMentors() {
   const [confirm, setConfirm] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
+  const [tierChange, setTierChange] = useState<Record<string, Tier>>({}); // picked, waiting for confirm
+  const [lastChange, setLastChange] = useState<Record<string, TierChange>>({});
 
   const [picked, setPicked] = useState(false); // the admin chose a filter; stop choosing for them
   const load = useCallback(() => {
     listAllTiers().then((ls) => setLevels(ls.filter((t) => !t.archived_at))).catch(() => {});
     listDeletedMentors().then(setDeleted).catch(() => setDeleted([]));
+    latestTierChanges().then(setLastChange).catch(() => {});
     return listMentors().then((ms) => {
       setMentors(ms);
       // open on the list that has people in it: applications when any are waiting, otherwise the approved mentors
@@ -68,6 +72,23 @@ export default function AdminMentors() {
       setConfirm(null);
       setReason("");
       setMsg(`${m.display_name} deleted. Their email is free to sign up again, and their record is under Deleted.`);
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+    setBusy(null);
+  }
+
+  const tierName = (key: string | null | undefined) => (key ? levels.find((t) => t.key === key)?.name ?? TIER_LABEL[key as Tier] ?? key : "no tier");
+
+  async function changeTier(m: AdminMentor, to: Tier) {
+    setBusy(`tier-${m.user_id}`);
+    setError(null);
+    setMsg(null);
+    try {
+      await patchMentor(m.user_id, { tier: to });
+      setTierChange(({ [m.user_id]: _done, ...rest }) => rest);
+      setMsg(`${m.display_name} moved from ${tierName(m.tier)} to ${tierName(to)}.`);
       await load();
     } catch (e) {
       setError((e as Error).message);
@@ -181,6 +202,39 @@ export default function AdminMentors() {
                   </View>
                 ) : null}
 
+                {m.status !== "applied" ? (
+                  <View style={s.tierRow}>
+                    <View style={{ minWidth: 240 }}>
+                      <Dropdown
+                        label="Tier"
+                        single
+                        options={levels.map((t) => ({ key: t.key, label: t.visible ? t.name : `${t.name} (private)` }))}
+                        value={[tierChange[m.user_id] ?? m.tier ?? ""]}
+                        placeholder="No tier yet"
+                        onChange={(v) => {
+                          const to = v[0] as Tier | undefined;
+                          setTierChange(({ [m.user_id]: _old, ...rest }) => (to && to !== m.tier ? { ...rest, [m.user_id]: to } : rest));
+                        }}
+                      />
+                    </View>
+                    {lastChange[m.user_id] ? (
+                      <Small style={{ color: colors.muted }}>
+                        Last changed {new Date(lastChange[m.user_id].changed_at).toLocaleDateString()} from {tierName(lastChange[m.user_id].from_tier)} to {tierName(lastChange[m.user_id].to_tier)}{lastChange[m.user_id].by?.full_name ? ` by ${lastChange[m.user_id].by?.full_name}` : ""}.
+                      </Small>
+                    ) : null}
+                  </View>
+                ) : null}
+                {tierChange[m.user_id] ? (
+                  <View style={s.tierConfirm}>
+                    <Body style={{ fontWeight: "700" }}>Move {m.display_name} from {tierName(m.tier)} to {tierName(tierChange[m.user_id])}?</Body>
+                    <Small>New breakdowns and Film Rooms use {tierName(tierChange[m.user_id])}'s prices and share. Anything already booked keeps the price it was paid at.</Small>
+                    <View style={s.actions}>
+                      <Button title="Change tier" small loading={busy === `tier-${m.user_id}`} onPress={() => changeTier(m, tierChange[m.user_id])} />
+                      <Button title="Cancel" variant="ghost" small onPress={() => setTierChange(({ [m.user_id]: _x, ...rest }) => rest)} />
+                    </View>
+                  </View>
+                ) : null}
+
                 <View style={s.actions}>
                   {m.status === "applied" ? (
                     <>
@@ -240,4 +294,6 @@ const s = StyleSheet.create({
   stat: { minWidth: 120 },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: space.sm, alignItems: "flex-end" },
   confirm: { gap: space.sm, padding: space.md, borderWidth: 1, borderColor: colors.danger, borderRadius: 8 },
+  tierRow: { flexDirection: "row", flexWrap: "wrap", gap: space.md, alignItems: "flex-end" },
+  tierConfirm: { gap: space.sm, padding: space.md, borderWidth: 1, borderColor: colors.gold, borderRadius: 8 },
 });
