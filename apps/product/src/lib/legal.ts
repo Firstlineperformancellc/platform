@@ -9,6 +9,23 @@ export const AGREEMENT = {
   path: "/legal/FLP-Athlete-Independent-Contractor-Agreement.pdf",
 };
 
+// The mentor manual, shipped the same way. Rebuild with docs/manual/build.sh after editing the HTML.
+export const MANUAL = {
+  title: "Mentor FLP Service User Manual",
+  path: "/manual/FLP-Mentor-Service-User-Manual.pdf",
+};
+
+function appOrigin() {
+  if (Platform.OS === "web" && typeof window !== "undefined") return window.location.origin;
+  return process.env.EXPO_PUBLIC_APP_ORIGIN ?? "https://app.firstlineperform.com";
+}
+
+export function openManual() {
+  const url = `${appOrigin()}${MANUAL.path}`;
+  if (Platform.OS === "web" && typeof window !== "undefined") window.open(url, "_blank", "noopener");
+  else Linking.openURL(url).catch(() => {});
+}
+
 export function agreementUrl() {
   if (Platform.OS === "web" && typeof window !== "undefined") return `${window.location.origin}${AGREEMENT.path}`;
   return `${process.env.EXPO_PUBLIC_APP_ORIGIN ?? "https://app.firstlineperform.com"}${AGREEMENT.path}`;

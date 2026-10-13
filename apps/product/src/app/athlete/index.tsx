@@ -14,6 +14,7 @@ import { supabase } from "@/lib/supabase";
 import { money, TIER_LABEL, useSettings, type Tier } from "@/lib/settings";
 import { firstName, type Athlete } from "@/lib/types";
 import { colors, space } from "@/theme/tokens";
+import { MANUAL, openManual } from "@/lib/legal";
 
 function who(o: { players: { first_name: string; last_name: string } | null; age_group: string; position: string; skill_level: string } | null) {
   if (!o) return "Youth athlete";
@@ -86,6 +87,16 @@ export default function AthleteHome() {
         <Label>FLP Mentor{athlete?.tier ? ` · ${TIER_LABEL[athlete.tier as Tier]}` : ""}</Label>
         <H1>Welcome, {firstName(profile?.full_name)}</H1>
       </View>
+
+      <Card style={{ borderColor: colors.goldDim }}>
+        <View style={s.row}>
+          <View style={{ flex: 1, minWidth: 220, gap: 2 }}>
+            <H3>{MANUAL.title}</H3>
+            <Small>How everything here works: requests, the worksheet, Film Room, ratings, and getting paid. Searchable PDF.</Small>
+          </View>
+          <Button title="Open the manual" variant="secondary" small onPress={openManual} />
+        </View>
+      </Card>
 
       {status === "applied" ? (
         <Card>

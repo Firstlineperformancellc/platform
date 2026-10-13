@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mentor FLP Service User Manual</title>
+<meta name="author" content="First Line Performance LLC">
+<meta name="description" content="How FLP mentors use the platform: applying, your profile, breakdown requests, the Player Development Worksheet, Film Room sessions, ratings, getting paid, safety, and support.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,600;0,700;0,800;1,700&family=Barlow+Condensed:wght@700;800&display=swap">
+<style>
+  @page { size: Letter; margin: 0.85in 0.8in 0.9in 0.8in; }
+  :root { --ink:#111; --muted:#5a5a5a; --faint:#8a8a8a; --line:#d9d9d9; --gold:#B8902A; --goldSoft:#FBF5E6; --black:#0c0c0c; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body { font-family: "Barlow", Helvetica, Arial, sans-serif; font-size: 11pt; line-height: 1.5; color: var(--ink); }
+  h1, h2, h3, h4 { font-family: "Barlow", Helvetica, Arial, sans-serif; line-height: 1.15; margin: 0; }
+  h1 { font-size: 26pt; font-weight: 800; letter-spacing: -0.01em; margin: 0 0 6pt; }
+  h2 { font-size: 18pt; font-weight: 800; margin: 26pt 0 8pt; padding-top: 6pt; border-top: 3px solid var(--black); break-after: avoid; }
+  h3 { font-size: 13pt; font-weight: 700; margin: 16pt 0 5pt; break-after: avoid; }
+  h4 { font-size: 11pt; font-weight: 700; margin: 10pt 0 3pt; }
+  p { margin: 0 0 7pt; }
+  ul, ol { margin: 0 0 8pt 0; padding-left: 20pt; }
+  li { margin-bottom: 3pt; }
+  li > ul, li > ol { margin-top: 3pt; }
+  strong { font-weight: 700; }
+  .eyebrow { font-family: "Barlow Condensed", "Barlow", sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; font-size: 10pt; color: var(--gold); }
+  .muted { color: var(--muted); }
+  .lead { font-size: 12.5pt; color: var(--muted); }
+  .note { background: var(--goldSoft); border-left: 4px solid var(--gold); padding: 8pt 11pt; margin: 8pt 0 10pt; break-inside: avoid; }
+  .note strong { color: #7a5c12; }
+  .warn { background: #fff3f2; border-left: 4px solid #c2362d; padding: 8pt 11pt; margin: 8pt 0 10pt; break-inside: avoid; }
+  .steps { counter-reset: step; list-style: none; padding-left: 0; }
+  .steps li { counter-increment: step; position: relative; padding-left: 30pt; margin-bottom: 6pt; }
+  .steps li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 20pt; height: 20pt; border-radius: 50%; background: var(--black); color: #fff; font-weight: 800; font-size: 10pt; text-align: center; line-height: 20pt; }
+  .btn { display: inline-block; border: 1px solid var(--line); border-radius: 4pt; padding: 0 5pt; font-weight: 700; font-size: 10pt; background: #f6f6f6; white-space: nowrap; }
+  table { width: 100%; border-collapse: collapse; margin: 6pt 0 12pt; font-size: 10.5pt; break-inside: auto; }
+  th { text-align: left; font-family: "Barlow Condensed", sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; font-size: 9.5pt; color: var(--muted); border-bottom: 2px solid var(--black); padding: 5pt 6pt; }
+  td { border-bottom: 1px solid var(--line); padding: 5pt 6pt; vertical-align: top; }
+  tr { break-inside: avoid; }
+  .cover { height: 8.6in; display: flex; flex-direction: column; justify-content: space-between; break-after: page; }
+  .cover .brand { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-style: italic; text-transform: uppercase; letter-spacing: .1em; font-size: 14pt; color: var(--gold); }
+  .cover h1 { font-size: 40pt; line-height: 1.02; margin-top: 2.6in; }
+  .cover .sub { font-size: 14pt; color: var(--muted); margin-top: 10pt; max-width: 5.6in; }
+  .cover .meta { font-size: 10.5pt; color: var(--faint); border-top: 1px solid var(--line); padding-top: 10pt; }
+  .toc { break-after: page; }
+  .toc ol { list-style: none; padding: 0; counter-reset: toc; }
+  .toc li { counter-increment: toc; display: flex; gap: 8pt; padding: 5pt 0; border-bottom: 1px solid var(--line); font-size: 12pt; }
+  .toc li::before { content: counter(toc, decimal-leading-zero); font-family: "Barlow Condensed", sans-serif; font-weight: 800; color: var(--gold); width: 24pt; }
+  .toc a { color: inherit; text-decoration: none; }
+  a { color: #7a5c12; }
+  section { break-inside: auto; }
+  .ref { font-size: 10.5pt; }
+  .ref td:first-child { font-weight: 700; white-space: nowrap; }
+  dl { margin: 0 0 10pt; }
+  dt { font-weight: 700; margin-top: 6pt; }
+  dd { margin: 0 0 2pt 0; }
+  .faq dt { margin-top: 9pt; }
+  .footer-note { font-size: 9.5pt; color: var(--faint); margin-top: 30pt; border-top: 1px solid var(--line); padding-top: 8pt; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div>
+    <div class="brand">First Line Performance</div>
+    <h1>Mentor FLP Service<br>User Manual</h1>
+    <p class="sub">Everything a First Line Performance mentor needs: applying and getting approved, building your profile, taking breakdown requests, delivering the Player Development Worksheet, running Film Room sessions, ratings and quality, getting paid, safety, and support.</p>
+  </div>
+  <div class="meta">
+    First Line Performance LLC · Edition 1, October 2026 · firstlineperform.com · This manual is searchable: press Ctrl+F or ⌘F to find any word.
+  </div>
+</div>
+
+<div class="toc">
+  <div class="eyebrow">Contents</div>
+  <h1>What's in this manual</h1>
+  <ol>
+    <li><a href="#s1">How FLP works</a></li>
+    <li><a href="#s2">Getting started: applying, approval, signing in</a></li>
+    <li><a href="#s3">Your profile is your storefront</a></li>
+    <li><a href="#s4">Workload and Film Room availability</a></li>
+    <li><a href="#s5">Breakdown requests: accepting and declining</a></li>
+    <li><a href="#s6">Doing a breakdown: film, recording, worksheet, delivery</a></li>
+    <li><a href="#s7">Film Room: live sessions with the family</a></li>
+    <li><a href="#s8">Ratings, reviews, and the Quality Control Audit</a></li>
+    <li><a href="#s9">Getting paid: Stripe setup, earnings, taxes</a></li>
+    <li><a href="#s10">Safety and conduct</a></li>
+    <li><a href="#s11">Your account, emails, and support</a></li>
+    <li><a href="#s12">Quick reference and glossary</a></li>
+    <li><a href="#s13">Frequently asked questions</a></li>
+  </ol>
+</div>
+
+<section id="s1">
+  <div class="eyebrow">Section 1</div>
+  <h2>How FLP works</h2>
+  <p class="lead">First Line Performance connects youth hockey players and their families with current and former NCAA and professional players for personal video breakdowns and live mentoring. You are the product. This manual is how the platform supports you.</p>
+  <h3>The two things families buy</h3>
+  <ul>
+    <li><strong>A breakdown.</strong> A family uploads game film of their young athlete and picks you from the marketplace. You watch the film, record a breakdown with your own screen-recording tools, fill in a Player Development Worksheet, and deliver both. The family gets your video and a branded PDF of the worksheet.</li>
+    <li><strong>A Film Room session.</strong> A recorded live video call, 30 or 60 minutes, where you and the young athlete go through their film together. Families book inside the weekly windows you set. Every session is recorded, and you send a short recap afterward.</li>
+  </ul>
+  <h3>Who is who</h3>
+  <ul>
+    <li><strong>Mentor.</strong> You. An approved athlete with a profile on the marketplace, a level set by FLP, and a share of every sale.</li>
+    <li><strong>Parent or guardian.</strong> The customer. Every family account belongs to a parent; the young athlete is a profile under it, never a separate login. Parents book, pay, rate, and can join any session.</li>
+    <li><strong>Youth athlete.</strong> The player whose film you review. Always a minor, always represented by a parent.</li>
+    <li><strong>FLP admin.</strong> The First Line Performance team. They approve mentors, set levels and prices, review quality audits, release payouts, and answer support.</li>
+  </ul>
+  <h3>Where you work</h3>
+  <p>Everything happens in your browser at <strong>app.firstlineperform.com</strong>, on a laptop or a phone. Mobile apps are planned; the website works on any device today. Email is how FLP reaches you about requests, bookings, deadlines, and money, so keep your inbox open and add <strong>firstlineperform.com</strong> to your safe senders.</p>
+</section>
+
+<section id="s2">
+  <div class="eyebrow">Section 2</div>
+  <h2>Getting started: applying, approval, signing in</h2>
+  <h3>Applying</h3>
+  <p>Go to app.firstlineperform.com/apply. The application creates your account and your mentor profile in one step. You'll be asked for:</p>
+  <ul>
+    <li>Your name, email, and a password of at least 8 characters.</li>
+    <li>Your current or highest team, your age, and your gender.</li>
+    <li>The positions you can review.</li>
+    <li>An Elite Prospects profile link. Optional, but it speeds up the review.</li>
+    <li>Why you want to mentor, and a short bio: where you've played and what you're best at teaching.</li>
+    <li>Any special circumstances FLP should know about. If you fill this in, you can submit without completing every other field.</li>
+  </ul>
+  <h3>The Independent Contractor Agreement</h3>
+  <p>Before you can submit, you read and sign the <strong>FLP Athlete Independent Contractor Agreement</strong>. Open the PDF from the form, tick the box to confirm you've read it, and type your full legal name as your signature, with the state or province you live in. If you are under 18, a parent or guardian types their name as well. The agreement covers your independent contractor status, how you're paid, who owns the breakdown content, confidentiality, non-solicitation, and safety. FLP keeps a record of your signature, the date, and the version you signed. You can read the agreement again any time from your application or by asking support.</p>
+  <h3>Confirming your email</h3>
+  <p>After you submit, FLP emails you a confirmation link. Open it and you land on a page confirming your email; your application is already saved. If the email doesn't arrive within a couple of minutes, check spam, then use <span class="btn">Resend the email</span> on the thank-you page.</p>
+  <h3>Approval</h3>
+  <p>A member of the FLP team reads every application before a mentor joins the marketplace. That review exists to keep the young athletes on the platform safe, so it isn't instant. Until you're approved, your dashboard shows <strong>Application in review</strong>. When you are approved, you get an email, FLP assigns your <strong>level</strong> (see Section 3), and your profile goes live. If FLP needs something from you first, they'll email you or open a support conversation.</p>
+  <h3>Signing in</h3>
+  <ol class="steps">
+    <li>Go to app.firstlineperform.com and choose <span class="btn">Sign in</span>.</li>
+    <li>Enter the email and password from your application.</li>
+    <li>Forgot the password? Use <span class="btn">Forgot password</span> on the sign-in page. A reset link comes by email.</li>
+  </ol>
+  <h3>Your dashboard</h3>
+  <p>Signing in opens <strong>Your jobs</strong>, the mentor dashboard. Across the top: <span class="btn">My profile</span>, <span class="btn">Earnings</span>, <span class="btn">Support</span>, and <span class="btn">Sign out</span>. Below your name, in order: <strong>New requests</strong> waiting on your answer, <strong>Film Room</strong> bookings, breakdowns <strong>On deck</strong> (accepted and in progress), and <strong>Completed</strong> work. This manual is linked from the dashboard too.</p>
+</section>
+
+<section id="s3">
+  <div class="eyebrow">Section 3</div>
+  <h2>Your profile is your storefront</h2>
+  <p class="lead">Parents pick mentors from the marketplace. Your profile is the pitch. Open it from <span class="btn">My profile</span> on the dashboard; <strong>See your public page</strong> shows exactly what families see.</p>
+  <h3>How parents see you</h3>
+  <table>
+    <tr><th>Field</th><th>What to put there</th></tr>
+    <tr><td>Photo</td><td>A clear headshot. <span class="btn">Add a photo</span> accepts any image; it's cropped to a circle on your tile.</td></tr>
+    <tr><td>Display name</td><td>The name on your tile and public page. Your real name builds trust.</td></tr>
+    <tr><td>Current team or status</td><td>One line: "Michigan Tech alum, now coaching in Grand Rapids."</td></tr>
+    <tr><td>Elite Prospects profile link</td><td>Your eliteprospects.com page. Shown publicly so parents can check your history.</td></tr>
+    <tr><td>Highest level you played</td><td>Pick the highest level you ever played. FLP sets your tier from it. If you play at a lower level now, say so in your bio.</td></tr>
+    <tr><td>Positions you review</td><td>Forward, defense, goalie. Parents filter by these.</td></tr>
+    <tr><td>Credentials</td><td>Badges such as national team or national champion. Shown on your tile; FLP may verify them. They don't change your price.</td></tr>
+    <tr><td>Specialties</td><td>Comma-separated: "Breakouts, gap control, reading the play."</td></tr>
+    <tr><td>Bio</td><td>Where you've played, what you're best at teaching, who you want to help. Write for a parent, not a scout.</td></tr>
+  </table>
+  <p>Press <span class="btn">Save profile</span> after editing. Changes show on the marketplace immediately.</p>
+  <h3>Your level and your price</h3>
+  <p>FLP groups mentors into <strong>levels</strong> (for example NHL, PWHL, AHL/ECHL/OHL, NCAA) based on the highest level you played. Each level carries a breakdown price, Film Room prices, and your share of each sale. Only FLP can set or change your level; it shows under "FLP Mentor" at the top of your dashboard. If you believe your level is wrong, write to support with your playing history. Some levels show "Please contact for pricing" to families instead of a number; FLP arranges those sales.</p>
+  <h3>Intro video (optional)</h3>
+  <p>A short hello for parents: who you are, what you're good at, who you can help. There is no length limit, but a minute lands best. Record it with your phone, then <span class="btn">Upload a video</span>. It plays on your public page and can be replaced any time.</p>
+  <h3>Contact details</h3>
+  <p>At the bottom of your profile: full name, phone, and mailing address. This is how FLP reaches you if they need to. Your sign-in email is shown there; to change it, write to support.</p>
+</section>
+
+<section id="s4">
+  <div class="eyebrow">Section 4</div>
+  <h2>Workload and Film Room availability</h2>
+  <h3>Breakdowns on deck at once</h3>
+  <p>Under <strong>Workload</strong> you choose how many breakdowns you'll hold at the same time, from 1 to 5. New mentors start at the number FLP set for their level, usually 3. "On deck" counts accepted breakdowns you haven't delivered <em>and</em> requests you haven't answered yet. When you're at your number, the marketplace shows you as unavailable until you deliver one. Set it honestly: your average turnaround is public, and late deliveries count against you.</p>
+  <h3>Film Room availability</h3>
+  <p>Under <strong>Film Room availability</strong> you add weekly windows when families can book a live session: a day of the week, a start time, and an end time, in your local time zone. Add as many windows as you like, then <span class="btn">Save availability</span>. Parents book 30- or 60-minute sessions inside these windows, at least 12 hours ahead and up to 14 days out. No windows means no Film Room bookings; breakdown requests still come through.</p>
+  <div class="note"><strong>Tip.</strong> Windows you can reliably keep beat windows you'd like to keep. A session you confirm and then cancel inside 24 hours counts against your scorecard.</div>
+</section>
+
+<section id="s5">
+  <div class="eyebrow">Section 5</div>
+  <h2>Breakdown requests: accepting and declining</h2>
+  <h3>How a request reaches you</h3>
+  <p>A parent chooses you on the marketplace, uploads their athlete's game film (or pastes a YouTube link), tells you what to focus on, and pays. The request lands under <strong>New requests</strong> on your dashboard and in your email. The pill on the card says whether you were the family's <strong>First choice</strong> or <strong>Second choice</strong>.</p>
+  <h3>What you see</h3>
+  <ul>
+    <li>The young athlete's first name and last initial, age group, position, and skill level.</li>
+    <li>The focus areas the parent asked for, and any notes.</li>
+    <li>What you earn on this job, how many hours are left to accept, and the turnaround once you do.</li>
+  </ul>
+  <p>The game film itself opens only after you accept.</p>
+  <h3>The acceptance window</h3>
+  <ul>
+    <li>You have <strong>48 hours</strong> to answer. At 24 hours without an answer, FLP emails a nudge.</li>
+    <li><span class="btn">Accept</span> starts your turnaround clock and moves the job to <strong>On deck</strong>.</li>
+    <li><span class="btn">Decline</span> passes the job on at once. Decline early if you can't take it; a quick no is better for the family than silence.</li>
+    <li>If the window runs out, the offer expires and the job goes to the family's second choice, or to FLP to place. Expired offers show on your scorecard.</li>
+  </ul>
+  <h3>If you're at capacity</h3>
+  <p>When you're at your on-deck number, a family that picked you can choose to wait a few days for you to free up before the job moves to their second choice. Deliver on time and the next request comes through.</p>
+</section>
+
+<section id="s6">
+  <div class="eyebrow">Section 6</div>
+  <h2>Doing a breakdown: film, recording, worksheet, delivery</h2>
+  <p>Open an accepted job from <strong>On deck</strong> with <span class="btn">Open the job</span>. The job page shows what the parent asked for, the game film, and the two steps to deliver.</p>
+  <h3>The game film</h3>
+  <ul>
+    <li><strong>Uploaded film</strong> plays on the job page as soon as processing finishes, with a link to download the MP4 if you prefer to work from a file.</li>
+    <li><strong>YouTube link.</strong> Some families share a link instead. Open it and screen-record your breakdown from there.</li>
+    <li>If the film shows <strong>Processing</strong> or <strong>Not uploaded yet</strong>, wait or check back; the clock is yours, but the family knows the film is theirs to supply.</li>
+  </ul>
+  <h3>Step 1: record and upload your breakdown</h3>
+  <p>Record with whatever you use: Loom, QuickTime, OBS, Zoom, or your phone pointed at a screen. Talk the athlete through the film: what they did well, what to fix, how to fix it. Then <span class="btn">Upload breakdown video</span>. Large files are fine; uploads can be paused and resumed, and the video keeps processing in the background while you fill in the worksheet. There is no in-app recording studio; your own tools are the tools.</p>
+  <h3>Step 2: the Player Development Worksheet</h3>
+  <p>The worksheet is the written half of the deliverable. FLP turns it into a branded PDF the family keeps, so write it for a young player and a parent reading it together. The minimum is <strong>one clip and one drill</strong>; three clips is the standard that gets great ratings.</p>
+  <table>
+    <tr><th>Part</th><th>What goes in it</th></tr>
+    <tr><td>Strengths</td><td>What they did well. Be specific: "Keeps the stick on the ice through the slot."</td></tr>
+    <tr><td>Areas to improve</td><td>The two or three things that would change their game most.</td></tr>
+    <tr><td>Game situations from the film</td><td>One block per clip: the time and period, the situation ("Odd-man rush against, 2-on-1"), what happened, what to improve, and a one-line key takeaway. <span class="btn">Add another clip</span> for each.</td></tr>
+    <tr><td>Recommended workouts and drills</td><td>One block per drill: the area of focus, the drill, a description, how often ("3x per week"), and notes.</td></tr>
+    <tr><td>Next steps</td><td>Their action plan for the next couple of weeks, in order.</td></tr>
+    <tr><td>Additional notes</td><td>Extra feedback, reminders, or resources.</td></tr>
+  </table>
+  <h3>Deliver</h3>
+  <p>Press <span class="btn">Deliver breakdown</span>. The family gets an email with your video and the worksheet PDF, the job moves to <strong>Completed</strong>, and your payout for it is created (Section 9). You can't deliver without an uploaded video.</p>
+  <h3>The turnaround clock</h3>
+  <ul>
+    <li>Your level sets the turnaround, <strong>72 hours from acceptance</strong> by default. The job card counts down the hours left; it turns red under 12.</li>
+    <li>FLP emails reminders at 24 and 48 hours after you accept.</li>
+    <li>A late delivery still goes through, but it's recorded. Your average turnaround and on-time rate are what families see on your tile.</li>
+    <li>Stuck? Write to support before the deadline, not after.</li>
+  </ul>
+  <h3>After delivery</h3>
+  <p>The parent can rate the breakdown (Section 8) and may book a <strong>30-minute Film Room add-on</strong> within 14 days to go through it with you live (Section 7). Delivered jobs stay in <strong>Completed</strong> with your video and worksheet.</p>
+</section>
+
+<section id="s7">
+  <div class="eyebrow">Section 7</div>
+  <h2>Film Room: live sessions with the family</h2>
+  <h3>How families book</h3>
+  <p>A parent picks a slot inside your availability windows, 30 or 60 minutes, at least 12 hours ahead and up to 14 days out, and pays at booking. Marketplace bookings come with the athlete's film attached. There are three ways a session reaches you:</p>
+  <ul>
+    <li><strong>From the marketplace:</strong> a new family booking a session outright.</li>
+    <li><strong>An add-on:</strong> a 30-minute session booked within 14 days of a breakdown you delivered, to go through it live.</li>
+    <li><strong>A Season Arc:</strong> a pack of four 30-minute sessions over eight weeks, booked one at a time from the pack.</li>
+  </ul>
+  <h3>Confirming</h3>
+  <p>New bookings appear under <strong>Film Room</strong> on your dashboard with the athlete, the time, and any note from the parent. Press <span class="btn">Confirm</span> within <strong>24 hours</strong>, or <span class="btn">Can't make it</span>. A booking you don't answer in time is cancelled and the family refunded, and the miss is recorded. Both of you get reminders 24 hours and 1 hour before.</p>
+  <h3>Before the session</h3>
+  <p>Open the athlete's film and, if there was a breakdown, your worksheet. Start from the worksheet: the session is where the takeaways become habits.</p>
+  <h3>Joining and recording</h3>
+  <ul>
+    <li>Shortly before the start time, <span class="btn">Start the room</span> appears on the card. It opens the video room in a new tab.</li>
+    <li><strong>Recording starts when you join and cannot be turned off.</strong> There is no off-the-record option for anyone, and both sides are told on joining. Recordings are kept for 90 days for FLP's quality and safety reviews.</li>
+    <li>The parent may join at any time. Whether they sit in is the family's choice.</li>
+    <li>If you drop, <span class="btn">Rejoin</span> puts you back in the same session.</li>
+  </ul>
+  <h3>Finishing</h3>
+  <p>When you're done, press <span class="btn">Finish session</span>. If you forget, the session completes itself after the booked end. If the family hasn't appeared 10 minutes after the start, <span class="btn">Family didn't show</span> records the no-show; you are still paid for the booked session.</p>
+  <h3>Cancellations</h3>
+  <ul>
+    <li>A parent can cancel free of charge up to 24 hours before. Inside 24 hours they forfeit the fee and you are still paid.</li>
+    <li>You can <span class="btn">Cancel</span> a session before it starts. Cancelling inside 24 hours counts against your scorecard; the family is refunded.</li>
+    <li>A session you confirmed and never joined becomes a <strong>mentor no-show</strong> a day after its end: the family is refunded in full, your scorecard records it, and FLP is notified.</li>
+  </ul>
+  <h3>The recap</h3>
+  <p>Within <strong>24 hours</strong> of a session, press <span class="btn">Write the recap</span>: three takeaways, one or two drills (optional), and one next step. It's added to the athlete's Development Log, the running record the family keeps of their progress, and it closes out the session. Your payout for the session is created when the session completes.</p>
+</section>
+
+<section id="s8">
+  <div class="eyebrow">Section 8</div>
+  <h2>Ratings, reviews, and the Quality Control Audit</h2>
+  <h3>Ratings</h3>
+  <p>After every delivered breakdown and completed Film Room, the parent can rate it from 1 to 5 stars and leave a testimonial. Ratings of <strong>3 stars and up publish automatically</strong> to your public profile; anything below goes to FLP for a look first. Your tile shows your average and how many ratings it's built on.</p>
+  <h3>The Quality Control Audit</h3>
+  <p>A parent who is unhappy with a breakdown or session can file a Quality Control Audit within <strong>7 days</strong> of delivery. FLP reviews the video, the worksheet, and the reason, then decides: refund the family, reassign the work to another mentor, or close it with notes. While an audit is open, the payout for that job is <strong>on hold</strong>; it's released when the audit closes in your favour and voided if the family is refunded. You'll hear from FLP if they need your side.</p>
+  <h3>What FLP's scorecard tracks</h3>
+  <p>Admins see, for every mentor: jobs completed, average turnaround, on-time rate, ratings, offers accepted, declined, and expired, audits and their outcomes, Film Rooms completed, no-shows, late cancellations, and last activity. Families see the public parts: rating, rating count, average turnaround, and jobs completed. Consistency on the small things, answering requests quickly and delivering on time, is what moves both.</p>
+</section>
+
+<section id="s9">
+  <div class="eyebrow">Section 9</div>
+  <h2>Getting paid: Stripe setup, earnings, taxes</h2>
+  <h3>Your share</h3>
+  <p>Every request card shows what you earn for that job before you accept. The amount is your level's share of the price the family paid, as set out in your Independent Contractor Agreement. The parent pays First Line Performance; FLP pays you. Nobody at FLP handles your bank details; that's Stripe's job.</p>
+  <h3>Setting up payouts (once, about five minutes)</h3>
+  <ol class="steps">
+    <li>Open <span class="btn">My profile</span> and find <strong>Getting paid</strong>.</li>
+    <li>Press <span class="btn">Set up payouts</span>. You're taken to Stripe, the payments company FLP uses.</li>
+    <li>Stripe asks for your identity (name, date of birth, address, the last digits of your tax ID) and a bank account for deposits. This is required by law for anyone receiving payments.</li>
+    <li>When you finish, you're returned to your profile. The card shows <strong>Payouts enabled</strong> when Stripe has verified you. If it shows <strong>Setup incomplete</strong>, press <span class="btn">Finish payout setup</span> to supply whatever Stripe still needs.</li>
+  </ol>
+  <div class="note"><strong>Do this before your first delivery.</strong> You can take jobs without it, but a payout can't be sent to a bank account that doesn't exist yet. Until setup is complete, your earnings sit as "On its way" with a note saying why.</div>
+  <h3>When you're paid</h3>
+  <ul>
+    <li>A payout is created the moment you deliver a breakdown or complete a Film Room.</li>
+    <li>FLP releases payouts after the 7-day quality window, either by hand or on an automatic schedule they set. Once released, Stripe deposits it to your bank on Stripe's normal timing, usually a couple of business days.</li>
+    <li>A payout stays <strong>On hold</strong> while a Quality Control Audit or a card dispute on that sale is open.</li>
+  </ul>
+  <h3>The Earnings page</h3>
+  <p>Open <span class="btn">Earnings</span> from the dashboard. The totals at the top are <strong>Paid</strong> (sent to your bank) and <strong>On its way</strong> (earned, not yet sent), plus <strong>On hold</strong> if anything is held. Below is every payout with its job or session and its status:</p>
+  <table>
+    <tr><th>Status</th><th>Meaning</th></tr>
+    <tr><td>On its way</td><td>Earned and waiting to be sent. If it's waiting on you, the reason shows: usually payout setup isn't finished.</td></tr>
+    <tr><td>On hold</td><td>Held while FLP looks into something, with the reason.</td></tr>
+    <tr><td>Paid</td><td>Sent to your bank, with the date.</td></tr>
+    <tr><td>Cancelled</td><td>The sale was refunded before the payout went out.</td></tr>
+    <tr><td>Failed</td><td>Stripe couldn't send it. FLP is notified automatically and will retry or contact you.</td></tr>
+  </table>
+  <h3>Your Stripe dashboard and taxes</h3>
+  <p><span class="btn">Open my Stripe dashboard</span> on your profile opens your own Stripe account: every deposit, your bank details, and your tax forms. As an independent contractor you are responsible for your own taxes; Stripe provides the year-end tax documents for what you were paid. Keep your bank and address current there.</p>
+</section>
+
+<section id="s10">
+  <div class="eyebrow">Section 10</div>
+  <h2>Safety and conduct</h2>
+  <p class="lead">Every young athlete on FLP is a minor. The rules below are built into the platform, not left to policy.</p>
+  <ul>
+    <li><strong>Parents own the account.</strong> You never deal with a young athlete directly. Every booking, payment, and message comes from a parent, and a parent may join any session at any time.</li>
+    <li><strong>No contact outside FLP.</strong> Do not message, follow, or arrange to meet a young athlete or their family outside the platform. Your agreement's non-solicitation and confidentiality terms apply.</li>
+    <li><strong>Every session is recorded.</strong> Recording starts when you join and can't be stopped. Recordings are kept 90 days for safety and quality review by FLP.</li>
+    <li><strong>Film belongs to the family.</strong> You may use game film only to do the job. Don't download, share, or keep it beyond that. Breakdown videos and worksheets are joint work product of you and FLP, as your agreement sets out.</li>
+    <li><strong>Keep it about hockey.</strong> Coach the player in front of you. If a family raises anything outside your role, point them to FLP.</li>
+    <li><strong>Report concerns.</strong> If you see or hear anything that worries you about a young athlete's safety, tell FLP through support immediately.</li>
+  </ul>
+  <div class="warn"><strong>Breaking these rules ends your agreement.</strong> FLP can suspend or remove a mentor who violates them; in serious cases, authorities are involved.</div>
+</section>
+
+<section id="s11">
+  <div class="eyebrow">Section 11</div>
+  <h2>Your account, emails, and support</h2>
+  <h3>Emails you'll receive</h3>
+  <table>
+    <tr><th>When</th><th>What</th></tr>
+    <tr><td>A family picks you</td><td>New breakdown request, with the hours left to accept.</td></tr>
+    <tr><td>24 hours without an answer</td><td>A nudge on the open request.</td></tr>
+    <tr><td>24 and 48 hours after accepting</td><td>Turnaround reminders.</td></tr>
+    <tr><td>A family books a Film Room</td><td>Booking to confirm within 24 hours; reminders 24 hours and 1 hour before.</td></tr>
+    <tr><td>A session ends</td><td>Reminder to write the recap.</td></tr>
+    <tr><td>Approval, payouts, audits, account changes</td><td>From FLP as they happen.</td></tr>
+  </table>
+  <h3>Changing your details</h3>
+  <ul>
+    <li>Profile, photo, video, availability, and workload: <span class="btn">My profile</span>, any time.</li>
+    <li>Phone and mailing address: the Contact details card at the bottom of your profile.</li>
+    <li>Sign-in email: write to support.</li>
+    <li>Password: <span class="btn">Forgot password</span> on the sign-in page.</li>
+    <li>Bank account and tax details: your Stripe dashboard.</li>
+  </ul>
+  <h3>Support</h3>
+  <p>Press <span class="btn">Support</span> on the dashboard to send a message from your account; a person at FLP reads every one, usually within a business day, and replies by email. You can also write to <strong>support@firstlineperform.com</strong>. Your open conversations and FLP's replies are listed on the Support page. For questions about your approval or account standing, write to <strong>team@firstlineperform.com</strong>.</p>
+  <h3>If your account is suspended or deactivated</h3>
+  <p>FLP can pause a mentor's account. You'll be emailed the reason, your profile comes off the marketplace, and open work is handled by FLP. Reply to that email or contact team@firstlineperform.com to discuss it. Completed work is still paid.</p>
+</section>
+
+<section id="s12">
+  <div class="eyebrow">Section 12</div>
+  <h2>Quick reference and glossary</h2>
+  <h3>The numbers</h3>
+  <table class="ref">
+    <tr><td>Answer a breakdown request</td><td>48 hours, nudge at 24</td></tr>
+    <tr><td>Deliver a breakdown</td><td>72 hours from acceptance (your level may differ), reminders at 24 and 48</td></tr>
+    <tr><td>Worksheet minimum</td><td>1 clip and 1 drill; 3 clips is the standard</td></tr>
+    <tr><td>Breakdowns on deck</td><td>1 to 5; open requests count</td></tr>
+    <tr><td>Film Room bookings</td><td>30 or 60 minutes, at least 12 hours ahead, up to 14 days out</td></tr>
+    <tr><td>Confirm a Film Room</td><td>24 hours, or the family is refunded</td></tr>
+    <tr><td>Free cancellation</td><td>Up to 24 hours before; inside that, a late cancel</td></tr>
+    <tr><td>No-show grace</td><td>10 minutes</td></tr>
+    <tr><td>Recap</td><td>Within 24 hours of the session</td></tr>
+    <tr><td>Add-on session</td><td>30 minutes, within 14 days of a delivered breakdown</td></tr>
+    <tr><td>Season Arc</td><td>4 × 30 minutes over 8 weeks</td></tr>
+    <tr><td>Ratings</td><td>1 to 5 stars; 3 and up publish automatically</td></tr>
+    <tr><td>Quality Control Audit window</td><td>7 days after delivery; payout on hold while open</td></tr>
+    <tr><td>Recordings kept</td><td>90 days</td></tr>
+    <tr><td>Payout release</td><td>After the 7-day quality window, then Stripe's deposit timing</td></tr>
+  </table>
+  <h3>Glossary</h3>
+  <dl>
+    <dt>Breakdown</dt><dd>Your recorded review of a young athlete's game film, delivered with a worksheet.</dd>
+    <dt>Player Development Worksheet</dt><dd>The written part of a breakdown: strengths, areas to improve, clips, drills, next steps. Delivered to the family as a PDF.</dd>
+    <dt>Film Room</dt><dd>A recorded live session with the athlete and, if they choose, the parent.</dd>
+    <dt>Add-on</dt><dd>A 30-minute Film Room booked after a breakdown to go through it live.</dd>
+    <dt>Season Arc</dt><dd>A pack of four sessions over eight weeks.</dd>
+    <dt>On deck</dt><dd>Breakdowns you've accepted but not delivered, plus requests you haven't answered.</dd>
+    <dt>Level (tier)</dt><dd>The group FLP places you in from your highest level played. It sets prices and your share.</dd>
+    <dt>Development Log</dt><dd>The family's running record of their athlete's progress; your recaps land there.</dd>
+    <dt>Quality Control Audit (QCA)</dt><dd>A parent's formal complaint, reviewed by FLP.</dd>
+    <dt>Scorecard</dt><dd>FLP's internal record of your responsiveness, timeliness, ratings, and conduct.</dd>
+  </dl>
+</section>
+
+<section id="s13" class="faq">
+  <div class="eyebrow">Section 13</div>
+  <h2>Frequently asked questions</h2>
+  <dl>
+    <dt>Do I need special software to record a breakdown?</dt><dd>No. Any screen recorder works: Loom, QuickTime, OBS, Zoom, or a phone. Upload the file on the job page.</dd>
+    <dt>Can I see the film before I accept?</dt><dd>No. You see the athlete's age group, position, level, and what the parent asked for. The film opens after you accept.</dd>
+    <dt>What if the family hasn't uploaded their film?</dt><dd>The job page shows "Not uploaded yet" or "Processing". Check back; if it stays empty for a day, write to support.</dd>
+    <dt>I accepted a job but can't finish it. What now?</dt><dd>Write to support before the deadline. FLP can reassign it. Silence turns into a late delivery on your record.</dd>
+    <dt>Why am I shown as unavailable?</dt><dd>You're at your on-deck number. Deliver a breakdown, or raise the number under Workload if you can handle more.</dd>
+    <dt>Can I change my level?</dt><dd>Only FLP can. If your playing history supports a different level, write to support with details.</dd>
+    <dt>Can I turn off recording for one session?</dt><dd>No. Every Film Room is recorded, for everyone, always.</dd>
+    <dt>Does the parent have to be in the session?</dt><dd>That's the family's choice. A parent can join at any time.</dd>
+    <dt>The family didn't show up. Am I paid?</dt><dd>Yes. Ten minutes after the start, press "Family didn't show". The session is marked a family no-show and you're paid for it.</dd>
+    <dt>How do refunds affect me?</dt><dd>If a sale is refunded before your payout goes out, that payout is cancelled. A payout that was already sent is not pulled back.</dd>
+    <dt>When will my money arrive?</dt><dd>Payouts are released after the 7-day quality window, then deposited by Stripe within a couple of business days. The Earnings page shows each one's status.</dd>
+    <dt>Where are my tax forms?</dt><dd>In your Stripe dashboard, opened from My profile.</dd>
+    <dt>A family contacted me on social media. What do I do?</dt><dd>Don't engage. Point them back to FLP and tell support.</dd>
+    <dt>I want to take a break.</dt><dd>Remove your Film Room windows and lower your on-deck number to 1, or write to support to pause your profile. Finish anything you've already accepted.</dd>
+    <dt>Where do I find this manual again?</dt><dd>On your dashboard, under "Mentor FLP Service User Manual".</dd>
+  </dl>
+  <p class="footer-note">Mentor FLP Service User Manual, Edition 1, October 2026. © First Line Performance LLC. Where this manual and your signed Independent Contractor Agreement differ, the agreement governs. Platform rules such as time limits are settings FLP can adjust; the app always shows the current values.</p>
+</section>
+
+</body>
+</html>

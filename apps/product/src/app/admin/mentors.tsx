@@ -14,7 +14,7 @@ import { Loading } from "@/lib/auth";
 import { levelLabel, TIER_LABEL, useSettings, type Tier } from "@/lib/settings";
 import { latestTierChanges, listAllTiers, type TierAdmin, type TierChange } from "@/lib/tiers";
 import { Dropdown } from "@/components/ui/Dropdown";
-import { AGREEMENT, openAgreement } from "@/lib/legal";
+import { AGREEMENT, MANUAL, openAgreement, openManual } from "@/lib/legal";
 import { colors, space } from "@/theme/tokens";
 
 const pct = (v: number | null | undefined) => (v == null ? "–" : `${Math.round(v * 100)}%`);
@@ -124,6 +124,15 @@ export default function AdminMentors() {
             <Small>Add or retire mentor levels, set their order, prices and visibility, choose what the tiles show, and control who is listed, featured or custom-priced.</Small>
           </View>
           <Link href="/admin/marketplace" asChild><Button title="Open levels & tiles" variant="secondary" small /></Link>
+        </View>
+      </Card>
+      <Card>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space.md }}>
+          <View style={{ flex: 1, minWidth: 220 }}>
+            <H3>{MANUAL.title}</H3>
+            <Small>What every mentor is given on their dashboard. Send it to applicants, or check what they were told.</Small>
+          </View>
+          <Button title="Open the manual" variant="secondary" small onPress={openManual} />
         </View>
       </Card>
       <Choice

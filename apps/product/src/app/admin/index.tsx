@@ -9,6 +9,7 @@ import { counts } from "@/lib/admin";
 import { ticketCounts } from "@/lib/support";
 import { latestRun, type Run } from "@/lib/health";
 import { HealthBadge } from "@/components/HealthMeter";
+import { MANUAL, openManual } from "@/lib/legal";
 import { colors, space } from "@/theme/tokens";
 
 export default function AdminHome() {
@@ -61,6 +62,15 @@ export default function AdminHome() {
           </View>
         </Card>
       </Link>
+      <Card>
+        <View style={s.supportRow}>
+          <View style={{ flex: 1, minWidth: 220, gap: 4 }}>
+            <H3>{MANUAL.title}</H3>
+            <Body style={{ color: colors.muted }}>The manual every mentor sees on their dashboard: requests, the worksheet, Film Room, ratings, payouts, safety. Searchable PDF.</Body>
+          </View>
+          <Button title="Open the manual" variant="secondary" small onPress={openManual} />
+        </View>
+      </Card>
     </AdminShell>
   );
 }
