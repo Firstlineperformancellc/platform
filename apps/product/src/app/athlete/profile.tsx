@@ -12,10 +12,12 @@ import { Choice } from "@/components/ui/Choice";
 import { Pill } from "@/components/ui/Pill";
 import { Screen } from "@/components/ui/Screen";
 import { ContactDetails } from "@/components/ContactDetails";
+import { CareerEditor } from "@/components/CareerEditor";
 import { TextField } from "@/components/ui/TextField";
 import { Body, H1, H3, Label, Small } from "@/components/ui/Text";
 import { Loading } from "@/lib/auth";
 import { avatarUrl, BIO_MAX, connectStatus, SECTION_MAX, stripeDashboard, DOW, getMyProfile, saveMyProfile, startConnect, uploadAvatar, type AvailabilityWindow, type MentorProfile } from "@/lib/mentorProfile";
+import { listMyCareer, type CareerRow } from "@/lib/career";
 import { levelLabel, TIER_LABEL, useSettings, type Tier } from "@/lib/settings";
 import type { HockeyPosition } from "@/lib/types";
 import { colors, radius, space } from "@/theme/tokens";
@@ -30,8 +32,9 @@ export default function MentorProfileScreen() {
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [payout, setPayout] = useState<{ configured: boolean; connected: boolean; payouts_enabled: boolean } | null>(null);
+  const [career, setCareer] = useState<CareerRow[] | undefined>(undefined);
 
-  const load = useCallback(() => getMyProfile().then(setP), []);
+  const load = useCallback(() => Promise.all([getMyProfile().then(setP), listMyCareer().then(setCareer)]), []);
   useFocusEffect(
     useCallback(() => {
       load();
@@ -158,6 +161,10 @@ export default function MentorProfileScreen() {
         {p.video_media_id ? <Pill tone="ok">Video on your profile</Pill> : null}
         <VideoUpload purpose="intro_video" buttonTitle={p.video_media_id ? "Replace video" : "Upload a video"} onUploaded={(mediaId) => save("video", { video_media_id: mediaId }).then(() => set({ video_media_id: mediaId }))} />
       </Card>
+
+      {career !== undefined ? (
+        <CareerEditor positions={p.positions} initialRows={career} initialAwards={p.awards ?? []} initialNote={p.career_note} onSaved={load} />
+      ) : null}
 
       <Card>
         <H3>Workload</H3>

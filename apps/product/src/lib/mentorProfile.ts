@@ -11,6 +11,8 @@ export type MentorProfile = {
   bio: string;
   teaching_focus: string | null;
   who_i_help: string | null;
+  awards: string[];
+  career_note: string | null;
   specialties: string[];
   positions: HockeyPosition[];
   current_team: string;
@@ -29,7 +31,7 @@ export type MentorProfile = {
   payouts_enabled: boolean;
 };
 
-const COLS = "user_id, slug, display_name, bio, teaching_focus, who_i_help, specialties, positions, current_team, highest_level, badges, eliteprospects_url, tier, status, verified, capacity_on_deck, availability, timezone, photo_path, video_media_id, stripe_account_id, payouts_enabled";
+const COLS = "user_id, slug, display_name, bio, teaching_focus, who_i_help, awards, career_note, specialties, positions, current_team, highest_level, badges, eliteprospects_url, tier, status, verified, capacity_on_deck, availability, timezone, photo_path, video_media_id, stripe_account_id, payouts_enabled";
 
 export async function getMyProfile(): Promise<MentorProfile | null> {
   const { data: auth } = await supabase.auth.getUser();

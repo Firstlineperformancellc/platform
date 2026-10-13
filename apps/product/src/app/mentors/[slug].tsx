@@ -3,12 +3,14 @@ import { Link, useLocalSearchParams } from "expo-router";
 import { Platform, StyleSheet, View } from "react-native";
 import { Brand } from "@/components/Brand";
 import { BookSession } from "@/components/BookSession";
+import { CareerTable } from "@/components/CareerTable";
 import { MentorCard } from "@/components/MentorCard";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Screen } from "@/components/ui/Screen";
 import { Body, H1, H3, Label, Small } from "@/components/ui/Text";
 import { Loading, useAuth } from "@/lib/auth";
+import { hasGoalie, hasSkater, listCareerPublic, type CareerPublicRow } from "@/lib/career";
 import { getMentor, listReviews, type MarketplaceMentor, type MentorReview, priceOf } from "@/lib/mentors";
 import { money, TIER_LABEL, useSettings } from "@/lib/settings";
 import { colors, radius, space } from "@/theme/tokens";
@@ -20,12 +22,16 @@ export default function MentorProfile() {
   const { settings } = useSettings();
   const [mentor, setMentor] = useState<MarketplaceMentor | null | undefined>(undefined);
   const [reviews, setReviews] = useState<MentorReview[]>([]);
+  const [career, setCareer] = useState<CareerPublicRow[]>([]);
 
   useEffect(() => {
     if (!slug) return;
     getMentor(slug).then((m) => {
       setMentor(m);
-      if (m) listReviews(m.user_id).then(setReviews);
+      if (m) {
+        listReviews(m.user_id).then(setReviews);
+        listCareerPublic(m.user_id).then(setCareer);
+      }
     });
   }, [slug]);
 
@@ -85,7 +91,7 @@ export default function MentorProfile() {
           ) : null}
         </Card>
       ) : null}
-      {mentor.eliteprospects_url ? (
+      {mentor.eliteprospects_url && career.length === 0 ? (
         <Small style={{ color: colors.gold }} onPress={() => window.open(mentor.eliteprospects_url!, "_blank", "noopener")}>Elite Prospects profile ↗</Small>
       ) : null}
 
@@ -99,6 +105,27 @@ export default function MentorProfile() {
             allowFullScreen
             title={`${mentor.display_name} intro`}
           />
+        </Card>
+      ) : null}
+
+      {career.length > 0 ? (
+        <Card>
+          <H3>Career</H3>
+          <CareerTable rows={career} goalie={hasGoalie(mentor.positions)} skater={hasSkater(mentor.positions) || !hasGoalie(mentor.positions)} />
+          {(mentor.awards ?? []).length > 0 ? (
+            <View style={s.section}>
+              <Label>Awards and honours</Label>
+              {(mentor.awards ?? []).map((a, i) => (
+                <Body key={i}>{a}</Body>
+              ))}
+            </View>
+          ) : null}
+          {mentor.career_note ? <Small>{mentor.career_note}</Small> : null}
+          {mentor.eliteprospects_url ? (
+            <Small style={{ color: colors.gold }} onPress={() => window.open(mentor.eliteprospects_url!, "_blank", "noopener")}>Source: Elite Prospects ↗</Small>
+          ) : (
+            <Small style={{ color: colors.muted }}>Entered by {first}.</Small>
+          )}
         </Card>
       ) : null}
 
