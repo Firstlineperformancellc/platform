@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Admin User Manual</title>
+<meta name="author" content="First Line Performance LLC">
+<meta name="description" content="How to run First Line Performance from the admin control panel: users, mentors, levels and prices, orders and jobs, Film Room, audits, the payout ledger and Stripe, the support desk, settings, service health, and the emails the platform sends.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,600;0,700;0,800;1,700&family=Barlow+Condensed:wght@700;800&display=swap">
+<style>
+  @page { size: Letter; margin: 0.85in 0.8in 0.9in 0.8in; }
+  :root { --ink:#111; --muted:#5a5a5a; --faint:#8a8a8a; --line:#d9d9d9; --gold:#B8902A; --goldSoft:#FBF5E6; --black:#0c0c0c; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body { font-family: "Barlow", Helvetica, Arial, sans-serif; font-size: 11pt; line-height: 1.5; color: var(--ink); }
+  h1, h2, h3, h4 { line-height: 1.15; margin: 0; }
+  h1 { font-size: 26pt; font-weight: 800; letter-spacing: -0.01em; margin: 0 0 6pt; }
+  h2 { font-size: 18pt; font-weight: 800; margin: 26pt 0 8pt; padding-top: 6pt; border-top: 3px solid var(--black); break-after: avoid; }
+  h3 { font-size: 13pt; font-weight: 700; margin: 16pt 0 5pt; break-after: avoid; }
+  h4 { font-size: 11pt; font-weight: 700; margin: 10pt 0 3pt; }
+  p { margin: 0 0 7pt; }
+  ul, ol { margin: 0 0 8pt 0; padding-left: 20pt; }
+  li { margin-bottom: 3pt; }
+  strong { font-weight: 700; }
+  .eyebrow { font-family: "Barlow Condensed", "Barlow", sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; font-size: 10pt; color: var(--gold); }
+  .lead { font-size: 12.5pt; color: var(--muted); }
+  .note { background: var(--goldSoft); border-left: 4px solid var(--gold); padding: 8pt 11pt; margin: 8pt 0 10pt; break-inside: avoid; }
+  .note strong { color: #7a5c12; }
+  .warn { background: #fff3f2; border-left: 4px solid #c2362d; padding: 8pt 11pt; margin: 8pt 0 10pt; break-inside: avoid; }
+  .steps { counter-reset: step; list-style: none; padding-left: 0; }
+  .steps li { counter-increment: step; position: relative; padding-left: 30pt; margin-bottom: 6pt; }
+  .steps li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 20pt; height: 20pt; border-radius: 50%; background: var(--black); color: #fff; font-weight: 800; font-size: 10pt; text-align: center; line-height: 20pt; }
+  .btn { display: inline-block; border: 1px solid var(--line); border-radius: 4pt; padding: 0 5pt; font-weight: 700; font-size: 10pt; background: #f6f6f6; white-space: nowrap; }
+  .tab { display: inline-block; font-family: "Barlow Condensed", sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; font-size: 10pt; color: var(--gold); white-space: nowrap; }
+  table { width: 100%; border-collapse: collapse; margin: 6pt 0 12pt; font-size: 10.5pt; }
+  th { text-align: left; font-family: "Barlow Condensed", sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; font-size: 9.5pt; color: var(--muted); border-bottom: 2px solid var(--black); padding: 5pt 6pt; }
+  td { border-bottom: 1px solid var(--line); padding: 5pt 6pt; vertical-align: top; }
+  tr { break-inside: avoid; }
+  .cover { height: 8.6in; display: flex; flex-direction: column; justify-content: space-between; break-after: page; }
+  .cover .brand { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-style: italic; text-transform: uppercase; letter-spacing: .1em; font-size: 14pt; color: var(--gold); }
+  .cover h1 { font-size: 40pt; line-height: 1.02; margin-top: 2.6in; }
+  .cover .sub { font-size: 14pt; color: var(--muted); margin-top: 10pt; max-width: 5.6in; }
+  .cover .meta { font-size: 10.5pt; color: var(--faint); border-top: 1px solid var(--line); padding-top: 10pt; }
+  .toc { break-after: page; }
+  .toc ol { list-style: none; padding: 0; counter-reset: toc; }
+  .toc li { counter-increment: toc; display: flex; gap: 8pt; padding: 5pt 0; border-bottom: 1px solid var(--line); font-size: 12pt; }
+  .toc li::before { content: counter(toc, decimal-leading-zero); font-family: "Barlow Condensed", sans-serif; font-weight: 800; color: var(--gold); width: 24pt; }
+  .toc a { color: inherit; text-decoration: none; }
+  a { color: #7a5c12; }
+  .ref td:first-child { font-weight: 700; white-space: nowrap; }
+  dl { margin: 0 0 10pt; }
+  dt { font-weight: 700; margin-top: 6pt; }
+  dd { margin: 0 0 2pt 0; }
+  .footer-note { font-size: 9.5pt; color: var(--faint); margin-top: 30pt; border-top: 1px solid var(--line); padding-top: 8pt; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div>
+    <div class="brand">First Line Performance</div>
+    <h1>Admin<br>User Manual</h1>
+    <p class="sub">How to run First Line Performance from the admin control panel: accounts, mentor approvals and levels, the breakdown pipeline, Film Room sessions, audits and reviews, the payout ledger and Stripe, the support desk, every setting, and the platform's own health.</p>
+  </div>
+  <div class="meta">
+    First Line Performance LLC · Edition 1, October 2026 · app.firstlineperform.com/admin · This manual is searchable: press Ctrl+F or ⌘F to find any word.
+  </div>
+</div>
+
+<div class="toc">
+  <div class="eyebrow">Contents</div>
+  <h1>What's in this manual</h1>
+  <ol>
+    <li><a href="#s1">How the platform fits together</a></li>
+    <li><a href="#s2">Your first day: signing in, the Control center, admin seats</a></li>
+    <li><a href="#s3">Users: every account, suspend, delete, contact</a></li>
+    <li><a href="#s4">Mentors: applications, approval, tiers, deletion and restore</a></li>
+    <li><a href="#s5">Levels &amp; tiles: the marketplace control center</a></li>
+    <li><a href="#s6">Orders &amp; jobs: the breakdown pipeline and refunds</a></li>
+    <li><a href="#s7">Film Room: sessions, no-shows, recordings</a></li>
+    <li><a href="#s8">Audits and reviews</a></li>
+    <li><a href="#s9">The payout ledger and Stripe</a></li>
+    <li><a href="#s10">Support desk</a></li>
+    <li><a href="#s11">Settings: every rule explained</a></li>
+    <li><a href="#s12">Service health</a></li>
+    <li><a href="#s13">Emails the platform sends</a></li>
+    <li><a href="#s14">Quick reference and glossary</a></li>
+  </ol>
+</div>
+
+<section id="s1">
+  <div class="eyebrow">Section 1</div>
+  <h2>How the platform fits together</h2>
+  <p class="lead">First Line Performance is a marketplace. Families buy video breakdowns and live Film Room sessions from vetted mentors. The platform takes the money, routes the work, delivers the result, and pays the mentor. The admin panel is where you steer all of it.</p>
+  <h3>The people</h3>
+  <ul>
+    <li><strong>Parents</strong> own every family account. The youth athlete is a profile under the parent, never a login. Parents choose mentors, upload film, pay, rate, file audits, and may join any Film Room.</li>
+    <li><strong>Mentors</strong> are approved athletes with a public profile, a level set by you, and a share of each sale. They accept requests, record breakdowns with their own tools, fill in the Player Development Worksheet, run Film Rooms, and are paid through Stripe. Everything they're told is in the <em>Mentor FLP Service User Manual</em>, linked from your Control center.</li>
+    <li><strong>Admins</strong> are you. Admins can read everything and act on everything; every admin action is written to an audit log with who did it and when.</li>
+  </ul>
+  <h3>The two products</h3>
+  <ul>
+    <li><strong>Breakdown.</strong> Parent picks a mentor and pays → the request is offered to the mentor → the mentor accepts, records, and delivers a video plus a worksheet PDF → the parent rates it and may file a Quality Control Audit within 7 days → the mentor's payout is released.</li>
+    <li><strong>Film Room.</strong> Parent books a 30- or 60-minute recorded live session inside the mentor's weekly windows and pays at booking → the mentor confirms → both join, recording locked on → the mentor files a recap → payout.</li>
+  </ul>
+  <h3>Money</h3>
+  <p>FLP is the merchant of record. Parents pay FLP through Stripe Checkout; mentors are paid by a Stripe transfer to their own Stripe Express account; FLP never holds money outside Stripe. Each level sets the price and the mentor's share. Section 9 covers the ledger.</p>
+  <h3>Where things live</h3>
+  <table>
+    <tr><th>Place</th><th>What it is</th></tr>
+    <tr><td>app.firstlineperform.com</td><td>The platform. Families and mentors sign in here; the admin panel is at /admin.</td></tr>
+    <tr><td>firstlineperform.com</td><td>The public website. Its pricing page reads the same levels and prices you set.</td></tr>
+    <tr><td>support@firstlineperform.com</td><td>The support mailbox. Every email to it becomes a ticket in the Support desk.</td></tr>
+    <tr><td>Stripe dashboard</td><td>FLP's own money: charges, refunds, disputes, payouts to FLP's bank. Opened with FLP's Stripe login, separate from this panel.</td></tr>
+    <tr><td>Audit log</td><td>Every admin action, visible on each user's activity timeline under Users.</td></tr>
+  </table>
+</section>
+
+<section id="s2">
+  <div class="eyebrow">Section 2</div>
+  <h2>Your first day: signing in, the Control center, admin seats</h2>
+  <h3>Signing in</h3>
+  <p>Go to app.firstlineperform.com and sign in with your admin email and password. Admin accounts are ordinary accounts that have been promoted (see "Admin seats" below). <span class="btn">Forgot password</span> on the sign-in page sends a reset link. Signing out on one device no longer signs you out everywhere. If the panel ever says "Your session has ended", sign in again; nothing was lost.</p>
+  <h3>The Control center</h3>
+  <p>The Overview tab is a set of tiles, each a count of things waiting on you, with <span class="btn">Open</span> to go there. A tile turns gold when its count is above zero.</p>
+  <table>
+    <tr><th>Tile</th><th>What it counts</th><th>Where it goes</th></tr>
+    <tr><td>Accounts</td><td>Every parent, mentor and admin.</td><td>Users</td></tr>
+    <tr><td>Mentor applications</td><td>Applicants waiting for approval.</td><td>Mentors</td></tr>
+    <tr><td>Jobs needing a mentor</td><td>Unassigned, or waiting on a waitlist.</td><td>Orders &amp; jobs</td></tr>
+    <tr><td>Open audits</td><td>Quality Control Audits to resolve.</td><td>Audits</td></tr>
+    <tr><td>Payouts owed</td><td>Mentors waiting to be paid.</td><td>Ledger</td></tr>
+    <tr><td>Film Rooms upcoming</td><td>Requested, scheduled, or live right now.</td><td>Film Room</td></tr>
+    <tr><td>Reviews to moderate</td><td>Ratings under 3 stars.</td><td>Audits</td></tr>
+  </table>
+  <p>Above the tiles, the <strong>health badge</strong> summarises the platform's services (Section 12). Below them, the <strong>Support desk</strong> card shows how many tickets are waiting on FLP and how many on a customer. The two manuals are linked at the bottom.</p>
+  <h3>The tabs</h3>
+  <p><span class="tab">Overview</span> · <span class="tab">Users</span> · <span class="tab">Mentors</span> · <span class="tab">Levels &amp; tiles</span> · <span class="tab">Orders &amp; jobs</span> · <span class="tab">Film Room</span> · <span class="tab">Audits</span> · <span class="tab">Ledger</span> · <span class="tab">Support</span> · <span class="tab">Health</span> · <span class="tab">Settings</span> · <span class="tab">Admin User Manual</span>. The panel works on a phone; the tabs wrap.</p>
+  <h3>Admin seats</h3>
+  <p>Under <span class="tab">Settings</span>, <strong>Admin seats</strong> lists every admin and lets you add one by email with <span class="btn">Make admin</span>. The person signs up as a parent first; then their account is promoted here. An email listed before the person signs up becomes an admin the moment they do. Admins can't be suspended or deleted from Users; manage them from Settings.</p>
+  <h3>A daily routine that works</h3>
+  <ol class="steps">
+    <li>Open the Control center. Anything gold needs you.</li>
+    <li>Mentor applications: approve with a level, or decline.</li>
+    <li>Jobs needing a mentor: assign anything unassigned.</li>
+    <li>Open audits: read, decide, close.</li>
+    <li>Support desk: answer the inbox.</li>
+    <li>Payouts owed: pay what's past the quality window (or let Automatic do it; Section 9).</li>
+    <li>Glance at Health. Green means leave it alone.</li>
+  </ol>
+</section>
+
+<section id="s3">
+  <div class="eyebrow">Section 3</div>
+  <h2>Users: every account, suspend, delete, contact</h2>
+  <p>The <span class="tab">Users</span> tab lists every account. Search by name or email; filter with <span class="btn">All</span>, <span class="btn">Parents</span>, <span class="btn">Mentors</span>, <span class="btn">Admins</span>, or <span class="btn">Suspended / deleted</span>.</p>
+  <h3>What each row shows</h3>
+  <ul>
+    <li>Name, email, phone and mailing address (if they've given them), role, and a status pill: <strong>Active</strong>, <strong>Unconfirmed</strong> (never clicked their confirmation email), <strong>Suspended</strong>, or <strong>Deleted</strong>.</li>
+    <li>When they joined and last signed in.</li>
+    <li>For parents: their youth athletes, orders, Film Rooms, and money spent and refunded. For mentors: jobs, sessions, and money earned and paid.</li>
+  </ul>
+  <p><span class="btn">Open</span> on a row shows the <strong>activity timeline</strong>: account created, sign-ins, orders placed, film uploaded, breakdowns accepted and delivered, reviews, audits, Film Rooms booked and completed, packs, payouts, and every admin action taken on the account.</p>
+  <h3>Contact</h3>
+  <p><span class="btn">Contact</span> opens a composer. The message goes out by email from support@firstlineperform.com and opens a support ticket assigned to you, marked "waiting on customer", so their reply lands in the Support desk under the same number. If the mail provider refuses the address, the panel says so.</p>
+  <h3>Suspend and unsuspend</h3>
+  <p><span class="btn">Suspend</span> blocks sign-in at once and emails the person the reason you type (optional). A suspended mentor comes off the marketplace. <span class="btn">Unsuspend</span> restores everything and emails them. Both are logged.</p>
+  <h3>Delete</h3>
+  <p><span class="btn">Delete</span> always asks <strong>"Are you sure you want to delete this user?"</strong> first.</p>
+  <ul>
+    <li><strong>A parent</strong> with no orders, sessions, or payouts is erased outright. One with history is deactivated instead, so ledgers and other people's records keep their meaning.</li>
+    <li><strong>A mentor</strong> goes through the mentor delete flow (Section 4): identity wiped, email freed, a full record kept under Mentors → Deleted, restorable.</li>
+  </ul>
+  <p>You can't act on your own account, and admins are managed from Settings.</p>
+</section>
+
+<section id="s4">
+  <div class="eyebrow">Section 4</div>
+  <h2>Mentors: applications, approval, tiers, deletion and restore</h2>
+  <p>The <span class="tab">Mentors</span> tab opens on <strong>Applications</strong> whenever any are waiting, otherwise on <strong>Approved</strong>. The filters are Applications, Approved, Suspended, Deactivated, All, and Deleted, each with a count. The team is also emailed at team@firstlineperform.com within minutes of every new application, with the applicant's details and a link here.</p>
+  <h3>The mentor card</h3>
+  <ul>
+    <li>Name, email, positions, team, and highest level played; status pill, level pill, and <strong>Verified</strong> or <strong>Unverified</strong>.</li>
+    <li>Their bio; any <strong>special circumstances</strong> they wrote, in amber; age and gender; why they want to mentor; their Elite Prospects link.</li>
+    <li>The <strong>contractor agreement</strong> line: signed on which date, as which name, from which state or province, with a guardian for minors, and a link to the agreement. Applicants from before signing was part of the form show "No signed contractor agreement on file" in amber.</li>
+    <li>For anyone past the application stage, the <strong>scorecard</strong>: completed, on deck against capacity, average turnaround, on-time rate, rating and count, offers accepted / declined / expired, audits, Film Rooms completed, no-shows / late cancels / declines, last delivered. The scorecard is admin-only; families see rating, count, turnaround, and completed jobs.</li>
+  </ul>
+  <h3>Approving an application</h3>
+  <ol class="steps">
+    <li>Read the application. Check the Elite Prospects page if they gave one, and the special circumstances if any.</li>
+    <li>Pick a <strong>Tier</strong> on the card. The panel suggests one from their highest level played. Approval without a level is refused, because the marketplace only lists levelled mentors.</li>
+    <li>Press <span class="btn">Approve</span>. The mentor is emailed, their profile goes live, and they start at the level's default jobs on deck. Or press <span class="btn">Decline</span>: the application is deactivated and the person is not emailed.</li>
+  </ol>
+  <h3>Managing an approved mentor</h3>
+  <ul>
+    <li><span class="btn">Mark verified</span> records that you checked their credentials. It isn't shown publicly.</li>
+    <li><span class="btn">Suspend</span> takes them off the marketplace and blocks sign-in; <span class="btn">Unsuspend</span> reverses it. <span class="btn">Deactivate &amp; block</span> is the firmer version; <span class="btn">Reactivate</span> brings them back.</li>
+    <li><strong>Tier.</strong> Every card past the application stage has a Tier dropdown. Picking a new one asks you to confirm: new orders and Film Rooms use the new level's prices and share, and anything already booked keeps the price it was paid at. The card then shows the last change, the date, and who made it. Only admins can change a mentor's tier; the mentor can't.</li>
+  </ul>
+  <h3>Deleting a mentor so they can start over</h3>
+  <p><span class="btn">Delete</span> is on every card. It asks <strong>"Are you sure you want to delete this user?"</strong>, with an optional reason for the record, and then:</p>
+  <ul>
+    <li>Wipes the live account: name, email, phone, and address come off, the profile disappears from the marketplace, and sign-in is blocked. The platform never emails a deleted account.</li>
+    <li>Frees the email, so the same person can apply again from scratch with the same address.</li>
+    <li>Keeps everything in a record under the <strong>Deleted</strong> filter: who, when, why, and the full profile and application as they stood.</li>
+  </ul>
+  <p>Old orders, payouts and reviews stay attached to the wiped account, so history is intact. A mentor with breakdowns in progress, open requests, or upcoming Film Rooms can't be deleted until that work is finished or reassigned; the panel tells you what's open.</p>
+  <p><span class="btn">Restore</span> on a deleted record puts the mentor back exactly as they were, as long as their email hasn't signed up again. If it has, the panel says so: keep the new account, or delete it first and then restore the old one.</p>
+</section>
+
+<section id="s5">
+  <div class="eyebrow">Section 5</div>
+  <h2>Levels &amp; tiles: the marketplace control center</h2>
+  <p class="lead">Levels are the backbone of pricing. Each one carries its prices, the mentor's share, and how it appears to families. <span class="tab">Levels &amp; tiles</span> is where all of that lives; the public website's pricing page reads the same data.</p>
+  <h3>Mentor levels</h3>
+  <p>The list is the hierarchy, top to bottom, and the order parents see. <span class="btn">▲</span> and <span class="btn">▼</span> move a level. Each level has:</p>
+  <table>
+    <tr><th>Field</th><th>Meaning</th></tr>
+    <tr><td>Level name, one line about it</td><td>The name on tiles and in the mentor's dropdown; the line shows under the heading when the marketplace is grouped.</td></tr>
+    <tr><td>Visible on the marketplace</td><td>Off hides every mentor on the level from the public list.</td></tr>
+    <tr><td>Bookable by direct link</td><td>Out of the list, but a mentor's own profile link still opens and parents can order from it.</td></tr>
+    <tr><td>Show the price</td><td>Off shows "Please contact for pricing" and a Contact FLP button that opens a support ticket; FLP arranges those sales.</td></tr>
+    <tr><td>Breakdown ($), Film Room 30 / 60 ($), Add-on 30 ($), Season Arc pack ($)</td><td>What the family pays for each product on this level.</td></tr>
+    <tr><td>Mentor share (%)</td><td>The mentor's cut of each sale. Shown to the mentor as a dollar figure on every request.</td></tr>
+    <tr><td>Turnaround (hours)</td><td>Overrides the global turnaround for this level; drives the delivery clock and the wording parents see.</td></tr>
+    <tr><td>Jobs on deck for new mentors</td><td>The capacity a mentor starts with when they join the level.</td></tr>
+    <tr><td>Colour</td><td>The level name's colour on tiles.</td></tr>
+  </table>
+  <p><span class="btn">Save level</span> applies at once. <span class="btn">Delete</span> removes a level nobody is on; if past orders or sessions used it, it's <strong>retired</strong> instead so their history keeps its name, and it can be restored from <strong>Retired levels</strong>. Move a level's mentors elsewhere first; the panel tells you how many are on it. <span class="btn">Add level</span> lands at the bottom.</p>
+  <h3>Mentor tiles</h3>
+  <p>Choose what every marketplace tile shows: price, available / waitlist, star rating, typical turnaround, positions, credential badges, bio excerpt. Choose the order, level hierarchy, rating, or name, and whether the list is grouped under level headings. A live preview sits beside the switches. <span class="btn">Save tile display</span> or <span class="btn">Reset to defaults</span>.</p>
+  <h3>Mentors on the marketplace</h3>
+  <p>The list at the bottom is every approved mentor with their <strong>Level</strong> dropdown, a <strong>Listed</strong> switch (off takes one mentor out of the public list without touching their account), a <strong>Featured</strong> switch (featured mentors come first), and <strong>custom prices</strong> that override the level's for that one mentor. The mentor's share still follows the level's percentage. <span class="btn">Clear all</span> puts them back on the level's prices. Every level change is kept in a history with who made it.</p>
+</section>
+
+<section id="s6">
+  <div class="eyebrow">Section 6</div>
+  <h2>Orders &amp; jobs: the breakdown pipeline and refunds</h2>
+  <h3>How a breakdown moves</h3>
+  <ol>
+    <li><strong>Paid.</strong> The parent picks a mentor, uploads film or a YouTube link, names focus areas, optionally a second choice, and pays. Nothing is offered until the payment lands.</li>
+    <li><strong>Offered</strong> to the first choice, who has 48 hours to accept (nudged at 24). Decline or expiry → the second choice.</li>
+    <li><strong>Waiting.</strong> If the first choice is at capacity, the job waits the number of days the parent chose before falling through to the second choice.</li>
+    <li><strong>Unassigned.</strong> Nobody took it. It lands in your queue.</li>
+    <li><strong>Accepted.</strong> The turnaround clock starts (72 hours by default, or the level's own). Reminders go to the mentor at 24 and 48 hours.</li>
+    <li><strong>Delivered</strong>, on time or late. The parent gets the video and the worksheet PDF, can rate it, and has 7 days to file an audit. The mentor's payout is created.</li>
+  </ol>
+  <h3>The Orders &amp; jobs tab</h3>
+  <p>Filters: <span class="btn">Needs attention</span> (unassigned, waiting, offered, or accepted with under 24 hours left), <span class="btn">Active</span>, <span class="btn">Delivered</span>, <span class="btn">All</span>. Each card shows the athlete and parent, focus areas, the status, who holds it ("Offered to X (choice 1), expires …", "Waiting 3 days for first choice since …", or the mentor), hours left, and for delivered jobs <strong>On time</strong> or <strong>Late</strong>.</p>
+  <h3>Actions</h3>
+  <ul>
+    <li><span class="btn">Assign</span> / <span class="btn">Reassign</span>: pick a mentor from the dropdown and press it. The job is pinned to that mentor; use it for unassigned jobs, for a family that writes in, or to move a job off a mentor who can't finish it.</li>
+    <li><span class="btn">Extend 24h</span>: adds a day to an accepted job's deadline. Logged; use it when the delay is the family's (film arrived late) or agreed.</li>
+    <li><span class="btn">Refund order</span>: type a reason (emailed to the parent) and an amount, or leave the amount blank for everything not yet refunded. The money goes back to the parent's card through Stripe. A full refund closes the order and voids the mentor's unpaid payout. A payout that already went out is not pulled back; the panel tells you the amount and you decide. An order from free-preview mode was never charged, so a refund there only records the fact.</li>
+  </ul>
+  <div class="note"><strong>Refunds made in the Stripe dashboard</strong> flow back into the platform on their own, so either place works. The panel is the better record.</div>
+</section>
+
+<section id="s7">
+  <div class="eyebrow">Section 7</div>
+  <h2>Film Room: sessions, no-shows, recordings</h2>
+  <h3>The rules, as the platform enforces them</h3>
+  <ul>
+    <li>Parents book 30- or 60-minute slots inside a mentor's weekly windows, at least 12 hours ahead and up to 14 days out, and pay at booking. Marketplace bookings must attach film.</li>
+    <li>The mentor confirms within 24 hours, or the booking is cancelled and the family refunded automatically.</li>
+    <li>Free cancellation up to 24 hours before. Inside that window the parent forfeits and the mentor is still paid; a mentor cancelling inside it is logged against their scorecard and the family refunded.</li>
+    <li>Recording starts when the mentor joins and cannot be stopped by anyone; both sides are told. Recordings are kept 90 days.</li>
+    <li>10-minute grace. A family that hasn't appeared by then can be marked a no-show by the mentor (mentor paid). A mentor who never joins becomes a <strong>mentor no-show</strong> a day after the booked end: full refund, scorecard mark, you're emailed.</li>
+    <li>Sessions nobody closes complete themselves after the booked end. The mentor's recap is due within 24 hours and lands in the family's Development Log.</li>
+    <li><strong>Add-on:</strong> a 30-minute session a parent can book within 14 days of a delivered breakdown. <strong>Season Arc:</strong> four 30-minute sessions over eight weeks, booked one at a time from the pack. Prices per level.</li>
+  </ul>
+  <h3>The Film Room tab</h3>
+  <p>Filters: <span class="btn">Needs attention</span> (live past its end, completed without a recap, or any no-show), <span class="btn">Upcoming</span>, <span class="btn">Completed</span>, <span class="btn">All</span>. Each card shows the athlete, the mentor, the format, the time, the parent's note, the recap or "Recap not filed yet", any cancel reason, and the recordings.</p>
+  <h3>Actions</h3>
+  <ul>
+    <li><span class="btn">Cancel + refund</span> with a reason that goes to the parent.</li>
+    <li><span class="btn">Mentor no-show</span>: refunds the family and marks the mentor's scorecard. <span class="btn">Family no-show</span>: the mentor is paid.</li>
+    <li><span class="btn">Mark completed</span>: closes a session that got stuck live.</li>
+    <li><span class="btn">Open recording</span>: a one-hour link to watch it, for audits and safety reviews.</li>
+  </ul>
+</section>
+
+<section id="s8">
+  <div class="eyebrow">Section 8</div>
+  <h2>Audits and reviews</h2>
+  <h3>Quality Control Audits</h3>
+  <p>A parent may file an audit within 7 days of a delivered breakdown or a completed Film Room. It appears under <span class="tab">Audits</span> with the parent, the mentor, the job or session, the reason, and when it was filed. The mentor's payout for that work goes <strong>on hold</strong> the moment an audit opens.</p>
+  <ol class="steps">
+    <li>Watch the breakdown or recording and read the worksheet. <span class="btn">Add note</span> as you go; notes are internal.</li>
+    <li>Choose <strong>Close with</strong>: <strong>Dismiss</strong> (the work stands; payout released), <strong>Partial refund</strong> (type the dollars), <strong>Full refund</strong> (payout voided), <strong>Reassign to another mentor</strong> (pick one; the job is re-offered), or <strong>Other</strong>.</li>
+    <li>Press <span class="btn">Close audit</span>. The resolution is recorded and the parent is emailed. Refunds go through Stripe like any other.</li>
+  </ol>
+  <h3>Reviews to moderate</h3>
+  <p>Parents rate breakdowns and Film Rooms from 1 to 5. Ratings at or above the threshold in Settings (3 by default) publish to the mentor's public profile on their own. Anything below waits here: <span class="btn">Publish</span> or <span class="btn">Hide</span>. Hidden reviews still count on the admin scorecard.</p>
+</section>
+
+<section id="s9">
+  <div class="eyebrow">Section 9</div>
+  <h2>The payout ledger and Stripe</h2>
+  <h3>How a payout comes to exist</h3>
+  <p>When a mentor delivers a breakdown or a Film Room completes, a payout row is created for their share, in status <strong>Owed</strong>. It is <strong>Held</strong> while an audit or a card dispute on that sale is open. It becomes <strong>Paid</strong> when the money is sent, <strong>Voided</strong> if the sale is refunded first, and <strong>Failed</strong> if Stripe refused it.</p>
+  <h3>The Ledger tab</h3>
+  <p>Totals for Owed, Held, and Paid at the top; filters for each status; a by-mentor subtotal for the view; then every payout with the mentor, what it was for and for whom, the dates, and how it was paid ("via Stripe" or "manually"). A held row shows its reason; an owed row whose last attempt failed shows why.</p>
+  <h3>Actions</h3>
+  <ul>
+    <li><span class="btn">Pay via Stripe</span>: a transfer to the mentor's Stripe Express account, tied to the charge that funded it, so it can never exceed what the parent paid and doesn't wait for FLP's balance to settle. Needs the mentor to have finished payout setup; the row says if they haven't.</li>
+    <li><span class="btn">Mark paid manually</span>: records a payment you made outside Stripe.</li>
+    <li><span class="btn">Hold</span> with a reason, and <span class="btn">Release</span>.</li>
+  </ul>
+  <h3>Manual or automatic</h3>
+  <p>Under <span class="tab">Settings</span>, <strong>Mentor payouts</strong> is <strong>Manual</strong> (you press Pay) or <strong>Automatic after the waiting period</strong>. On Automatic, each owed payout is sent once it is older than the waiting period; blank uses the audit window, so a parent's audit can still stop it. Held payouts are never sent automatically. A real failure emails the admins once and is retried every six hours. A mentor who hasn't finished Stripe setup, or a sale that was never charged (free preview), stays owed with the reason on the row and no alarm.</p>
+  <h3>Stripe, in one paragraph</h3>
+  <p>Parents pay FLP through Stripe Checkout. Mentors onboard to Stripe Express from their profile ("Set up payouts"), where Stripe collects identity, bank, and tax details; FLP never sees them. Stripe tells the platform when a payment lands, when a checkout is abandoned, when a refund is made, when a card is disputed (the mentor's payout is held and you're emailed), and when a mentor's account is verified. FLP's own Stripe dashboard, under FLP's Stripe login, is where FLP's money, fees, and disputes are managed; answer disputes there, then release or void the payout here.</p>
+  <div class="warn"><strong>Payments mode.</strong> Settings → Payments has a <strong>Free preview</strong> mode in which orders and bookings complete with no charge, for demos and beta testing. A red banner shows in the panel while it's on. Switch it back to <strong>Stripe</strong> before real families use the platform.</div>
+</section>
+
+<section id="s10">
+  <div class="eyebrow">Section 10</div>
+  <h2>Support desk</h2>
+  <h3>Three doors, one queue</h3>
+  <ul>
+    <li><strong>Email</strong> to support@firstlineperform.com. A small script in that mailbox hands every new message to the platform within five minutes. Customer replies land on the same ticket by the [FLP-123] tag in the subject.</li>
+    <li><strong>In the app:</strong> parents and mentors have a Support link on their dashboard.</li>
+    <li><strong>The website:</strong> the contact page posts straight into the queue.</li>
+  </ul>
+  <p>New tickets and customer replies email every admin.</p>
+  <h3>Working a ticket</h3>
+  <p>The <span class="tab">Support</span> tab shows <strong>Inbox</strong> (waiting on FLP), <strong>Waiting on customer</strong>, <strong>Resolved</strong>, and <strong>All</strong>, with search. Open a ticket:</p>
+  <ul>
+    <li><strong>Reply</strong> is a real email to the requester from FLP Support, threaded under their message. Pick <strong>After sending</strong>: <em>Wait for their answer</em> (moves it out of the inbox until they write back; it returns on its own), <em>Mark resolved</em>, or <em>Keep open</em>.</li>
+    <li><span class="btn">Insert a canned reply</span> drops in a saved answer. Manage them under <strong>Canned replies</strong>: title, body, sort order.</li>
+    <li><strong>Internal note</strong> is never emailed; use it to hand a ticket to someone with context.</li>
+    <li><strong>Status</strong>, <strong>Priority</strong> (Low, Normal, High, Urgent), <strong>Assigned to</strong>, and <strong>Tags</strong> (free text: billing, film room, bug, mentor).</li>
+    <li><span class="btn">Open in Users</span> jumps to the requester's account.</li>
+  </ul>
+  <div class="note"><strong>Answer from the ticket, not from Gmail,</strong> so the thread and the record stay in one place. The <strong>Mail setup</strong> page under Support explains the mailbox script; the Health tab watches that it's alive.</div>
+</section>
+
+<section id="s11">
+  <div class="eyebrow">Section 11</div>
+  <h2>Settings: every rule explained</h2>
+  <p>Every value here takes effect immediately and is audit-logged. The defaults are in parentheses.</p>
+  <h3>Payments</h3>
+  <p><strong>Mode:</strong> Stripe (charge at checkout) or Free preview (no charge). See Section 9.</p>
+  <h3>Mentor payouts</h3>
+  <p><strong>How mentors are paid:</strong> Manual (admin releases each one) or Automatic after the waiting period. <strong>Waiting period (days after delivery):</strong> blank uses the audit window.</p>
+  <h3>Prices and mentor levels</h3>
+  <p>Live under Levels &amp; tiles, on each level (Section 5).</p>
+  <h3>Rules</h3>
+  <table>
+    <tr><th>Rule</th><th>What it does</th></tr>
+    <tr><td>Hours to accept an offer (48)</td><td>How long a mentor has before an offer expires and moves on.</td></tr>
+    <tr><td>Nudge mentors after (24)</td><td>When the reminder email about an unanswered offer goes out.</td></tr>
+    <tr><td>Turnaround (72)</td><td>Hours from acceptance to delivery, unless the level sets its own.</td></tr>
+    <tr><td>Days to file a Quality Control Audit (7)</td><td>The parent's window after delivery. Also the default payout waiting period.</td></tr>
+    <tr><td>Auto-publish reviews at (3 stars)</td><td>Ratings at or above this publish on their own; below wait for you.</td></tr>
+    <tr><td>Default jobs on deck (3), Max (5)</td><td>A mentor's starting capacity (levels can override) and the most they may set.</td></tr>
+    <tr><td>Suggested waitlist days (3)</td><td>The default offered to a parent whose first choice is busy.</td></tr>
+    <tr><td>Film Room cancellation window (24 hours)</td><td>Free cancellation ends this many hours before; inside it, a late cancel.</td></tr>
+    <tr><td>Film Room grace (10 minutes)</td><td>How long before a no-show can be recorded.</td></tr>
+    <tr><td>Mentor recap due (24 hours)</td><td>After the session.</td></tr>
+    <tr><td>Session recording retention (90 days)</td><td>How long recordings are kept.</td></tr>
+    <tr><td>Hours a mentor has to confirm a Film Room (24)</td><td>Then the booking is refunded automatically.</td></tr>
+    <tr><td>Earliest booking (12 hours ahead), Booking horizon (14 days)</td><td>The window parents can book inside.</td></tr>
+    <tr><td>Add-on price window after a breakdown (14 days)</td><td>How long the add-on session can be booked after delivery.</td></tr>
+    <tr><td>Sessions in a Season Arc (4), Weeks to use it (8)</td><td>The pack.</td></tr>
+  </table>
+  <h3>Lists</h3>
+  <p>Age groups, skill levels, and focus areas for skaters and goalies, comma-separated. They fill the dropdowns parents and mentors see.</p>
+  <h3>Admin seats</h3>
+  <p>Section 2.</p>
+</section>
+
+<section id="s12">
+  <div class="eyebrow">Section 12</div>
+  <h2>Service health</h2>
+  <p>Once an hour the platform sends one small, read-only request to each connected service and records the answer. The <span class="tab">Health</span> tab shows each service, the last 48 checks, and a <span class="btn">Run</span> button to check now. The badge on the Overview is the summary.</p>
+  <table>
+    <tr><th>Status</th><th>Meaning</th></tr>
+    <tr><td>Healthy</td><td>Answered normally.</td></tr>
+    <tr><td>Needs attention</td><td>Answered, but something about the setup is incomplete. The detail says what.</td></tr>
+    <tr><td>Unhealthy</td><td>Did not answer or refused. Every admin is emailed when a service turns unhealthy and again when it recovers.</td></tr>
+    <tr><td>Not connected</td><td>Not set up yet; not counted.</td></tr>
+  </table>
+  <p>The services: database, sign-in, file storage, video (Mux), calls (Daily), email (Resend), the support mailbox script's heartbeat, Stripe, the web app, the marketing site, and disk space on the server. If something is unhealthy for more than an hour, contact the lead developer with the service name and the detail text.</p>
+</section>
+
+<section id="s13">
+  <div class="eyebrow">Section 13</div>
+  <h2>Emails the platform sends</h2>
+  <table>
+    <tr><th>To</th><th>When</th></tr>
+    <tr><td>Mentors</td><td>New request (with hours to accept); nudge at 24 hours; turnaround reminders at 24 and 48 hours; approval; suspension and restoration; Film Room booking to confirm, reminders at 24 hours and 1 hour, recap reminder; no-show notices.</td></tr>
+    <tr><td>Parents</td><td>Order and booking confirmations; the delivered breakdown with the worksheet PDF; Film Room confirmations and reminders; refunds and audit resolutions; suspension if it ever applies.</td></tr>
+    <tr><td>Admins (all)</td><td>New support tickets and replies; card disputes; failed refunds or payouts; services turning unhealthy or recovering; mentor no-shows.</td></tr>
+    <tr><td>team@firstlineperform.com</td><td>Every new mentor application, with the applicant's answers, whether they've confirmed their email, whether they signed the agreement, and a link to review.</td></tr>
+  </table>
+  <p>Platform mail comes from no-reply@mail.firstlineperform.com; support replies from support@firstlineperform.com. Sign-in, confirmation, and password-reset emails come from the sign-in service.</p>
+</section>
+
+<section id="s14">
+  <div class="eyebrow">Section 14</div>
+  <h2>Quick reference and glossary</h2>
+  <h3>Statuses you'll see</h3>
+  <table class="ref">
+    <tr><td>Jobs</td><td>Offered · Waiting · Accepted · Delivered · Closed · Expired · Unassigned · Reassigned</td></tr>
+    <tr><td>Film Rooms</td><td>Requested · Scheduled · In progress · Completed · Cancelled · No-show (parent) · No-show (mentor) · Declined · Expired</td></tr>
+    <tr><td>Payouts</td><td>Owed · Held · Paid · Voided · Failed</td></tr>
+    <tr><td>Audits</td><td>Open · Closed: dismissed / partial refund / full refund / reassigned / other</td></tr>
+    <tr><td>Mentors</td><td>Applied · Approved · Suspended · Deactivated · Deleted (restorable)</td></tr>
+    <tr><td>Accounts</td><td>Active · Unconfirmed · Suspended · Deleted</td></tr>
+    <tr><td>Tickets</td><td>Open (inbox) · Pending (waiting on customer) · Resolved</td></tr>
+  </table>
+  <h3>Glossary</h3>
+  <dl>
+    <dt>Breakdown</dt><dd>A mentor's recorded review of game film, delivered with a worksheet.</dd>
+    <dt>Player Development Worksheet</dt><dd>The written half of a breakdown, delivered to the family as a PDF.</dd>
+    <dt>Film Room</dt><dd>A recorded live session. Add-on and Season Arc are its booking shapes.</dd>
+    <dt>Level (tier)</dt><dd>A pricing group for mentors, set by admins. Price, share, turnaround, and capacity live on it.</dd>
+    <dt>On deck</dt><dd>A mentor's unfinished breakdowns plus unanswered offers, against their capacity.</dd>
+    <dt>Second choice, waitlist</dt><dd>Where an offer goes if the first mentor declines, lets it expire, or is at capacity.</dd>
+    <dt>Quality Control Audit (QCA)</dt><dd>A parent's formal complaint, resolved from the Audits tab; holds the payout meanwhile.</dd>
+    <dt>Scorecard</dt><dd>The admin-only record of a mentor's responsiveness, timeliness, ratings, and conduct.</dd>
+    <dt>Development Log</dt><dd>The family's running record of their athlete; recaps and breakdowns land there.</dd>
+    <dt>Audit log</dt><dd>Every admin action, with actor and time; visible on user timelines.</dd>
+    <dt>Free preview</dt><dd>The payments mode with no charges, for demos and beta.</dd>
+  </dl>
+  <p class="footer-note">Admin User Manual, Edition 1, October 2026. © First Line Performance LLC. Rule values in this manual are the defaults; Settings shows the values in force. For anything about the platform itself rather than its contents, contact the lead developer.</p>
+</section>
+
+</body>
+</html>

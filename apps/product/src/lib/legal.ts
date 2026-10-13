@@ -20,6 +20,21 @@ function appOrigin() {
   return process.env.EXPO_PUBLIC_APP_ORIGIN ?? "https://app.firstlineperform.com";
 }
 
+export const ADMIN_MANUAL = {
+  title: "Admin User Manual",
+  path: "/manual/FLP-Admin-User-Manual.pdf",
+};
+
+export function manualUrl(which: "mentor" | "admin" = "mentor") {
+  return `${appOrigin()}${which === "admin" ? ADMIN_MANUAL.path : MANUAL.path}`;
+}
+
+export function openAdminManual() {
+  const url = manualUrl("admin");
+  if (Platform.OS === "web" && typeof window !== "undefined") window.open(url, "_blank", "noopener");
+  else Linking.openURL(url).catch(() => {});
+}
+
 export function openManual() {
   const url = `${appOrigin()}${MANUAL.path}`;
   if (Platform.OS === "web" && typeof window !== "undefined") window.open(url, "_blank", "noopener");
