@@ -7,6 +7,7 @@ import { env } from "../env.js";
 import { appUrl, notify } from "../notify.js";
 import { slotsForMentor } from "../slots.js";
 import { createRoom, dailyConfigured, deleteRoom, meetingToken, recordingAccessLink } from "../daily.js";
+import { checkoutDownMessage, providerFailed } from "../failures.js";
 
 // Film Room sessions. Parent books a slot inside the mentor's availability, pays at booking,
 // mentor accepts (or the request expires), both join a recorded Daily room from the API-issued
@@ -116,7 +117,9 @@ sessions.post("/", async (c) => {
   }
   const path = paymentPath(s, stripeConfigured, env.appEnv);
   if (path === "stripe" && stripe) {
-    const checkout = await stripe.checkout.sessions.create({
+    let checkout: Awaited<ReturnType<typeof stripe.checkout.sessions.create>>;
+    try {
+      checkout = await stripe.checkout.sessions.create({
       mode: "payment",
       customer_email: user.email ?? undefined,
       line_items: [{ quantity: 1, price_data: { currency: s.currency, unit_amount: price, product_data: { name: `FLP Film Room · ${minutes} min with ${m.display_name}` } } }],
@@ -126,7 +129,13 @@ sessions.post("/", async (c) => {
       expires_at: Math.floor(Date.now() / 1000) + 31 * 60, // the slot is held while they pay; let it go if they leave
       success_url: appUrl(`/parent/sessions/${sess.id}?paid=1`),
       cancel_url: appUrl(`/mentors/${b.mentorSlug}?cancelled=1`),
-    });
+      });
+    } catch (err) {
+      // Let go of the slot straight away so the parent (or anyone) can book it once checkout works.
+      await admin.from("sessions").update({ status: "expired", cancel_reason: "checkout could not start", cancelled_at: iso(Date.now()) }).eq("id", sess.id);
+      const ref = await providerFailed("checkout", "Checkout for a Film Room booking", err, { id: sess.id, parent: user.id, mentor: b.mentorSlug, amount_cents: price });
+      return c.json({ error: checkoutDownMessage(ref), code: "checkout_unavailable", ref }, 502);
+    }
     await admin.from("sessions").update({ stripe_checkout_session_id: checkout.id }).eq("id", sess.id);
     return c.json({ sessionId: sess.id, checkoutUrl: checkout.url });
   }
@@ -157,15 +166,22 @@ export async function afterPayment(sessionId: string) {
   }
 }
 
+const roomName = (sessionId: string) => `flp-${env.appEnv}-${sessionId.slice(0, 8)}`;
+
 async function scheduleRoom(sess: NonNullable<Awaited<ReturnType<typeof sessionFor>>>) {
   const starts = new Date(sess.scheduled_at!);
   const ends = new Date(starts.getTime() + (sess.duration_minutes ?? 30) * 60000);
   const patch: Record<string, unknown> = { status: "scheduled" };
   if (dailyConfigured) {
-    // Prefixed by environment: dev and production share one Daily domain.
-    const room = await createRoom(`flp-${env.appEnv}-${sess.id.slice(0, 8)}`, starts, ends);
-    patch.daily_room_name = room.name;
-    patch.daily_room_url = room.url;
+    // Prefixed by environment: dev and production share one Daily domain. If Daily says no, the
+    // booking still goes through and the room is made when someone joins (see /:id/join).
+    try {
+      const room = await createRoom(roomName(sess.id), starts, ends);
+      patch.daily_room_name = room.name;
+      patch.daily_room_url = room.url;
+    } catch (err) {
+      await providerFailed("video_room", "Creating the video room for a Film Room", err, { id: sess.id });
+    }
   }
   return patch;
 }
@@ -265,8 +281,20 @@ sessions.get("/:id/join", async (c) => {
   const grace = ((s.rules as Record<string, number>).session_grace_minutes ?? 10) * 60000;
   if (Date.now() < starts - 15 * 60000) return c.json({ error: "the room opens 15 minutes before the start" }, 400);
   if (Date.now() > ends + grace + 30 * 60000) return c.json({ error: "this session has ended" }, 400);
-  if (!dailyConfigured || !sess.daily_room_name) return c.json({ configured: false, error: "Video rooms open once FLP's Daily account is connected." }, 503);
-  const token = await meetingToken(sess.daily_room_name, me?.full_name || (isMentor ? "FLP Mentor" : "Parent"), {
+  if (!dailyConfigured) return c.json({ configured: false, error: "Video rooms open once FLP's Daily account is connected." }, 503);
+  let room = sess.daily_room_name;
+  if (!room) {
+    // The room couldn't be made at booking time; make it now.
+    try {
+      const made = await createRoom(roomName(sess.id), new Date(starts), new Date(ends));
+      await admin.from("sessions").update({ daily_room_name: made.name, daily_room_url: made.url }).eq("id", sess.id);
+      room = made.name;
+    } catch (err) {
+      const ref = await providerFailed("video_room", "Opening the video room for a Film Room", err, { id: sess.id });
+      return c.json({ configured: true, error: `The video room couldn't be opened. FLP has been told. Please try again in a minute. (Reference ${ref})` }, 503);
+    }
+  }
+  const token = await meetingToken(room, me?.full_name || (isMentor ? "FLP Mentor" : "Parent"), {
     owner: isMentor || me?.role === "admin",
     startRecording: isMentor, // recording starts the moment the mentor joins; nobody can turn it off
     expSeconds: Math.max(600, Math.round((ends + grace - Date.now()) / 1000) + 1800),
@@ -383,14 +411,21 @@ sessions.post("/packs", async (c) => {
   if (error || !pack) return c.json({ error: error?.message ?? "could not create pack" }, 500);
   const packPath = paymentPath(s, stripeConfigured, env.appEnv);
   if (packPath === "stripe" && stripe) {
-    const checkout = await stripe.checkout.sessions.create({
+    let checkout: Awaited<ReturnType<typeof stripe.checkout.sessions.create>>;
+    try {
+      checkout = await stripe.checkout.sessions.create({
       mode: "payment", customer_email: user.email ?? undefined,
       line_items: [{ quantity: 1, price_data: { currency: s.currency, unit_amount: price, product_data: { name: `FLP Season Arc · ${total} Film Rooms with ${m.display_name}` } } }],
       metadata: { packId: pack.id },
       client_reference_id: pack.id,
       payment_intent_data: { metadata: { packId: pack.id }, transfer_group: `pack_${pack.id}`, receipt_email: user.email ?? undefined, description: `FLP Season Arc ${pack.id}` },
       success_url: appUrl(`/mentors/${b.mentorSlug}?pack=${pack.id}`), cancel_url: appUrl(`/mentors/${b.mentorSlug}?cancelled=1`),
-    });
+      });
+    } catch (err) {
+      // The unpaid pack row can't be used (bookings need paid_at), so it is left as is.
+      const ref = await providerFailed("checkout", "Checkout for a Season Arc", err, { id: pack.id, parent: user.id, mentor: b.mentorSlug, amount_cents: price });
+      return c.json({ error: checkoutDownMessage(ref), code: "checkout_unavailable", ref }, 502);
+    }
     await admin.from("session_packs").update({ stripe_checkout_session_id: checkout.id }).eq("id", pack.id);
     return c.json({ packId: pack.id, checkoutUrl: checkout.url });
   }

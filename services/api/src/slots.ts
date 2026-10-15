@@ -14,6 +14,17 @@ function tzOffsetMs(date: Date, tz: string) {
   return asUtc - date.getTime();
 }
 
+// A time zone name the runtime can use; anything else falls back to Eastern rather than throwing.
+function validTz(tz: string | null | undefined): tz is string {
+  if (!tz) return false;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Local wall-clock (y, m, d, hh:mm) in tz -> UTC Date.
 export function zonedToUtc(y: number, m: number, d: number, hhmm: string, tz: string) {
   const [hh, mm] = hhmm.split(":").map(Number);
@@ -33,7 +44,7 @@ export async function slotsForMentor(athleteId: string, minutes: number): Promis
 
   const { data: a } = await admin.from("athletes").select("availability, timezone").eq("user_id", athleteId).maybeSingle();
   const windows = ((a?.availability ?? []) as Window[]).filter((w) => /^\d{2}:\d{2}$/.test(w.start) && /^\d{2}:\d{2}$/.test(w.end));
-  const tz = a?.timezone || "America/Detroit";
+  const tz = validTz(a?.timezone) ? a!.timezone : "America/Detroit";
   if (windows.length === 0) return [];
 
   const now = Date.now();

@@ -5,6 +5,7 @@ import { stripe, stripeConfigured } from "../stripe.js";
 import { openJobForOrder } from "../jobs.js";
 import { env } from "../env.js";
 import { appUrl } from "../notify.js";
+import { checkoutDownMessage, providerFailed } from "../failures.js";
 
 export const orders = new Hono();
 
@@ -74,7 +75,9 @@ orders.post("/", async (c) => {
 
   const path = paymentPath(s, stripeConfigured, env.appEnv);
   if (path === "stripe" && stripe) {
-    const session = await stripe.checkout.sessions.create({
+    let session: Awaited<ReturnType<typeof stripe.checkout.sessions.create>>;
+    try {
+      session = await stripe.checkout.sessions.create({
       mode: "payment",
       customer_email: user.email ?? undefined,
       line_items: [{ quantity: 1, price_data: { currency: s.currency, unit_amount: price, product_data: { name: `FLP breakdown · ${level.tier.name} mentor` } } }],
@@ -83,7 +86,12 @@ orders.post("/", async (c) => {
       payment_intent_data: { metadata: { orderId: order.id }, transfer_group: `order_${order.id}`, receipt_email: user.email ?? undefined, description: `FLP breakdown ${order.id}` },
       success_url: appUrl(`/parent/orders/${order.id}?paid=1`),
       cancel_url: appUrl(`/parent/order?cancelled=1&order=${order.id}`),
-    });
+      });
+    } catch (err) {
+      // Stripe refused (account settings, key, a field it rejects): the order stays an unpaid draft.
+      const ref = await providerFailed("checkout", "Checkout for a breakdown order", err, { id: order.id, parent: user.id, mentor: body.mentorSlug, amount_cents: price });
+      return c.json({ error: checkoutDownMessage(ref), code: "checkout_unavailable", ref }, 502);
+    }
     await admin.from("orders").update({ stripe_checkout_session_id: session.id }).eq("id", order.id);
     return c.json({ orderId: order.id, checkoutUrl: session.url });
   }

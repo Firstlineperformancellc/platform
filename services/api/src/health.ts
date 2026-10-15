@@ -92,7 +92,15 @@ export async function runChecks(): Promise<Check[]> {
     timed("stripe", "Stripe (payments)", async () => {
       if (!stripe) return { status: "off", detail: "not connected (free preview)" };
       await stripe.balance.retrieve();
-      return env.stripeWebhookSecret ? { status: "healthy", detail: "API answering" } : { status: "attention", detail: "API answering, webhook secret missing" };
+      // Checkout needs an account that can take charges and has a public business name.
+      const acct = await stripe.accounts.retrieveCurrent();
+      if (!acct.charges_enabled) {
+        const why = acct.requirements?.disabled_reason ?? (acct.requirements?.currently_due ?? []).slice(0, 3).join(", ");
+        return { status: "unhealthy", detail: `Stripe can't take payments yet${why ? `: ${why}` : ""}` };
+      }
+      if (!acct.business_profile?.name && !acct.settings?.dashboard?.display_name) return { status: "unhealthy", detail: "Checkout needs a public business name in Stripe settings" };
+      if (!env.stripeWebhookSecret) return { status: "attention", detail: "payments on, webhook secret missing" };
+      return { status: "healthy", detail: `payments on${env.stripeSecretKey?.startsWith("sk_test") ? " (test mode)" : ""}` };
     }),
     timed("web", "Web app", async () => {
       const r = await http(appUrl("/"), { redirect: "follow" });

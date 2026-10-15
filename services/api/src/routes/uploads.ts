@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { admin, userFromBearer } from "../supabase.js";
 import { mux, muxConfigured, muxSigningConfigured } from "../mux.js";
+import { providerFailed } from "../failures.js";
 
 // POST /uploads — a signed-in user asks for somewhere to put a video.
 // We create the media row first (so the file is owned before a byte moves), then ask Mux for a
@@ -32,7 +33,9 @@ uploads.post("/", async (c) => {
   // intro videos are public because the marketplace embeds them for visitors.
   const signed = purpose !== "intro_video" && muxSigningConfigured;
   if (purpose !== "intro_video" && !muxSigningConfigured) console.warn("mux signing key missing: uploading with public playback");
-  const upload = await mux.video.uploads.create({
+  let upload: Awaited<ReturnType<typeof mux.video.uploads.create>>;
+  try {
+    upload = await mux.video.uploads.create({
     cors_origin: c.req.header("origin") ?? "*",
     timeout: DAY,
     new_asset_settings: {
@@ -44,7 +47,13 @@ uploads.post("/", async (c) => {
       // Game film gets an MP4 rendition so the mentor can download it for their own screen recorder.
       ...(purpose === "game_film" ? { static_renditions: [{ resolution: "highest" as const }] } : {}),
     },
-  });
+    });
+  } catch (err) {
+    await admin.from("media").update({ status: "errored" }).eq("id", media.id);
+    const ref = await providerFailed("upload", purpose === "game_film" ? "Starting a game-film upload" : "Starting a video upload", err, { id: media.id, user: user.id, purpose });
+    const tail = purpose === "game_film" ? " You can also paste a YouTube link instead." : "";
+    return c.json({ error: `The video upload couldn't start. Nothing was lost; please try again in a few minutes.${tail} (Reference ${ref})`, code: "upload_unavailable", ref }, 502);
+  }
 
   await admin.from("media").update({ mux_upload_id: upload.id }).eq("id", media.id);
 

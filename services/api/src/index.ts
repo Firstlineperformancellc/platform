@@ -4,6 +4,7 @@ import { Hono, type MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { env } from "./env.js";
+import { newRef } from "./failures.js";
 import { admin } from "./supabase.js";
 import { uploads } from "./routes/uploads.js";
 import { webhooks } from "./routes/webhooks.js";
@@ -76,9 +77,12 @@ app.route("/internal", internal);
 app.route("/webhooks", webhooks);
 
 app.notFound((c) => c.json({ error: "not found" }, 404));
+// Anything not handled where it happened: the log gets the route and the stack under a short
+// reference, and the person gets that reference instead of a bare "internal error".
 app.onError((err, c) => {
-  console.error(err);
-  return c.json({ error: "internal error" }, 500);
+  const ref = newRef();
+  console.error(`[unhandled] ${c.req.method} ${c.req.path} ref=${ref}`, err);
+  return c.json({ error: `Something went wrong on our side. Please try again; if it keeps happening, contact FLP and mention reference ${ref}.`, code: "internal", ref }, 500);
 });
 
 serve({ fetch: app.fetch, port: env.port, hostname: "127.0.0.1" }, (info) => {
