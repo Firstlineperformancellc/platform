@@ -51,6 +51,7 @@ export default function MentorProfile() {
   const first = mentor.display_name.split(" ")[0];
   const orderHref = { pathname: "/parent/order" as const, params: { mentor: mentor.slug } };
   const canOrder = !session || profile?.role === "parent";
+  const showCareer = career.length > 0 || (mentor.awards ?? []).length > 0 || !!mentor.career_note;
 
   return (
     <Screen title="FLP Mentor" width="content">
@@ -66,7 +67,8 @@ export default function MentorProfile() {
         <Label>FLP Mentor · {mentor.tier_name ?? TIER_LABEL[mentor.tier]}</Label>
         <H1>{mentor.display_name}</H1>
       </View>
-      <MentorCard mentor={mentor} settings={settings} />
+      {/* compact: the header card drops the clamped excerpt because the full bio is right below. */}
+      <MentorCard mentor={mentor} settings={settings} compact />
       {mentor.bio.trim() || mentor.teaching_focus || mentor.who_i_help ? (
         <Card>
           <H3>About {first}</H3>
@@ -91,7 +93,7 @@ export default function MentorProfile() {
           ) : null}
         </Card>
       ) : null}
-      {mentor.eliteprospects_url && career.length === 0 ? (
+      {mentor.eliteprospects_url && !showCareer ? (
         <Small style={{ color: colors.gold }} onPress={() => window.open(mentor.eliteprospects_url!, "_blank", "noopener")}>Elite Prospects profile ↗</Small>
       ) : null}
 
@@ -108,10 +110,10 @@ export default function MentorProfile() {
         </Card>
       ) : null}
 
-      {career.length > 0 ? (
+      {showCareer ? (
         <Card>
           <H3>Career</H3>
-          <CareerTable rows={career} goalie={hasGoalie(mentor.positions)} skater={hasSkater(mentor.positions) || !hasGoalie(mentor.positions)} />
+          {career.length > 0 ? <CareerTable rows={career} goalie={hasGoalie(mentor.positions)} skater={hasSkater(mentor.positions) || !hasGoalie(mentor.positions)} /> : null}
           {(mentor.awards ?? []).length > 0 ? (
             <View style={s.section}>
               <Label>Awards and honours</Label>
@@ -179,8 +181,8 @@ export default function MentorProfile() {
   );
 }
 
-// A bio keeps its paragraphs: blank lines (or single line breaks) split it.
-const paragraphs = (text: string | null | undefined) => (text ?? "").split(/\n+/).map((t) => t.trim()).filter(Boolean);
+// A bio keeps its paragraphs: a blank line starts a new one, and a single line break stays a line break.
+const paragraphs = (text: string | null | undefined) => (text ?? "").split(/\n\s*\n/).map((t) => t.trim()).filter(Boolean);
 
 const s = StyleSheet.create({
   topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },

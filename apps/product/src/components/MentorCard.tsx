@@ -14,9 +14,11 @@ type Props = {
   selected?: "first" | "second" | null;
   onPress?: () => void;
   compact?: boolean;
+  /** The tile leads to the mentor's page: show the "Read more" cue under the clamped excerpt. */
+  opensProfile?: boolean;
 };
 
-export function MentorCard({ mentor: m, settings, selected, onPress, compact }: Props) {
+export function MentorCard({ mentor: m, settings, selected, onPress, compact, opensProfile }: Props) {
   const price = priceOf(m, settings, "breakdown");
   const o = marketOptions(settings);
   const priceHidden = m.price_visible === false;
@@ -45,6 +47,8 @@ export function MentorCard({ mentor: m, settings, selected, onPress, compact }: 
         </View>
       </View>
       {!compact && o.show_bio ? <Body style={{ color: colors.muted }} numberOfLines={3}>{m.bio}</Body> : null}
+      {/* The excerpt is clamped, so a tile that opens the mentor's page says so: the full bio lives there. */}
+      {opensProfile && !compact && o.show_bio && m.bio?.trim() ? <Small style={s.more}>Read more ›</Small> : null}
       <View style={s.meta}>
         {o.show_turnaround ? <Small>{turnaroundLabel(m.avg_turnaround_hours)}</Small> : null}
         {o.show_rating ? (
@@ -63,7 +67,12 @@ export function MentorCard({ mentor: m, settings, selected, onPress, compact }: 
     </Card>
   );
   return onPress ? (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ hovered }: { hovered?: boolean }) => [hovered && s.hover]}>
+    <Pressable
+      accessibilityRole="button"
+      // A short name for screen readers; without it the whole tile, bio included, is read as the button's label.
+      accessibilityLabel={`${m.display_name}, ${m.tier_name ?? TIER_LABEL[m.tier]} mentor${selected ? `, ${selected} choice` : ""}${opensProfile ? ". Opens the full profile" : ""}`}
+      onPress={onPress}
+      style={({ hovered }: { hovered?: boolean }) => [hovered && s.hover]}>
       {inner}
     </Pressable>
   ) : (
@@ -81,4 +90,5 @@ const s = StyleSheet.create({
   first: { borderColor: colors.gold, borderWidth: 2 },
   second: { borderColor: colors.goldDim, borderWidth: 2, borderStyle: "dashed" },
   hover: { borderRadius: radius.lg, opacity: 0.95 },
+  more: { color: colors.gold, fontFamily: "Barlow_600SemiBold", marginTop: -4 },
 });

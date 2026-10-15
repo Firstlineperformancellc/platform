@@ -82,7 +82,7 @@ export default function Marketplace() {
             <View style={s.grid}>
               {g.mentors.map((m) => (
                 <View key={m.user_id} style={s.cell}>
-                  <MentorCard mentor={m} settings={settings} onPress={() => router.push({ pathname: "/mentors/[slug]", params: { slug: m.slug } })} />
+                  <MentorCard mentor={m} settings={settings} opensProfile onPress={() => router.push({ pathname: "/mentors/[slug]", params: { slug: m.slug } })} />
                 </View>
               ))}
             </View>
@@ -108,5 +108,5 @@ function groups(list: MarketplaceMentor[], byLevel: boolean): { key: string; tit
 const s = StyleSheet.create({
   topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: space.lg },
-  cell: { flexGrow: 1, flexBasis: 340, maxWidth: 520 },
+  cell: { flexGrow: 1, flexShrink: 1, flexBasis: 340, minWidth: 0, maxWidth: 520 },
 });

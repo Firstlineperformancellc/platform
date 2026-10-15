@@ -205,7 +205,7 @@ export default function AdminMarketplace() {
 
       <Card>
         <H3>Mentor tiles</H3>
-        <Small>What every tile on the marketplace shows, and how the list is ordered. Featured mentors always come first.</Small>
+        <Small>What every tile on the marketplace shows, and how the list is ordered. Featured mentors always come first. A mentor's own page always shows the full bio.</Small>
         <View style={s.checks}>
           {TILE_TOGGLES.map((x) => <Checkbox key={x.key} label={x.label} checked={Boolean(opts[x.key])} onChange={(v) => setOpts({ ...opts, [x.key]: v })} />)}
         </View>
@@ -214,7 +214,7 @@ export default function AdminMarketplace() {
         {sample ? (
           <View style={s.preview}>
             <Small>Preview, using {sample.display_name}:</Small>
-            <MentorCard mentor={sample} settings={previewSettings} />
+            <MentorCard mentor={sample} settings={previewSettings} opensProfile />
           </View>
         ) : null}
         <View style={s.actions}>
