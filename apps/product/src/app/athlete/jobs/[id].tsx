@@ -14,6 +14,7 @@ import { Body, H1, H2, H3, Label, Small } from "@/components/ui/Text";
 import { Loading } from "@/lib/auth";
 import { deliverBreakdown, emptyWorksheet, getBreakdownForJob, type Breakdown, type Worksheet } from "@/lib/breakdowns";
 import { hoursLeft, listMyJobs, type MyJob } from "@/lib/jobs";
+import { openFramework } from "@/lib/legal";
 import { colors, radius, space } from "@/theme/tokens";
 
 // The mentor's job: watch the film, record the breakdown with their own tools, upload it, fill in the
@@ -130,6 +131,10 @@ export default function JobScreen() {
             <Body style={{ color: colors.muted }}>
               Record with whatever you use, Loom, QuickTime, OBS, your phone. Then upload the file here. It can keep processing while you fill in the worksheet.
             </Body>
+            <Body style={{ color: colors.muted }}>
+              Follow FLP's breakdown framework: a short hello, three strengths, three things to improve, hockey IQ tips, two or three things to practice this month, and an encouraging close. About 10 to 15 minutes.
+            </Body>
+            <Button title="Open the breakdown framework" variant="secondary" small onPress={openFramework} style={{ alignSelf: "flex-start" }} />
             <VideoUpload purpose="breakdown" buttonTitle="Upload breakdown video" onUploaded={(m) => setMediaId(m)} onReady={() => setVideoReady(true)} />
             {mediaId && !videoReady ? <Small>Uploaded. You can deliver now; processing finishes in the background.</Small> : null}
           </Card>

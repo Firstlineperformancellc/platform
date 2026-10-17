@@ -35,6 +35,19 @@ export function openAdminManual() {
   else Linking.openURL(url).catch(() => {});
 }
 
+// Alex's script for the breakdown video (supplied 2026-09-23), shipped next to the manual. The source
+// copy lives in docs/manual; replace both files together if FLP revises it.
+export const FRAMEWORK = {
+  title: "Athlete Film Breakdown Framework",
+  path: "/manual/FLP-Athlete-Film-Breakdown-Framework.pdf",
+};
+
+export function openFramework() {
+  const url = `${appOrigin()}${FRAMEWORK.path}`;
+  if (Platform.OS === "web" && typeof window !== "undefined") window.open(url, "_blank", "noopener");
+  else Linking.openURL(url).catch(() => {});
+}
+
 export function openManual() {
   const url = `${appOrigin()}${MANUAL.path}`;
   if (Platform.OS === "web" && typeof window !== "undefined") window.open(url, "_blank", "noopener");
