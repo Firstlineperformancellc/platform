@@ -49,7 +49,7 @@ export default function SignIn() {
     try {
       await resendConfirmation(currentEmail(), siteUrl());
       setUnconfirmed(false);
-      setNotice("We sent a new confirmation link. It can take a couple of minutes, so check spam too. Open it within the hour.");
+      setNotice("We sent a new confirmation link. It can take a couple of minutes, so check spam too. Open it within 24 hours.");
     } catch (e) {
       setError((e as Error).message);
     }

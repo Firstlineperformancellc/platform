@@ -445,3 +445,6 @@ additional_redirect_urls = ["https://app.firstlineperform.com/**", "flp://**"]
 enable_confirmations = true
 max_frequency = "1m0s"
 otp_length = 8
+# Confirmation, sign-in and reset links last 24 hours, Supabase's maximum (2026-10-18; it was 1 hour and
+# approved mentors who opened the email later were stuck). Set in the dashboard too: Email OTP Expiration.
+otp_expiry = 86400
