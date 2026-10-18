@@ -228,6 +228,8 @@ export default function OrderWizard() {
                     mentor={m}
                     settings={settings}
                     compact
+                    preview
+                    previewHint={picking === "first" ? "Click to make this mentor your first choice" : m.slug === first ? "Already your first choice" : "Click to make this mentor your second choice"}
                     selected={m.slug === first ? "first" : m.slug === second ? "second" : null}
                     onPress={() => {
                       if (picking === "first") {

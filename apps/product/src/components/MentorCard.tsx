@@ -2,6 +2,8 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
 import { avatarUrl } from "@/lib/mentorProfile";
 import { Card } from "./ui/Card";
+import { useHoverPreview } from "./HoverPreview";
+import { MentorPreview } from "./MentorPreview";
 import { Pill } from "./ui/Pill";
 import { Body, H3, Small } from "./ui/Text";
 import { priceOf, turnaroundLabel, type MarketplaceMentor } from "@/lib/mentors";
@@ -16,12 +18,22 @@ type Props = {
   compact?: boolean;
   /** The tile leads to the mentor's page: show the "Read more" cue under the clamped excerpt. */
   opensProfile?: boolean;
+  /** Rest the pointer on the tile for a second to open a larger card with the photo and more detail (web). */
+  preview?: boolean;
+  /** The line at the foot of that card saying what a click does. */
+  previewHint?: string;
 };
 
-export function MentorCard({ mentor: m, settings, selected, onPress, compact, opensProfile }: Props) {
+export function MentorCard({ mentor: m, settings, selected, onPress, compact, opensProfile, preview, previewHint }: Props) {
   const price = priceOf(m, settings, "breakdown");
   const o = marketOptions(settings);
   const priceHidden = m.price_visible === false;
+  const hover = useHoverPreview({
+    enabled: Boolean(preview && onPress),
+    label: `${m.display_name}, ${m.tier_name ?? TIER_LABEL[m.tier]} mentor.${previewHint ? ` ${previewHint}` : ""}`,
+    onPress,
+    preview: (photoHeight) => <MentorPreview mentor={m} settings={settings} photoHeight={photoHeight} hint={previewHint} />,
+  });
   const inner = (
     <Card style={[s.card, selected === "first" && s.first, selected === "second" && s.second]}>
       <View style={s.head}>
@@ -66,8 +78,11 @@ export function MentorCard({ mentor: m, settings, selected, onPress, compact, op
       {selected ? <Pill tone="gold">{selected === "first" ? "First choice" : "Second choice"}</Pill> : null}
     </Card>
   );
-  return onPress ? (
+  const tile = onPress ? (
     <Pressable
+      ref={hover.anchor.ref}
+      onHoverIn={hover.anchor.onHoverIn}
+      onHoverOut={hover.anchor.onHoverOut}
       accessibilityRole="button"
       // A short name for screen readers; without it the whole tile, bio included, is read as the button's label.
       accessibilityLabel={`${m.display_name}, ${m.tier_name ?? TIER_LABEL[m.tier]} mentor${selected ? `, ${selected} choice` : ""}${opensProfile ? ". Opens the full profile" : ""}`}
@@ -77,6 +92,12 @@ export function MentorCard({ mentor: m, settings, selected, onPress, compact, op
     </Pressable>
   ) : (
     inner
+  );
+  return (
+    <>
+      {tile}
+      {hover.overlay}
+    </>
   );
 }
 

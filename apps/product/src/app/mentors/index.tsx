@@ -82,7 +82,7 @@ export default function Marketplace() {
             <View style={s.grid}>
               {g.mentors.map((m) => (
                 <View key={m.user_id} style={s.cell}>
-                  <MentorCard mentor={m} settings={settings} opensProfile onPress={() => router.push({ pathname: "/mentors/[slug]", params: { slug: m.slug } })} />
+                  <MentorCard mentor={m} settings={settings} opensProfile preview previewHint="Click for the full profile ›" onPress={() => router.push({ pathname: "/mentors/[slug]", params: { slug: m.slug } })} />
                 </View>
               ))}
             </View>
