@@ -47,7 +47,7 @@ export function useHoverPreview({ enabled, preview, label, onPress }: HoverPrevi
     const r = el.getBoundingClientRect();
     const width = Math.min(WIDTH, window.innerWidth - GAP * 2);
     const left = Math.max(GAP, Math.min(r.left + (r.width - width) / 2, window.innerWidth - GAP - width));
-    const photo = Math.round(Math.max(150, Math.min(240, window.innerHeight * 0.28)));
+    const photo = Math.round(Math.max(180, Math.min(300, window.innerHeight * 0.36)));
     setBox({ left, top: r.top, width, maxHeight: window.innerHeight - GAP * 2, photo, placed: false });
   };
 

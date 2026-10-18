@@ -21,7 +21,13 @@ export function MentorPreview({ mentor: m, settings, photoHeight, hint }: { ment
   return (
     <View>
       {uri ? (
-        <Image source={{ uri }} style={[s.photo, { height: photoHeight }]} contentFit="cover" contentPosition="top" transition={120} />
+        // The whole photo, never cropped (portrait headshots lose the face when cropped to a wide strip),
+        // over a blurred, darkened copy of itself that fills the rest of the frame.
+        <View style={[s.photo, { height: photoHeight }]}>
+          <Image source={{ uri }} style={[StyleSheet.absoluteFill, s.backdrop]} contentFit="cover" blurRadius={28} />
+          <View style={[StyleSheet.absoluteFill, s.shade]} />
+          <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="contain" transition={120} />
+        </View>
       ) : (
         <View style={[s.photo, s.photoEmpty, { height: photoHeight }]}>
           <Display style={{ color: colors.goldDim }}>{initials}</Display>
@@ -88,7 +94,9 @@ export function MentorPreview({ mentor: m, settings, photoHeight, hint }: { ment
 }
 
 const s = StyleSheet.create({
-  photo: { width: "100%", backgroundColor: colors.panel2 },
+  photo: { width: "100%", backgroundColor: colors.panel2, overflow: "hidden" },
+  backdrop: { transform: [{ scale: 1.2 }] },
+  shade: { backgroundColor: "rgba(0,0,0,0.35)" },
   photoEmpty: { alignItems: "center", justifyContent: "center", borderBottomWidth: 1, borderBottomColor: colors.line2 },
   body: { padding: space.lg, gap: space.sm },
   head: { flexDirection: "row", gap: space.md, alignItems: "flex-start" },
