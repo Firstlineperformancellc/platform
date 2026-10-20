@@ -115,3 +115,19 @@ footer .copy{grid-column:1/-1;border-top:1px solid var(--line);padding-top:18px;
 .field{width:100%;padding:11px 12px;border-radius:8px;border:1px solid var(--line2);background:var(--panel2);color:var(--ink);font:inherit;font-size:16px}
 .field:focus{outline:2px solid var(--gold);outline-offset:1px}
 label.small{margin-bottom:-8px}
+
+/* First Line Presents: the athlete grid on presents.html */
+#athletes{scroll-margin-top:84px}
+.athletes{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px;margin-top:8px}
+.athletes [data-fallback]{grid-column:1/-1;margin:0}
+.athlete{display:block;min-width:0;background:var(--panel2);border:1px solid var(--line);border-radius:16px;padding:16px;color:var(--ink)}
+.athlete:hover{text-decoration:none;border-color:var(--gold)}
+.athlete .photo{aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--panel);display:flex;align-items:center;justify-content:center;margin-bottom:14px;font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:48px;color:var(--gold)}
+.athlete .photo img{width:100%;height:100%;object-fit:cover;display:block}
+.athlete h3{font-size:22px;margin:0 0 4px;overflow-wrap:anywhere}
+.athlete .who{color:var(--muted);font-size:14px;margin:0 0 12px}
+.athlete .meta{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;font-size:14px;color:var(--muted)}
+.athlete .cost{font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:30px;color:var(--gold);line-height:1}
+.athlete .rating small{color:var(--faint);font-size:13px}
+.athlete.off .photo{filter:grayscale(1);opacity:.6}
+.athlete .paused{margin:12px 0 0;font-size:13px;color:var(--faint)}

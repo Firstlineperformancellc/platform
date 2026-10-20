@@ -26,6 +26,8 @@ export type ApplicationPayload = {
   bio: string; positions: string[]; team: string; eliteprospects_url: string | null;
   motivations: string[]; motivation_other: string | null; special_circumstances: string | null; age: number | null; gender: string | null;
   agreement?: AgreementSignature | null;
+  // false = First Line Presents only: never listed as a mentor, never offered a job. Set at application, changed only by FLP.
+  offers_mentoring: boolean;
 };
 const slugify = (name: string) => `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "mentor"}-${Math.random().toString(36).slice(2, 6)}`;
 
@@ -35,6 +37,7 @@ export async function saveApplicationRows(userId: string, fullName: string, a: A
   const { error } = await supabase.from("athletes").insert({
     user_id: userId, slug: slugify(name), display_name: name, bio: a.bio, positions: a.positions,
     credentials: a.team ? [{ label: a.team }] : [], current_team: a.team, eliteprospects_url: a.eliteprospects_url,
+    offers_mentoring: a.offers_mentoring !== false, // an application stashed before this field existed is a mentoring one
   });
   if (error) throw new Error(error.message);
   const g = a.agreement;

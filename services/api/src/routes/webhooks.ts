@@ -9,6 +9,7 @@ import { appUrl } from "../notify.js";
 import { openJobForOrder } from "../jobs.js";
 import { afterPayment, completeSession } from "./sessions.js";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { afterPresentsPaid } from "../presents.js";
 
 // Inbound webhooks. Each provider is verified by signature before anything is written.
 //   Mux    (live):   upload.asset_created / asset.ready / asset.errored -> media status
@@ -114,8 +115,9 @@ webhooks.post("/stripe", async (c) => {
 
 async function onCheckoutPaid(session: Stripe.Checkout.Session) {
   if (session.payment_status !== "paid") return;
-  const { orderId, sessionId, packId } = session.metadata ?? {};
+  const { orderId, sessionId, packId, presentsId } = session.metadata ?? {};
   const pi = typeof session.payment_intent === "string" ? session.payment_intent : null;
+  if (presentsId) await afterPresentsPaid(presentsId, pi);
   if (sessionId) {
     await admin.from("sessions").update({ stripe_payment_intent_id: pi }).eq("id", sessionId).is("paid_at", null);
     await afterPayment(sessionId);
@@ -132,12 +134,13 @@ async function onCheckoutPaid(session: Stripe.Checkout.Session) {
 
 // The parent left checkout without paying: free the Film Room slot and drop the unpaid pack.
 async function onCheckoutExpired(session: Stripe.Checkout.Session) {
-  const { sessionId, packId } = session.metadata ?? {};
+  const { sessionId, packId, presentsId } = session.metadata ?? {};
+  if (presentsId) await admin.from("presents_requests").delete().eq("id", presentsId).eq("status", "draft");
   if (sessionId) await admin.from("sessions").update({ status: "expired", cancel_reason: "checkout was not completed", cancelled_at: new Date().toISOString() }).eq("id", sessionId).eq("status", "requested").is("paid_at", null);
   if (packId) await admin.from("session_packs").delete().eq("id", packId).is("paid_at", null);
 }
 
-type Paid = { kind: "order" | "session" | "pack"; id: string; price_cents: number };
+type Paid = { kind: "order" | "session" | "pack" | "presents"; id: string; price_cents: number };
 async function paymentTarget(paymentIntent: string | null): Promise<Paid | null> {
   if (!paymentIntent) return null;
   const { data: o } = await admin.from("orders").select("id, price_cents").eq("stripe_payment_intent_id", paymentIntent).maybeSingle();
@@ -146,6 +149,8 @@ async function paymentTarget(paymentIntent: string | null): Promise<Paid | null>
   if (se) return { kind: "session", id: se.id, price_cents: se.price_cents };
   const { data: pk } = await admin.from("session_packs").select("id, price_cents").eq("stripe_payment_intent_id", paymentIntent).maybeSingle();
   if (pk) return { kind: "pack", id: pk.id, price_cents: pk.price_cents };
+  const { data: pr } = await admin.from("presents_requests").select("id, price_cents").eq("stripe_payment_intent_id", paymentIntent).maybeSingle();
+  if (pr) return { kind: "presents", id: pr.id, price_cents: pr.price_cents };
   return null;
 }
 
@@ -165,6 +170,12 @@ async function onChargeRefunded(charge: Stripe.Charge) {
   } else if (target.kind === "session") {
     await admin.from("sessions").update({ refunded_cents: refunded, refund_error: null }).eq("id", target.id);
     if (full) await admin.from("payouts").update({ status: "voided", note: "session refunded in full" }).eq("session_id", target.id).in("status", ["owed", "held"]);
+  } else if (target.kind === "presents") {
+    await admin.from("presents_requests").update({ refunded_cents: refunded, refund_error: null }).eq("id", target.id);
+    if (full) {
+      await admin.from("presents_requests").update({ status: "refunded" }).eq("id", target.id).in("status", ["open", "flagged", "in_review", "delivered"]);
+      await admin.from("payouts").update({ status: "voided", note: "Presents request refunded in full" }).eq("presents_request_id", target.id).in("status", ["owed", "held"]);
+    }
   } else {
     await admin.from("session_packs").update({ refunded_cents: refunded }).eq("id", target.id);
   }
@@ -180,6 +191,8 @@ async function onDispute(dispute: Stripe.Dispute) {
     for (const j of jobs ?? []) await admin.from("payouts").update({ status: "held", held_reason: "card dispute" }).eq("job_id", j.id).eq("status", "owed");
   } else if (target.kind === "session") {
     await admin.from("payouts").update({ status: "held", held_reason: "card dispute" }).eq("session_id", target.id).eq("status", "owed");
+  } else if (target.kind === "presents") {
+    await admin.from("payouts").update({ status: "held", held_reason: "card dispute" }).eq("presents_request_id", target.id).eq("status", "owed");
   }
   await admin.from("audit_log").insert({ actor_id: null, action: "stripe.dispute", target_type: target.kind, target_id: target.id, meta: { dispute: dispute.id, amount: dispute.amount, reason: dispute.reason } });
   await notifyAdmins("stripe.dispute", "A card payment is being disputed",

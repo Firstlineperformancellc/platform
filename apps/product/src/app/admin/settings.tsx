@@ -5,12 +5,14 @@ import { AdminShell } from "@/components/AdminShell";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { TextField } from "@/components/ui/TextField";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { Choice } from "@/components/ui/Choice";
 import { Pill } from "@/components/ui/Pill";
 import { Body, H3, Small } from "@/components/ui/Text";
 import { grantAdmin, patchSettings } from "@/lib/admin";
 import { Loading } from "@/lib/auth";
 import { useSettings } from "@/lib/settings";
+import { presentsRules } from "@/lib/presents";
 import { colors, space } from "@/theme/tokens";
 
 const RULES: { key: string; label: string; hint: string }[] = [
@@ -45,6 +47,8 @@ export default function AdminSettings() {
   const { settings } = useSettings();
   const [rules, setRules] = useState<Record<string, string>>({});
   const [payoutDays, setPayoutDays] = useState("");
+  // First Line Presents, edited as text and sent as the API expects (cents, whole numbers, word lists)
+  const [pr, setPr] = useState({ enabled: true, share: "", min: "", max: "", days: "", review: "minors" as "minors" | "all" | "none", problemDays: "", occasions: "", blocklist: "" });
   const [lists, setLists] = useState<Record<string, string>>({});
   const [adminEmail, setAdminEmail] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -54,6 +58,8 @@ export default function AdminSettings() {
   useEffect(() => {
     if (!settings) return;
     setPayoutDays(settings.rules.payout_delay_days != null ? String(settings.rules.payout_delay_days) : "");
+    const p = presentsRules(settings.rules);
+    setPr({ enabled: p.enabled, share: String(p.sharePct), min: String(p.minCents / 100), max: String(p.maxCents / 100), days: String(p.maxDays), review: p.review, problemDays: String(p.problemDays), occasions: p.occasions.join(", "), blocklist: p.blocklist.join(", ") });
     setRules(Object.fromEntries(RULES.map((r) => [r.key, String((settings.rules as Record<string, unknown>)[r.key] ?? "")])));
     setLists(Object.fromEntries(LISTS.map((l) => [l.key, ((settings.taxonomy as Record<string, unknown>)[l.key] as string[]).join(", ")])));
   }, [settings]);
@@ -115,6 +121,44 @@ export default function AdminSettings() {
           </View>
         </View>
         <Button title="Save waiting period" small loading={busy === "payoutDays"} onPress={() => save("payoutDays", { rules: { payout_delay_days: payoutDays.trim() === "" ? settings.rules.qca_window_days : Number(payoutDays) } })} />
+      </Card>
+
+      <Card>
+        <View style={s.row}>
+          <H3>First Line Presents</H3>
+          <Pill tone={pr.enabled ? "ok" : "muted"}>{pr.enabled ? "On" : "Off"}</Pill>
+        </View>
+        <Small>
+          Personal video messages from FLP athletes, sold alongside mentoring. Mentors switch it on from My profile; athletes approved for Presents only never appear in the mentor marketplace. The floor and ceiling bound what an athlete may charge.
+        </Small>
+        <Checkbox label="First Line Presents is on" checked={pr.enabled} onChange={(v) => setPr({ ...pr, enabled: v })} hint="Off hides it everywhere and stops new requests. Requests already paid are still finished." />
+        <View style={s.grid}>
+          <View style={s.cell}><TextField label="FLP share (%)" value={pr.share} onChangeText={(v) => setPr({ ...pr, share: v.replace(/[^0-9]/g, "") })} keyboardType="number-pad" hint="The athlete keeps the rest." /></View>
+          <View style={s.cell}><TextField label="Lowest price ($)" value={pr.min} onChangeText={(v) => setPr({ ...pr, min: v })} keyboardType="decimal-pad" /></View>
+          <View style={s.cell}><TextField label="Highest price ($)" value={pr.max} onChangeText={(v) => setPr({ ...pr, max: v })} keyboardType="decimal-pad" /></View>
+          <View style={s.cell}><TextField label="Longest delivery window (days, 1 to 14)" value={pr.days} onChangeText={(v) => setPr({ ...pr, days: v.replace(/[^0-9]/g, "") })} keyboardType="number-pad" hint="Athletes pick their own window up to this." /></View>
+          <View style={s.cell}><TextField label="Days a buyer has to report a problem" value={pr.problemDays} onChangeText={(v) => setPr({ ...pr, problemDays: v.replace(/[^0-9]/g, "") })} keyboardType="number-pad" hint="A report holds the athlete's payout until you decide." /></View>
+        </View>
+        <Choice
+          label="Review before delivery"
+          options={[{ key: "minors", label: "Under-18 recipients" }, { key: "all", label: "All videos" }, { key: "none", label: "None" }]}
+          value={pr.review}
+          onChange={(v) => setPr({ ...pr, review: v as "minors" | "all" | "none" })}
+          hint="Reviewed videos wait under Presents until an admin approves them."
+        />
+        <TextField label="Occasions" value={pr.occasions} onChangeText={(v) => setPr({ ...pr, occasions: v })} hint="Comma-separated. Blank restores the standard list." />
+        <TextField label="Review word list" value={pr.blocklist} onChangeText={(v) => setPr({ ...pr, blocklist: v })} hint="Comma-separated. A request containing any of these is held for FLP before the athlete sees it." />
+        <Button
+          title="Save Presents settings"
+          small
+          loading={busy === "presents"}
+          onPress={() => {
+            const whole = (v: string) => (v.trim() === "" ? undefined : Number(v));
+            const cents = (v: string) => (v.trim() === "" ? undefined : Math.round(Number(v) * 100));
+            const words = (v: string) => v.split(",").map((x) => x.trim()).filter(Boolean);
+            save("presents", { rules: { presents_enabled: pr.enabled, presents_share_pct: whole(pr.share), presents_min_cents: cents(pr.min), presents_max_cents: cents(pr.max), presents_max_days: whole(pr.days), presents_review: pr.review, presents_problem_days: whole(pr.problemDays), presents_occasions: words(pr.occasions), presents_blocklist: words(pr.blocklist) } });
+          }}
+        />
       </Card>
 
       <Card>

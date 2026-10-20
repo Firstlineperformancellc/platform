@@ -189,6 +189,8 @@ export default function AdminMentors() {
                     <Pill tone={m.status === "approved" ? "ok" : m.status === "applied" ? "warn" : "danger"}>{m.status}</Pill>
                     {m.tier ? <Pill tone="gold">{TIER_LABEL[m.tier as Tier]}</Pill> : null}
                     <Pill tone={m.verified ? "ok" : "muted"}>{m.verified ? "Verified" : "Unverified"}</Pill>
+                    {m.offers_mentoring === false ? <Pill tone="muted">Presents only</Pill> : null}
+                    {m.presents_blocked_at ? <Pill tone="warn">Presents off by FLP</Pill> : m.presents_enabled ? <Pill tone="muted">Presents: on</Pill> : null}
                   </View>
                 </View>
                 {m.bio ? <Body style={{ color: colors.muted }}>{m.bio}</Body> : null}
@@ -220,7 +222,10 @@ export default function AdminMentors() {
                   </View>
                 ) : null}
 
-                {m.status !== "applied" ? (
+                {m.presents_enabled || m.presents_blocked_at ? (
+                  <Small>First Line Presents: {m.presents_blocked_at ? `switched off by FLP ${new Date(m.presents_blocked_at).toLocaleDateString()}` : m.presents_price_cents != null ? `on at $${Math.round(m.presents_price_cents / 100)} a video` : "on, no price set yet"}.</Small>
+                ) : null}
+                {m.status !== "applied" && m.offers_mentoring !== false ? (
                   <View style={s.tierRow}>
                     <View style={{ minWidth: 240 }}>
                       <Dropdown
@@ -256,8 +261,12 @@ export default function AdminMentors() {
                 <View style={s.actions}>
                   {m.status === "applied" ? (
                     <>
-                      <Choice label="Tier" options={levels.map((t) => ({ key: t.key, label: t.visible ? t.name : `${t.name} (private)` }))} value={tier} onChange={(v) => setTierPick({ ...tierPick, [m.user_id]: v as Tier })} />
-                      <Button title="Approve" small loading={busy === m.user_id} onPress={() => act(m.user_id, { status: "approved", tier })} />
+                      {m.offers_mentoring === false ? (
+                        <Small style={{ flexBasis: "100%" }}>Applied for First Line Presents only: no tier, and never listed as a mentor.</Small>
+                      ) : (
+                        <Choice label="Tier" options={levels.map((t) => ({ key: t.key, label: t.visible ? t.name : `${t.name} (private)` }))} value={tier} onChange={(v) => setTierPick({ ...tierPick, [m.user_id]: v as Tier })} />
+                      )}
+                      <Button title="Approve" small loading={busy === m.user_id} onPress={() => act(m.user_id, m.offers_mentoring === false ? { status: "approved" } : { status: "approved", tier })} />
                       <Button title="Decline" variant="danger" small onPress={() => act(m.user_id, { status: "deactivated" })} />
                     </>
                   ) : null}
@@ -265,6 +274,7 @@ export default function AdminMentors() {
                     <>
                       <Button title={m.verified ? "Mark unverified" : "Mark verified"} variant="secondary" small onPress={() => act(m.user_id, { verified: !m.verified })} />
                       <Button title="Suspend" variant="danger" small onPress={() => act(m.user_id, { status: "suspended" })} />
+                      <Button title={m.presents_blocked_at ? "Allow Presents" : "Switch Presents off"} variant="ghost" small onPress={() => act(m.user_id, { presents_blocked: !m.presents_blocked_at })} />
                     </>
                   ) : null}
                   {m.status === "suspended" ? (

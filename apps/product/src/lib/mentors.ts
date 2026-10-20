@@ -42,6 +42,9 @@ export type MarketplaceMentor = {
   film_room_60_cents?: number | null;
   addon_30_cents?: number | null;
   season_arc_cents?: number | null;
+  // First Line Presents: the view sets these only while the athlete is offering it.
+  presents_enabled?: boolean;
+  presents_price_cents?: number | null;
 };
 
 // What this mentor costs: their own price where FLP set one, else their level's. Null when it is by arrangement.
@@ -54,7 +57,7 @@ export function priceOf(m: MarketplaceMentor, settings: Settings, kind: PriceKin
 }
 
 const COLS =
-  "user_id, slug, display_name, tier, highest_level, current_team, badges, positions, specialties, bio, photo_media_id, photo_path, video_media_id, video_playback_id, capacity_on_deck, jobs_on_deck, available, avg_turnaround_hours, avg_rating, rating_count, jobs_completed, eliteprospects_url, tier_name, tier_sort, tier_description, price_visible, featured, in_listing, tier_color, turnaround_hours, breakdown_cents, film_room_30_cents, film_room_60_cents, addon_30_cents, season_arc_cents, teaching_focus, who_i_help, awards, career_note";
+  "user_id, slug, display_name, tier, highest_level, current_team, badges, positions, specialties, bio, photo_media_id, photo_path, video_media_id, video_playback_id, capacity_on_deck, jobs_on_deck, available, avg_turnaround_hours, avg_rating, rating_count, jobs_completed, eliteprospects_url, tier_name, tier_sort, tier_description, price_visible, featured, in_listing, tier_color, turnaround_hours, breakdown_cents, film_room_30_cents, film_room_60_cents, addon_30_cents, season_arc_cents, teaching_focus, who_i_help, awards, career_note, presents_enabled, presents_price_cents";
 
 export async function listMentors(position?: HockeyPosition): Promise<MarketplaceMentor[]> {
   // the browsable list; direct-link mentors are reached by their profile link only

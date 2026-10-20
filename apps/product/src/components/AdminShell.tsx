@@ -17,6 +17,7 @@ const NAV = [
   { href: "/admin/marketplace", label: "Levels & tiles" },
   { href: "/admin/jobs", label: "Orders & jobs" },
   { href: "/admin/sessions", label: "Film Room" },
+  { href: "/admin/presents", label: "Presents" },
   { href: "/admin/audits", label: "Audits" },
   { href: "/admin/ledger", label: "Ledger" },
   { href: "/admin/support", label: "Support" },

@@ -93,7 +93,7 @@ export default function AdminLedger() {
                   {r.athletes?.display_name ?? "?"} · {money(r.amount_cents)}
                 </H3>
                 <Small>
-                  {r.sessions ? `Film Room for ${player} · held ${r.sessions.scheduled_at ? new Date(r.sessions.scheduled_at).toLocaleDateString() : "–"}` : `Breakdown for ${player} · delivered ${r.jobs?.delivered_at ? new Date(r.jobs.delivered_at).toLocaleDateString() : "–"}`}{r.note ? ` · ${r.note}` : ""} · ledger {new Date(r.created_at).toLocaleDateString()}
+                  {r.presents_requests ? `Presents · ${r.presents_requests.recipient_name} · ${r.presents_requests.occasion}` : r.sessions ? `Film Room for ${player} · held ${r.sessions.scheduled_at ? new Date(r.sessions.scheduled_at).toLocaleDateString() : "–"}` : `Breakdown for ${player} · delivered ${r.jobs?.delivered_at ? new Date(r.jobs.delivered_at).toLocaleDateString() : "–"}`}{r.note ? ` · ${r.note}` : ""} · ledger {new Date(r.created_at).toLocaleDateString()}
                   {r.paid_at ? ` · paid ${new Date(r.paid_at).toLocaleDateString()}${r.stripe_transfer_id ? " via Stripe" : " manually"}` : ""}
                 </Small>
                 {r.held_reason ? <Small style={{ color: colors.warn }}>Held: {r.held_reason}</Small> : null}

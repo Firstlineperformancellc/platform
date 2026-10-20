@@ -21,7 +21,7 @@ ANON_PROD = anon_key(".env.prod")
 if not ANON_PROD:
     raise SystemExit("apps/product/.env.prod is missing or has no anon key; the production site would have no prices")
 
-NAV = [("index.html", "Home"), ("how-it-works.html", "How it works"), ("for-mentors.html", "For mentors"), ("pricing.html", "Pricing"), ("faq.html", "FAQ")]
+NAV = [("index.html", "Home"), ("how-it-works.html", "How it works"), ("for-mentors.html", "For mentors"), ("pricing.html", "Pricing"), ("faq.html", "FAQ"), ("presents.html", "Presents")]
 
 def frame(title, desc, body, current):
     links = []
@@ -62,7 +62,7 @@ def frame(title, desc, body, current):
       <a class="brand" href="index.html" style="margin-bottom:10px"><img src="assets/logo.png" alt="" width="44" height="45"><span>First Line Performance</span></a>
       <p class="small">Personalized video breakdowns and live Film Room mentoring from athletes who played at the level your youth athlete is chasing.</p>
     </div>
-    <div><h4>Product</h4><a href="how-it-works.html">How it works</a><a href="pricing.html">Pricing</a><a href="faq.html">FAQ</a><a data-app="/mentors" href="#">Browse FLP Mentors</a></div>
+    <div><h4>Product</h4><a href="how-it-works.html">How it works</a><a href="pricing.html">Pricing</a><a href="faq.html">FAQ</a><a data-app="/mentors" href="#">Browse FLP Mentors</a><a href="presents.html">First Line Presents</a></div>
     <div><h4>Mentors</h4><a href="for-mentors.html">Become an FLP Mentor</a><a data-app="/apply" href="#">Apply</a></div>
     <div><h4>Company</h4><a href="contact.html">Contact</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></div>
     <div class="copy">&copy; 2026 First Line Performance LLC. All rights reserved.</div>
@@ -126,6 +126,15 @@ PAGES["index.html"] = ("Film breakdowns from athletes who've done it", "Upload y
       <div class="card"><h3>Quality Control Audit</h3><p class="muted">Not what you expected? File an audit within <span data-rule="qca_window_days">7</span> days. FLP watches the breakdown, reads the worksheet, and decides on a refund, a re-review or a fix.</p></div>
       <div class="card"><h3>Money handled by Stripe</h3><p class="muted">You're charged at checkout through Stripe. FLP never holds your card details, and mentors are paid through Stripe too.</p></div>
     </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">First Line Presents</p>
+    <h2>A personal video message from an FLP athlete.</h2>
+    <p class="muted" style="max-width:60ch">For a birthday, a big game or a comeback: an FLP athlete records a short message for your young player, and you get a private link by email. No account needed.</p>
+    <div class="btns"><a class="btn secondary" href="presents.html">See the athletes</a></div>
   </div>
 </section>
 
@@ -298,6 +307,7 @@ PAGES["pricing.html"] = ("Pricing", "One flat price per breakdown by mentor tier
     <h2>Pick the mentor first</h2>
     <p class="lead" style="margin:0 auto 24px">Every mentor's profile shows their level, turnaround and reviews before you pay anything.</p>
     <div class="btns" style="justify-content:center"><a class="btn primary" data-app="/mentors" href="#">Browse FLP Mentors</a></div>
+    <p class="small" style="margin-top:22px">First Line Presents videos are priced by each athlete, from <span data-rule-cents="presents_min_cents">$20</span>. <a href="presents.html">See the athletes</a>.</p>
   </div>
 </section>
 ''')
@@ -319,12 +329,62 @@ PAGES["faq.html"] = ("FAQ", "Answers for parents and for athletes who want to me
     <details><summary>Is the Film Room recorded?</summary><p>Always. Recording starts the moment the mentor joins and nobody in the room can stop it. Parents may join any session. FLP keeps recordings for quality control and safeguarding.</p></details>
     <details><summary>What if the breakdown isn't good?</summary><p>File a Quality Control Audit from the order page within <span data-rule="qca_window_days">7</span> days. FLP reviews the video and worksheet and decides on a refund, a re-review by another mentor, or another fix. The mentor's payout is held while the audit is open.</p></details>
     <details><summary>Where does my film go?</summary><p>To a private video service. Only you, your chosen mentor once they've accepted, and FLP can view it. Links don't work without being signed in.</p></details>
+    <details><summary>What is First Line Presents?</summary><p>A personal video message recorded by an FLP athlete for an occasion: a birthday, a big game, a comeback. You pick the athlete, tell them who it's for and what to say, and get a private link by email within a few days. Anyone can order one, no account needed, and FLP checks every video made for a young athlete. <a href="presents.html">More about Presents</a>.</p></details>
     <h2 id="mentors" style="margin-top:48px">For mentors</h2>
     <details><summary>Who can apply?</summary><p>Athletes who played NCAA (D1, D3), U Sports, the PWHL, or professionally (NHL, AHL, ECHL, top European leagues). Junior-only careers aren't listed yet.</p></details>
     <details><summary>How much do I make?</summary><p>You keep the majority of every breakdown and Film Room at your tier. The exact split is shown in the application and on every request before you accept it.</p></details>
     <details><summary>How am I paid?</summary><p>Through Stripe. You connect a bank account once; each delivered breakdown and completed session adds to your ledger and FLP pays it out.</p></details>
     <details><summary>What tools do I need?</summary><p>A browser and a screen recorder you're comfortable with. Loom, QuickTime, OBS, your phone. You upload the recording to FLP and fill in the worksheet in the app.</p></details>
     <details><summary>Can I set my own hours?</summary><p>Yes. You choose how many breakdowns you hold at once and post the weekly windows when families can book a Film Room with you.</p></details>
+  </div>
+</section>
+''')
+
+PAGES["presents.html"] = ("First Line Presents", "A personal video message recorded by an FLP athlete for a birthday, a big game or a comeback. Delivered as a private link within a few days. No account needed.", '''
+<section class="hero" style="padding-bottom:24px">
+  <div class="wrap" style="grid-template-columns:1fr">
+    <div>
+      <p class="kicker">First Line Presents</p>
+      <h1>A personal video message from <span class="gold">an FLP athlete.</span></h1>
+      <div class="rule"></div>
+      <p class="lead">For a birthday, a big game, a comeback. The athlete records it on their phone and you get a private link by email within a few days. FLP checks every video made for a young athlete. No account needed.</p>
+      <div class="btns"><a class="btn primary" href="#athletes">See the athletes</a></div>
+    </div>
+  </div>
+</section>
+<section class="tight">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <div class="grid cols3">
+      <div class="card"><div class="n">1</div><h3>Pick an athlete</h3><p class="muted">Every athlete offering Presents sets their own price and how many days they need. Pick the one your young player looks up to.</p></div>
+      <div class="card"><div class="n">2</div><h3>Tell them who it's for</h3><p class="muted">The recipient's first name, the occasion, and what you'd like said. The athlete sees the request, never your contact details.</p></div>
+      <div class="card"><div class="n">3</div><h3>Get the private link</h3><p class="muted">You pay at checkout through Stripe. When the video is ready, the link lands in your email. Watch it, download it, pass it on.</p></div>
+    </div>
+  </div>
+</section>
+<section class="band" id="athletes">
+  <div class="wrap">
+    <p class="kicker">Pick an athlete</p>
+    <h2>Athletes offering <span class="gold">Presents</span></h2>
+    <div class="athletes" id="presents">
+      <p class="muted" data-fallback>Athletes who offer Presents appear here as they switch it on.</p>
+    </div>
+  </div>
+</section>
+<section class="tight">
+  <div class="wrap">
+    <h2>Questions</h2>
+    <details><summary>What is a Present?</summary><p>A short personal video message recorded by an FLP athlete for someone specific: a birthday, a big game, a comeback, a thank-you to a coach, a team shout-out. The athlete records it on their phone and FLP delivers it as a private link.</p></details>
+    <details><summary>Who can order one?</summary><p>Anyone. Parents with an FLP account can order from their dashboard; everyone else orders with an email address. No account needed. The request is one-way: the athlete sees the recipient's first name, the occasion and your notes, never your contact details.</p></details>
+    <details><summary>Is it safe for young players?</summary><p>Every video made for a recipient under 18 is checked by FLP before it is delivered. Requests are one-way, recipients are identified by first name only, and there is no messaging between the athlete and the recipient.</p></details>
+    <details><summary>What if it isn't delivered?</summary><p>If the athlete doesn't deliver within their stated time, you're refunded automatically. Delivered videos aren't refundable, except for a real problem reported within <span data-rule="presents_problem_days">7</span> days from your private link, which FLP reviews.</p></details>
+    <details><summary>What does it cost?</summary><p>Each athlete sets their own price. It's shown on their tile and again before you pay. You're charged once at checkout through Stripe; FLP never holds your card details.</p></details>
+  </div>
+</section>
+<section>
+  <div class="wrap">
+    <p class="muted" style="max-width:60ch">FLP is first a mentoring platform. Presents is an extra way to hear from the athletes your young player looks up to.</p>
+    <div class="btns"><a class="btn secondary" href="how-it-works.html">How mentoring works</a></div>
   </div>
 </section>
 ''')
@@ -395,7 +455,7 @@ PAGES["terms.html"] = ("Terms", "Terms of service for First Line Performance.", 
 </section>
 ''')
 
-CURRENT = {"index.html": "index.html", "how-it-works.html": "how-it-works.html", "for-mentors.html": "for-mentors.html", "pricing.html": "pricing.html", "faq.html": "faq.html"}
+CURRENT = {"index.html": "index.html", "how-it-works.html": "how-it-works.html", "for-mentors.html": "for-mentors.html", "pricing.html": "pricing.html", "faq.html": "faq.html", "presents.html": "presents.html"}
 OUT.mkdir(exist_ok=True)
 for slug, (title, desc, body) in PAGES.items():
     (OUT / slug).write_text(frame(title, desc, body, CURRENT.get(slug, "")))

@@ -25,7 +25,11 @@ export async function refundPayment(paymentIntentId: string, amountCents: number
 }
 
 // The payment that funded a payout: the order behind a breakdown job, or the session (or its pack).
-async function paymentIntentForPayout(p: { job_id: string | null; session_id: string | null }): Promise<string | null> {
+async function paymentIntentForPayout(p: { job_id: string | null; session_id: string | null; presents_request_id?: string | null }): Promise<string | null> {
+  if (p.presents_request_id) {
+    const { data: r } = await admin.from("presents_requests").select("stripe_payment_intent_id").eq("id", p.presents_request_id).maybeSingle();
+    return r?.stripe_payment_intent_id ?? null;
+  }
   if (p.job_id) {
     const { data: job } = await admin.from("jobs").select("order_id").eq("id", p.job_id).maybeSingle();
     if (!job) return null;
@@ -47,8 +51,8 @@ async function paymentIntentForPayout(p: { job_id: string | null; session_id: st
 // funded it (source_transaction), so it works before those funds settle and can never exceed them.
 export async function payPayoutViaStripe(payoutId: string, paidBy: string | null): Promise<{ ok: true; transferId: string } | { ok: false; error: string; skip?: boolean }> {
   if (!stripe) return { ok: false, error: "Stripe is not configured" };
-  const { data: p } = await admin.from("payouts").select("id, status, amount_cents, currency, athlete_id, job_id, session_id, athletes(stripe_account_id, payouts_enabled, display_name)").eq("id", payoutId).maybeSingle();
-  const payout = p as unknown as { id: string; status: string; amount_cents: number; currency: string; athlete_id: string; job_id: string | null; session_id: string | null; athletes: { stripe_account_id: string | null; payouts_enabled: boolean; display_name: string } | null } | null;
+  const { data: p } = await admin.from("payouts").select("id, status, amount_cents, currency, athlete_id, job_id, session_id, presents_request_id, athletes(stripe_account_id, payouts_enabled, display_name)").eq("id", payoutId).maybeSingle();
+  const payout = p as unknown as { id: string; status: string; amount_cents: number; currency: string; athlete_id: string; job_id: string | null; session_id: string | null; presents_request_id: string | null; athletes: { stripe_account_id: string | null; payouts_enabled: boolean; display_name: string } | null } | null;
   if (!payout) return { ok: false, error: "payout not found" };
   if (payout.status !== "owed") return { ok: false, error: `payout is ${payout.status}` };
   const fail = async (error: string, skip = false) => {

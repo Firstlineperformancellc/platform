@@ -34,6 +34,10 @@ export default function Apply() {
       if (data) router.replace("/athlete");
     });
   }, [finishing, session, router]);
+  // What the athlete is applying to offer. Mentoring is the default; First Line Presents can be added
+  // to it or applied for on its own (then the mentoring-only questions drop out of the form).
+  const [mentoring, setMentoring] = useState(true);
+  const [presentsOffer, setPresentsOffer] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -63,12 +67,15 @@ export default function Apply() {
   async function submit() {
     // Anything in the special-circumstances box lets an incomplete application through to the reviewers.
     const partial = special.trim().length > 0;
-    if (!partial && positions.length === 0) return setError("Pick at least one position you can review, or tell us about your circumstances below.");
-    if (!partial && motivations.length === 0) return setError("Tell us why you want to mentor.");
-    if (!partial && motivations.includes("other") && !motivationOther.trim()) return setError("Add a few words about why you want to mentor.");
+    if (!mentoring && !presentsOffer) return setError("Pick at least one: mentoring, First Line Presents, or both.");
+    if (mentoring && !partial && positions.length === 0) return setError("Pick at least one position you can review, or tell us about your circumstances below.");
+    if (mentoring && !partial && motivations.length === 0) return setError("Tell us why you want to mentor.");
+    if (mentoring && !partial && motivations.includes("other") && !motivationOther.trim()) return setError("Add a few words about why you want to mentor.");
     const ageNum = age.trim() ? Number(age.trim()) : null;
     if (!partial && (ageNum === null || !Number.isInteger(ageNum) || ageNum < 16 || ageNum > 99)) return setError("Enter your age.");
     if (ageNum !== null && (!Number.isInteger(ageNum) || ageNum < 13 || ageNum > 110)) return setError("That age doesn't look right.");
+    // Presents on its own has no under-18 path (mentoring applicants keep the guardian co-signature route).
+    if (!mentoring && (ageNum === null || ageNum < 18)) return setError("First Line Presents is open to athletes 18 and over.");
     if (!partial && !gender) return setError("Pick a gender, or \"Prefer not to say\".");
     const ep = normaliseEliteProspects(epUrl);
     if (epUrl.trim() && !ep) return setError("That doesn't look like an eliteprospects.com link.");
@@ -82,7 +89,11 @@ export default function Apply() {
       version: AGREEMENT.version, signed_name: signedName.trim(), residence: residence.trim(), guardian_name: minor ? guardianName.trim() : null,
       signed_at: new Date().toISOString(), user_agent: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 400) : null,
     };
-    const application = { bio: bio.trim(), positions, team: team.trim(), eliteprospects_url: ep, motivations, motivation_other: motivations.includes("other") ? motivationOther.trim() : null, special_circumstances: special.trim() || null, age: ageNum, gender, agreement };
+    const application = {
+      bio: bio.trim(), positions: mentoring ? positions : [], team: team.trim(), eliteprospects_url: ep,
+      motivations: mentoring ? motivations : [], motivation_other: mentoring && motivations.includes("other") ? motivationOther.trim() : null,
+      special_circumstances: special.trim() || null, age: ageNum, gender, agreement, offers_mentoring: mentoring,
+    };
     if (finishing) {
       setBusy(true);
       setError(null);
@@ -126,7 +137,7 @@ export default function Apply() {
   }
 
   return (
-    <Screen title="Apply as a mentor" width="form" center>
+    <Screen title="Apply as an athlete" width="form" center>
       <Brand size={96} />
       <H1 center>{finishing ? "Your email is confirmed." : "Apply as an athlete"}</H1>
       <Body center style={{ color: colors.muted }}>
@@ -142,6 +153,11 @@ export default function Apply() {
         {finishing ? (
           <Body style={{ color: colors.muted }}>Signed in as {session?.user.email}. Your account is active; these details are what FLP reviews.</Body>
         ) : null}
+        <View style={{ gap: space.xs }}>
+          <Label>What would you like to offer?</Label>
+          <Checkbox label="Mentoring youth athletes (breakdowns and Film Rooms)" checked={mentoring} onChange={setMentoring} />
+          <Checkbox label="First Line Presents: personal video messages" checked={presentsOffer} onChange={setPresentsOffer} hint="Short videos for birthdays, good luck and the like. Open to athletes 18 and over. You set the price." />
+        </View>
         <TextField label="Your name" value={fullName} onChangeText={setFullName} autoComplete="name" placeholder={finishing ? profile?.full_name : undefined} />
         {finishing ? null : (
           <>
@@ -168,28 +184,34 @@ export default function Apply() {
           <View style={{ width: 110 }}><TextField label="Age" value={age} onChangeText={(v) => setAge(v.replace(/[^0-9]/g, "").slice(0, 3))} keyboardType="number-pad" /></View>
           <View style={{ flex: 1, minWidth: 180 }}><Dropdown label="Gender" options={GENDERS} value={gender ? [gender] : []} onChange={(v) => setGender((v[0] as Gender) ?? null)} single placeholder="Choose" /></View>
         </View>
-        <View style={{ gap: space.sm }}>
-          <Label>Positions you can review</Label>
-          <View style={s.chips}>
-            {POSITIONS.map((p) => {
-              const on = positions.includes(p.key);
-              return (
-                <Pressable
-                  key={p.key}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: on }}
-                  onPress={() => toggle(p.key)}
-                  style={[s.chip, on && s.chipOn]}
-                >
-                  <Text style={[s.chipText, on && s.chipTextOn]}>{p.label}</Text>
-                </Pressable>
-              );
-            })}
+        {mentoring ? (
+          <View style={{ gap: space.sm }}>
+            <Label>Positions you can review</Label>
+            <View style={s.chips}>
+              {POSITIONS.map((p) => {
+                const on = positions.includes(p.key);
+                return (
+                  <Pressable
+                    key={p.key}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: on }}
+                    onPress={() => toggle(p.key)}
+                    style={[s.chip, on && s.chipOn]}
+                  >
+                    <Text style={[s.chipText, on && s.chipTextOn]}>{p.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
-        </View>
+        ) : null}
         <TextField label="Elite Prospects profile link" value={epUrl} onChangeText={setEpUrl} autoCapitalize="none" autoCorrect={false} keyboardType="url" placeholder="eliteprospects.com/player/…" hint="Optional, but it speeds up our review." />
-        <Dropdown label="Why do you want to be a mentor?" options={MOTIVATIONS} value={motivations} onChange={(v) => setMotivations(v as Motivation[])} placeholder="Choose one or more" />
-        {motivations.includes("other") ? <TextField label="Tell us in your own words" value={motivationOther} onChangeText={setMotivationOther} multiline maxLength={1000} style={{ height: 80, paddingTop: space.md, textAlignVertical: "top" }} /> : null}
+        {mentoring ? (
+          <>
+            <Dropdown label="Why do you want to be a mentor?" options={MOTIVATIONS} value={motivations} onChange={(v) => setMotivations(v as Motivation[])} placeholder="Choose one or more" />
+            {motivations.includes("other") ? <TextField label="Tell us in your own words" value={motivationOther} onChangeText={setMotivationOther} multiline maxLength={1000} style={{ height: 80, paddingTop: space.md, textAlignVertical: "top" }} /> : null}
+          </>
+        ) : null}
         <TextField
           label="Short bio"
           value={bio}
@@ -213,7 +235,7 @@ export default function Apply() {
         />
         <View style={s.agreement}>
           <Label>Independent Contractor Agreement</Label>
-          <Body style={{ color: colors.muted }}>Every FLP mentor works under the {AGREEMENT.title}. It covers how you're paid, who owns the breakdowns, confidentiality, and keeping young athletes safe. Read it in full, then sign below. Your typed name is your signature.</Body>
+          <Body style={{ color: colors.muted }}>Every FLP athlete works under the {AGREEMENT.title}, which covers both mentoring and First Line Presents videos. It sets out how you're paid, who owns the breakdowns and videos, confidentiality, and keeping young athletes safe. Read it in full, then sign below. Your typed name is your signature.</Body>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
             <Button title="Open the agreement (PDF)" variant="secondary" small onPress={openAgreement} />
           </View>

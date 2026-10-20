@@ -56,6 +56,16 @@ export type Settings = {
     payments_mode?: "stripe" | "free_preview";
     payout_mode?: "manual" | "auto";
     payout_delay_days?: number;
+    // First Line Presents (defaults live in lib/presents presentsRules and mirror the API)
+    presents_enabled?: boolean;
+    presents_share_pct?: number;
+    presents_min_cents?: number;
+    presents_max_cents?: number;
+    presents_max_days?: number;
+    presents_review?: "minors" | "all" | "none";
+    presents_problem_days?: number;
+    presents_occasions?: string[];
+    presents_blocklist?: string[];
   };
   taxonomy: {
     age_groups: string[];

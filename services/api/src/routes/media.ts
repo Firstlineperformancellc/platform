@@ -21,6 +21,8 @@ async function mayWatch(userId: string, m: { id: string; owner_id: string }) {
   for (const b of (bds ?? []) as unknown as { jobs: { orders: { parent_id: string } | null } | null }[]) {
     if (b.jobs?.orders?.parent_id === userId) return true;
   }
+  const { data: gift } = await admin.from("presents_requests").select("id").eq("video_media_id", m.id).eq("buyer_id", userId).eq("status", "delivered").limit(1);
+  if (gift?.length) return true;
   return false;
 }
 
@@ -43,6 +45,6 @@ media.get("/:id/playback", async (c) => {
   return c.json({
     ready: true, playbackId: id, policy: "signed",
     tokens: { playback: video, thumbnail, storyboard },
-    mp4Url: m.purpose === "game_film" ? `https://stream.mux.com/${id}/highest.mp4?token=${video}` : null,
+    mp4Url: m.purpose === "game_film" || m.purpose === "presents_video" ? `https://stream.mux.com/${id}/highest.mp4?token=${video}` : null,
   });
 });

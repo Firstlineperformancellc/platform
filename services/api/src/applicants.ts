@@ -40,7 +40,7 @@ export async function notifyTeamOfNewApplicants() {
   const since = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
   const { data, error } = await admin
     .from("athletes")
-    .select("user_id, display_name, status, created_at, highest_level, current_team, positions, eliteprospects_url, profiles!athletes_user_id_fkey(email, phone, full_name), application:athlete_applications(motivations, motivation_other, special_circumstances, age, gender, agreement_signed_name, agreement_signed_at, agreement_residence, agreement_guardian_name)")
+    .select("user_id, display_name, status, created_at, highest_level, current_team, positions, eliteprospects_url, offers_mentoring, profiles!athletes_user_id_fkey(email, phone, full_name), application:athlete_applications(motivations, motivation_other, special_circumstances, age, gender, agreement_signed_name, agreement_signed_at, agreement_residence, agreement_guardian_name)")
     .is("team_notified_at", null)
     .gte("created_at", since)
     .order("created_at")
@@ -102,6 +102,7 @@ export function buildNotice(a: Applicant, levels: { key: string; label: string }
         ? esc(`Signed as "${app.agreement_signed_name ?? ""}"${app.agreement_residence ? `, ${app.agreement_residence}` : ""}${app.agreement_guardian_name ? ` (guardian: ${app.agreement_guardian_name})` : ""}`)
         : `<span style="color:#f0b84a">Not signed</span>`),
       row("Applied", `${esc(applied)} ET`),
+      row("Applying for", (a as unknown as { offers_mentoring?: boolean }).offers_mentoring === false ? "First Line Presents only (no mentoring)" : "Mentoring"),
       row("Email confirmed", confirmed ? "Yes" : `<span style="color:#f0b84a">Not yet. They can't sign in until they click the link in their confirmation email.</span>`),
     ].join("");
 

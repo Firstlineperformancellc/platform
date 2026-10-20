@@ -34,15 +34,47 @@
   var ASK = "Please contact for pricing";
   var FORMATS = [["film_room_30_cents", 0], ["film_room_60_cents", 1], ["addon_30_cents", 2], ["season_arc_cents", 3]];
 
-  var levelsBox = document.getElementById("levels"), table = document.getElementById("level-prices");
-  var names = document.querySelectorAll("[data-level-names]"), rules = document.querySelectorAll("[data-rule]");
-  if (ANON && (levelsBox || table || names.length || rules.length)) {
+  // First Line Presents: the athletes offering a personal video message, from the same public view the
+  // app lists from. Each tile opens that athlete's Presents page in the app. Photos are public avatars;
+  // an athlete without one gets their initials. Level keys resolve through the taxonomy like the app.
+  var PRESENTS_COLS = "slug,display_name,photo_path,highest_level,current_team,tier_name,price_cents,days,available,avg_rating,rating_count";
+  function renderPresents(box, list, tax) {
+    if (!list.length) return; // the static fallback stays
+    var levels = (tax && tax.levels) || [];
+    var levelLabel = function (key) { var l = levels.filter(function (x) { return x.key === key; })[0]; return (l && l.label) || key || ""; };
+    box.innerHTML = list.map(function (p) {
+      var name = p.display_name || "FLP athlete";
+      var initials = name.trim().split(/\s+/).slice(0, 2).map(function (w) { return w.charAt(0); }).join("").toUpperCase();
+      var photo = p.photo_path
+        ? '<img src="' + esc(SUPABASE + "/storage/v1/object/public/avatars/" + p.photo_path) + '" alt="" loading="lazy">'
+        : "<span>" + esc(initials) + "</span>";
+      var level = levelLabel(p.highest_level);
+      if (p.tier_name && level.toLowerCase() === p.tier_name.toLowerCase()) level = "";
+      var who = [p.tier_name, level, p.current_team].filter(Boolean).join(" · ");
+      var days = p.days === 1 ? "within 1 day" : "within " + esc(p.days) + " days";
+      var rating = p.rating_count > 0 && p.avg_rating != null ? '<span class="rating">★ ' + esc(p.avg_rating) + " <small>(" + esc(p.rating_count) + ")</small></span>" : "";
+      return '<a class="athlete' + (p.available ? "" : " off") + '" href="' + esc(APP + "/presents/" + encodeURIComponent(p.slug)) + '">' +
+        '<div class="photo">' + photo + "</div>" +
+        "<h3>" + esc(name) + "</h3>" +
+        (who ? '<p class="who">' + esc(who) + "</p>" : "") +
+        '<div class="meta"><span class="cost">' + money(p.price_cents) + "</span><span>" + days + "</span>" + rating + "</div>" +
+        (p.available ? "" : '<p class="paused">Not taking requests right now</p>') +
+        "</a>";
+    }).join("");
+  }
+
+  var levelsBox = document.getElementById("levels"), table = document.getElementById("level-prices"), presentsBox = document.getElementById("presents");
+  var names = document.querySelectorAll("[data-level-names]"), rules = document.querySelectorAll("[data-rule]"), cents = document.querySelectorAll("[data-rule-cents]");
+  if (ANON && (levelsBox || table || names.length || rules.length || cents.length || presentsBox)) {
     Promise.all([
       (levelsBox || table || names.length) ? get("mentor_tiers_public?select=key,name,description,sort,price_visible,breakdown_price_cents,film_room_30_cents,film_room_60_cents,addon_30_cents,season_arc_cents,color,turnaround_hours&visible=eq.true&order=sort.asc") : [],
-      get("settings?select=rules&id=eq.1")
+      get("settings?select=rules,taxonomy&id=eq.1"),
+      presentsBox ? get("presents_providers?select=" + PRESENTS_COLS + "&order=tier_sort.asc.nullslast,display_name.asc") : []
     ]).then(function (res) {
-      var levels = res[0] || [], r = (res[1] && res[1][0] && res[1][0].rules) || {};
+      var levels = res[0] || [], row = (res[1] && res[1][0]) || {}, r = row.rules || {};
       rules.forEach(function (el) { var v = r[el.getAttribute("data-rule")]; if (v != null) el.textContent = v; });
+      cents.forEach(function (el) { var v = r[el.getAttribute("data-rule-cents")]; if (typeof v === "number") el.textContent = money(v); });
+      if (presentsBox) renderPresents(presentsBox, res[2] || [], row.taxonomy);
       if (!levels.length) return; // the static fallback stays
       if (levelsBox) levelsBox.innerHTML = levels.map(function (l, i) {
         var hours = l.turnaround_hours || r.turnaround_hours || 72;

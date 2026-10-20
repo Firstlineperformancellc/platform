@@ -74,6 +74,8 @@ export function MentorCard({ mentor: m, settings, selected, onPress, compact, op
             {settings.taxonomy.badges.find((x) => x.key === b)?.label ?? b}
           </Pill>
         ))}
+        {/* First Line Presents is a side offer: a quiet badge, no price on the tile. */}
+        {m.presents_enabled ? <Pill tone="muted">Presents</Pill> : null}
       </View>
       {selected ? <Pill tone="gold">{selected === "first" ? "First choice" : "Second choice"}</Pill> : null}
     </Card>

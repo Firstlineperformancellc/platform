@@ -12,6 +12,7 @@ import { Body, H1, H3, Label, Small } from "@/components/ui/Text";
 import { Loading, useAuth } from "@/lib/auth";
 import { hasGoalie, hasSkater, listCareerPublic, type CareerPublicRow } from "@/lib/career";
 import { getMentor, listReviews, type MarketplaceMentor, type MentorReview, priceOf } from "@/lib/mentors";
+import { money as presentsMoney } from "@/lib/presents";
 import { money, TIER_LABEL, useSettings } from "@/lib/settings";
 import { colors, radius, space } from "@/theme/tokens";
 
@@ -161,6 +162,17 @@ export default function MentorProfile() {
       </>
       )}
 
+      {/* First Line Presents sits after the mentoring offers, in one quiet line. */}
+      {mentor.presents_enabled && mentor.presents_price_cents != null ? (
+        <Card style={s.presents}>
+          <Label>Also from {first}</Label>
+          <Body style={{ color: colors.muted }}>First Line Presents: a personal video message, {presentsMoney(mentor.presents_price_cents)}.</Body>
+          <Link href={{ pathname: "/presents/[slug]", params: { slug: mentor.slug } }} asChild>
+            <Button title="Request a video" variant="secondary" small />
+          </Link>
+        </Card>
+      ) : null}
+
       {reviews.length > 0 ? (
         <Card>
           <H3>What parents say</H3>
@@ -189,4 +201,5 @@ const s = StyleSheet.create({
   section: { gap: 4, marginTop: space.xs },
   row: { flexDirection: "row", alignItems: "center", gap: space.md, flexWrap: "wrap" },
   review: { borderTopWidth: 1, borderTopColor: colors.line, paddingTop: space.sm, gap: 4 },
+  presents: { gap: space.sm, paddingVertical: space.lg },
 });

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Body, Display, H3, Small } from "@/components/ui/Text";
 import { counts } from "@/lib/admin";
+import { adminRequests } from "@/lib/presents";
 import { ticketCounts } from "@/lib/support";
 import { latestRun, type Run } from "@/lib/health";
 import { HealthBadge } from "@/components/HealthMeter";
@@ -16,11 +17,14 @@ export default function AdminHome() {
   const [c, setC] = useState<Awaited<ReturnType<typeof counts>> | null>(null);
   const [tc, setTc] = useState<{ open: number; pending: number } | null>(null);
   const [health, setHealth] = useState<Run | null | undefined>(undefined);
+  const [presents, setPresents] = useState<number | null>(null);
   useFocusEffect(
     useCallback(() => {
       counts().then(setC);
       ticketCounts().then(setTc).catch(() => setTc({ open: 0, pending: 0 }));
       latestRun().then(setHealth).catch(() => setHealth(null));
+      // videos waiting for FLP's check plus requests held on a flagged word; either call may fail on its own
+      Promise.all([adminRequests("in_review").catch(() => []), adminRequests("flagged").catch(() => [])]).then(([a, b]) => setPresents(a.length + b.length));
     }, []),
   );
   const tiles = [
@@ -31,6 +35,7 @@ export default function AdminHome() {
     { n: c?.owedPayouts, label: "Payouts owed", blurb: "Mentors waiting to be paid.", href: "/admin/ledger" as const },
     { n: c?.liveSessions, label: "Film Rooms upcoming", blurb: "Requested, scheduled, or live right now.", href: "/admin/sessions" as const },
     { n: c?.pendingReviews, label: "Reviews to moderate", blurb: "Ratings under 3 stars.", href: "/admin/audits" as const },
+    { n: presents ?? undefined, label: "Presents to check", blurb: "Videos waiting for a look, and held requests.", href: "/admin/presents" as const },
   ];
   return (
     <AdminShell title="Control center">
@@ -38,7 +43,7 @@ export default function AdminHome() {
       <View style={s.grid}>
         {tiles.map((t) => (
           <Card key={t.label} style={[s.cell, (t.n ?? 0) > 0 && s.hot]}>
-            <Display style={{ color: (t.n ?? 0) > 0 ? colors.gold : colors.faint }}>{c ? String(t.n) : "–"}</Display>
+            <Display style={{ color: (t.n ?? 0) > 0 ? colors.gold : colors.faint }}>{t.n != null ? String(t.n) : "–"}</Display>
             <H3>{t.label}</H3>
             <Body style={{ color: colors.muted }}>{t.blurb}</Body>
             <Link href={t.href} asChild>

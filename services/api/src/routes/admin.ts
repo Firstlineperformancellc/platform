@@ -75,19 +75,27 @@ adminRoutes.patch("/mentors/:id", async (c) => {
     patch.status = "deactivated";
     patch.blocked_at = new Date().toISOString();
   }
+  if (typeof body.presents_blocked === "boolean") patch.presents_blocked_at = body.presents_blocked ? new Date().toISOString() : null;
   if (Object.keys(patch).length === 0) return c.json({ error: "nothing to change" }, 400);
-  if (patch.status === "approved" && !patch.tier) {
-    const { data: cur } = await admin.from("athletes").select("tier").eq("user_id", id).maybeSingle();
-    if (!cur?.tier) return c.json({ error: "pick a tier before approving; the marketplace only lists tiered mentors" }, 400);
+  const { data: cur } = await admin.from("athletes").select("tier, offers_mentoring").eq("user_id", id).maybeSingle();
+  const mentoring = cur?.offers_mentoring !== false;
+  if (patch.status === "approved" && !patch.tier && mentoring && !cur?.tier) {
+    return c.json({ error: "pick a tier before approving; the marketplace only lists tiered mentors" }, 400);
   }
   const { error } = await admin.from("athletes").update(patch).eq("user_id", id);
   if (error) return c.json({ error: error.message }, 500);
   if (tierChanged) await admin.from("mentor_tier_history").insert({ athlete_id: id, from_tier: previousTier, to_tier: patch.tier, changed_by: me.id });
   await audit(me.id, "mentor.update", "athlete", id, patch);
   if (patch.status === "approved") {
-    await notify(id, "mentor.approved", "You're approved as an FLP Mentor",
-      `<p>Welcome to First Line Performance. Your profile is live on the marketplace and requests will start arriving by email.</p><p><a href="${appUrl("/athlete")}" style="color:#d4a32c">Open your dashboard</a></p>`,
-      { targetId: id });
+    if (mentoring) {
+      await notify(id, "mentor.approved", "You're approved as an FLP Mentor",
+        `<p>Welcome to First Line Performance. Your profile is live on the marketplace and requests will start arriving by email.</p><p><a href="${appUrl("/athlete")}" style="color:#d4a32c">Open your dashboard</a></p>`,
+        { targetId: id });
+    } else {
+      await notify(id, "mentor.approved", "You're approved for First Line Presents",
+        `<p>Welcome to First Line Performance. Set your price and switch First Line Presents on from My profile, and set up payouts so you can be paid. Requests arrive by email.</p><p><a href="${appUrl("/athlete/profile")}" style="color:#d4a32c">Open My profile</a></p>`,
+        { targetId: id });
+    }
   }
   if (body.remove === true) {
     // Block sign-in at the auth layer as well.
@@ -538,6 +546,16 @@ adminRoutes.patch("/settings", async (c) => {
   }
   const pr = patch.rules as Record<string, unknown> | undefined;
   if (pr?.payout_mode !== undefined && pr.payout_mode !== "manual" && pr.payout_mode !== "auto") return c.json({ error: "payout_mode must be manual or auto" }, 400);
+  if (pr) {
+    const n = (k: string, lo: number, hi: number) => { const v = pr[k]; return v === undefined || (typeof v === "number" && Number.isInteger(v) && v >= lo && v <= hi); };
+    if (!n("presents_share_pct", 0, 90)) return c.json({ error: "presents_share_pct must be a whole number from 0 to 90" }, 400);
+    if (!n("presents_min_cents", 100, 1_000_000) || !n("presents_max_cents", 100, 1_000_000)) return c.json({ error: "Presents price bounds are whole cents between $1 and $10,000" }, 400);
+    if (typeof pr.presents_min_cents === "number" && typeof pr.presents_max_cents === "number" && pr.presents_min_cents > pr.presents_max_cents) return c.json({ error: "the Presents floor must not exceed the ceiling" }, 400);
+    if (!n("presents_max_days", 1, 14)) return c.json({ error: "presents_max_days must be 1 to 14" }, 400);
+    if (!n("presents_problem_days", 0, 30)) return c.json({ error: "presents_problem_days must be 0 to 30" }, 400);
+    if (pr.presents_review !== undefined && !["minors", "all", "none"].includes(pr.presents_review as string)) return c.json({ error: "presents_review must be minors, all or none" }, 400);
+    for (const k of ["presents_occasions", "presents_blocklist"]) if (pr[k] !== undefined && !(Array.isArray(pr[k]) && (pr[k] as unknown[]).every((x) => typeof x === "string"))) return c.json({ error: `${k} must be a list of words` }, 400);
+  }
   if (pr?.payout_delay_days !== undefined && (!Number.isInteger(pr.payout_delay_days) || (pr.payout_delay_days as number) < 0 || (pr.payout_delay_days as number) > 60)) return c.json({ error: "payout delay is a whole number of days from 0 to 60" }, 400);
   if (pr?.payout_mode !== undefined && pr.payout_mode !== (current.rules as Record<string, unknown>).payout_mode) await audit(me.id, "settings.payout_mode", "settings", null, { mode: pr.payout_mode });
   const mode = (patch.rules as Record<string, unknown> | undefined)?.payments_mode;

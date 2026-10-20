@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useFocusEffect, useRouter } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { Brand } from "@/components/Brand";
@@ -10,6 +10,7 @@ import { Screen } from "@/components/ui/Screen";
 import { Body, H1, H2, H3, Label, Small } from "@/components/ui/Text";
 import { useAuth } from "@/lib/auth";
 import { acceptOffer, declineOffer, hoursLeft, listMyJobs, listOpenOffers, type MyJob, type Offer } from "@/lib/jobs";
+import { athleteRequests, getMyPresentsSettings, PRESENTS_NAME, type PresentsSettings } from "@/lib/presents";
 import { supabase } from "@/lib/supabase";
 import { money, TIER_LABEL, useSettings, type Tier } from "@/lib/settings";
 import { firstName, type Athlete } from "@/lib/types";
@@ -32,6 +33,9 @@ export default function AthleteHome() {
   const [jobs, setJobs] = useState<MyJob[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // First Line Presents, read once: whether it's switched on and how many requests wait to be recorded.
+  const [presents, setPresents] = useState<PresentsSettings | null>(null);
+  const [presentsOpen, setPresentsOpen] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     if (!session) return;
@@ -53,6 +57,12 @@ export default function AthleteHome() {
       load();
     }, [load]),
   );
+  const approved = athlete?.status === "approved";
+  useEffect(() => {
+    if (!approved) return;
+    getMyPresentsSettings().then(setPresents).catch(() => setPresents(null));
+    athleteRequests().then((rows) => setPresentsOpen(rows.filter((r) => r.status === "open").length)).catch(() => setPresentsOpen(null));
+  }, [approved]);
 
   async function respond(jobId: string, accept: boolean) {
     setBusy(jobId);
@@ -70,21 +80,24 @@ export default function AthleteHome() {
   const onDeck = jobs.filter((j) => j.status === "accepted");
   const done = jobs.filter((j) => j.status === "delivered" || j.status === "closed");
 
+  // An athlete approved for First Line Presents only has no breakdown or Film Room work to show.
+  const mentoring = presents?.offers_mentoring !== false;
   return (
     <Screen title="Your jobs" width="page">
       <View style={s.topbar}>
         <Brand size={44} />
-        <View style={{ flexDirection: "row", gap: space.sm }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", gap: space.sm }}>
           <Link href="/athlete/profile" asChild>
             <Button title="My profile" variant="secondary" small />
           </Link>
           <Link href="/athlete/earnings" asChild><Button title="Earnings" variant="ghost" small /></Link>
+          <Link href="/athlete/presents" asChild><Button title={PRESENTS_NAME} variant="ghost" small /></Link>
           <Link href="/support" asChild><Button title="Support" variant="ghost" small /></Link>
           <Button title="Sign out" variant="ghost" small onPress={signOut} />
         </View>
       </View>
       <View>
-        <Label>FLP Mentor{athlete?.tier ? ` · ${TIER_LABEL[athlete.tier as Tier]}` : ""}</Label>
+        <Label>{presents && !presents.offers_mentoring ? `FLP Athlete · ${PRESENTS_NAME}` : `FLP Mentor${athlete?.tier ? ` · ${TIER_LABEL[athlete.tier as Tier]}` : ""}`}</Label>
         <H1>Welcome, {firstName(profile?.full_name)}</H1>
       </View>
 
@@ -111,6 +124,7 @@ export default function AthleteHome() {
         </Card>
       ) : status === "approved" ? (
         <>
+          {mentoring ? (<>
           <View>
             <H2>New requests</H2>
             {offers.length === 0 ? <Body style={{ color: colors.muted }}>Nothing waiting on you.</Body> : null}
@@ -169,6 +183,25 @@ export default function AthleteHome() {
               ))}
             </View>
           ) : null}
+
+          </>) : null}
+          <Card style={{ padding: space.lg }}>
+            <View style={s.row}>
+              <View style={{ flex: 1, minWidth: 220, gap: 2 }}>
+                <H3>{PRESENTS_NAME}</H3>
+                <Small>Personal video messages for families and fans. You set the price.</Small>
+              </View>
+              {presents?.presents_enabled && !presents.presents_blocked_at ? (
+                <Link href="/athlete/presents" asChild>
+                  <Button title={presentsOpen ? `${presentsOpen} to record` : "Your requests"} variant="ghost" small />
+                </Link>
+              ) : (
+                <Link href="/athlete/profile" asChild>
+                  <Button title="Switch it on from My profile" variant="ghost" small />
+                </Link>
+              )}
+            </View>
+          </Card>
         </>
       ) : athlete === null ? (
         <Card>

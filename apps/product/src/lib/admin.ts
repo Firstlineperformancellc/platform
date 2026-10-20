@@ -24,6 +24,11 @@ export type AdminMentor = {
   credentials: { label: string }[];
   blocked_at: string | null;
   created_at: string;
+  // First Line Presents: offers_mentoring false = approved for Presents only (never in the marketplace)
+  offers_mentoring: boolean;
+  presents_enabled: boolean;
+  presents_price_cents: number | null;
+  presents_blocked_at: string | null;
   profiles: { email: string; full_name: string } | null;
   stats: MentorStats | null;
 };
@@ -49,7 +54,7 @@ export type MentorStats = {
 export async function listMentors(): Promise<AdminMentor[]> {
   const { data, error } = await supabase
     .from("athletes")
-    .select("user_id, slug, display_name, status, tier, highest_level, current_team, positions, bio, verified, capacity_on_deck, badges, credentials, eliteprospects_url, listed, featured, price_overrides, application:athlete_applications(motivations, motivation_other, special_circumstances, age, gender, agreement_version, agreement_signed_name, agreement_residence, agreement_guardian_name, agreement_signed_at), blocked_at, created_at, profiles!athletes_user_id_fkey(email, full_name)")
+    .select("user_id, slug, display_name, status, tier, highest_level, current_team, positions, bio, verified, capacity_on_deck, badges, credentials, eliteprospects_url, listed, featured, price_overrides, offers_mentoring, presents_enabled, presents_price_cents, presents_blocked_at, application:athlete_applications(motivations, motivation_other, special_circumstances, age, gender, agreement_version, agreement_signed_name, agreement_residence, agreement_guardian_name, agreement_signed_at), blocked_at, created_at, profiles!athletes_user_id_fkey(email, full_name)")
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
@@ -139,12 +144,14 @@ export type AdminPayout = {
   athletes: { display_name: string; stripe_account_id: string | null; payouts_enabled: boolean } | null;
   jobs: { id: string; delivered_at: string | null; orders: { players: { first_name: string; last_name: string } | null } } | null;
   sessions: { id: string; scheduled_at: string | null; players: { first_name: string; last_name: string } | null } | null;
+  presents_request_id: string | null;
+  presents_requests: { id: string; recipient_name: string; occasion: string } | null;
 };
 
 export async function listPayouts(): Promise<AdminPayout[]> {
   const { data, error } = await supabase
     .from("payouts")
-    .select("id, status, amount_cents, currency, held_reason, note, created_at, paid_at, stripe_transfer_id, error, attempted_at, athletes(display_name, stripe_account_id, payouts_enabled), jobs(id, delivered_at, orders(players(first_name, last_name))), sessions(id, scheduled_at, players(first_name, last_name))")
+    .select("id, status, amount_cents, currency, held_reason, note, created_at, paid_at, stripe_transfer_id, error, attempted_at, athletes(display_name, stripe_account_id, payouts_enabled), jobs(id, delivered_at, orders(players(first_name, last_name))), sessions(id, scheduled_at, players(first_name, last_name)), presents_request_id, presents_requests(id, recipient_name, occasion)")
     .order("created_at", { ascending: false })
     .limit(300);
   if (error) throw new Error(error.message);

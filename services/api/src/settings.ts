@@ -99,3 +99,27 @@ export function paymentPath(s: Settings, stripeConfigured: boolean, appEnv: stri
 export function shareCents(price: number, pct: number) {
   return Math.round((price * pct) / 100);
 }
+
+// First Line Presents: personal video messages. Every rule is admin-editable under settings.rules.
+export const PRESENTS_OCCASIONS = ["Birthday", "Good luck", "Congratulations", "Get well", "Pep talk", "Thank a coach", "Team shout-out", "Other"];
+export function presentsRules(s: Settings) {
+  const r = s.rules as Record<string, unknown>;
+  const num = (v: unknown, d: number) => (typeof v === "number" && Number.isFinite(v) ? v : d);
+  return {
+    enabled: r.presents_enabled !== false,
+    sharePct: num(r.presents_share_pct, 30),
+    minCents: num(r.presents_min_cents, 2000),
+    maxCents: num(r.presents_max_cents, 50000),
+    maxDays: num(r.presents_max_days, 7),
+    review: (r.presents_review === "all" || r.presents_review === "none" ? r.presents_review : "minors") as "minors" | "all" | "none",
+    problemDays: num(r.presents_problem_days, 7),
+    occasions: Array.isArray(r.presents_occasions) && r.presents_occasions.length ? (r.presents_occasions as string[]) : PRESENTS_OCCASIONS,
+    blocklist: Array.isArray(r.presents_blocklist) ? (r.presents_blocklist as string[]) : [],
+    minSeconds: 10,
+    maxSeconds: 180,
+  };
+}
+export function presentsSplit(price: number, sharePct: number) {
+  const platform = Math.round((price * sharePct) / 100);
+  return { athlete: price - platform, platform };
+}

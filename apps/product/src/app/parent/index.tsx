@@ -61,6 +61,19 @@ export default function ParentHome() {
           </Link>
         </Card>
       </View>
+      {/* First Line Presents is an extra, kept below and quieter than the mentoring cards. */}
+      <Card style={s.slim}>
+        <Label>First Line Presents</Label>
+        <Body style={{ color: colors.muted }}>A personal video message from an FLP athlete for a birthday, a big game or a comeback.</Body>
+        <View style={s.row}>
+          <Link href="/presents" asChild>
+            <Button title="Browse athletes" variant="ghost" small />
+          </Link>
+          <Link href="/presents/mine" asChild>
+            <Button title="My videos" variant="ghost" small />
+          </Link>
+        </View>
+      </Card>
     </Screen>
   );
 }
@@ -69,4 +82,6 @@ const s = StyleSheet.create({
   topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: space.lg },
   cell: { flexGrow: 1, flexBasis: 320 },
+  slim: { gap: space.sm, paddingVertical: space.lg },
+  row: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
 });
