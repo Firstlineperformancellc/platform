@@ -6,11 +6,14 @@ import { Card } from "@/components/ui/Card";
 import { Screen } from "@/components/ui/Screen";
 import { Body, H1, H3, Label, Small } from "@/components/ui/Text";
 import { useAuth } from "@/lib/auth";
+import { presentsRules } from "@/lib/presents";
+import { useSettings } from "@/lib/settings";
 import { firstName } from "@/lib/types";
 import { colors, space } from "@/theme/tokens";
 
 export default function ParentHome() {
   const { profile, signOut } = useAuth();
+  const { settings } = useSettings();
   return (
     <Screen title="Dashboard" width="page">
       <View style={s.topbar}>
@@ -61,7 +64,8 @@ export default function ParentHome() {
           </Link>
         </Card>
       </View>
-      {/* First Line Presents is an extra, kept below and quieter than the mentoring cards. */}
+      {/* First Line Presents is an extra, kept below and quieter than the mentoring cards, and follows the admin switch. */}
+      {presentsRules(settings?.rules).enabled ? (
       <Card style={s.slim}>
         <Label>First Line Presents</Label>
         <Body style={{ color: colors.muted }}>A personal video message from an FLP athlete for a birthday, a big game or a comeback.</Body>
@@ -74,6 +78,7 @@ export default function ParentHome() {
           </Link>
         </View>
       </Card>
+      ) : null}
     </Screen>
   );
 }

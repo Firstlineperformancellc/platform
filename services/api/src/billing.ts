@@ -1,7 +1,7 @@
 import type Stripe from "stripe";
 import { stripe } from "./stripe.js";
 import { admin } from "./supabase.js";
-import { getSettings } from "./settings.js";
+import { getSettings, presentsRules } from "./settings.js";
 import { alreadySent, appUrl, notify } from "./notify.js";
 
 // Money movement that touches Stripe: refunds, transfers to mentors, and the automatic payout run.
@@ -89,10 +89,13 @@ export async function autoPayoutsTick() {
   const retryAfter = new Date(Date.now() - 6 * 3600000).toISOString();
   // Payouts tried in the last six hours are left out of the query itself, so a backlog that cannot be paid
   // (a mentor who has not onboarded, a free-preview sale) never crowds out the ones that can.
-  const { data: due } = await admin.from("payouts").select("id").eq("status", "owed").lt("created_at", before)
+  const { data: due } = await admin.from("payouts").select("id, presents_request_id, created_at").eq("status", "owed").lt("created_at", before)
     .or(`attempted_at.is.null,attempted_at.lt.${retryAfter}`).order("created_at").limit(25);
+  const problemWindow = presentsRules(s).problemDays * 86400000;
   let paid = 0, failed = 0;
   for (const p of due ?? []) {
+    // a Presents payout also waits out the buyer's problem window, whichever is longer
+    if (p.presents_request_id && Date.now() - new Date(p.created_at).getTime() < problemWindow) continue;
     const res = await payPayoutViaStripe(p.id, null);
     if (res.ok) { paid++; continue; }
     failed++;

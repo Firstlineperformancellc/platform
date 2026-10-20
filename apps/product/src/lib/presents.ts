@@ -56,7 +56,7 @@ export async function getProvider(slug: string): Promise<PresentsProvider | null
 export const PRESENTS_OCCASIONS = ["Birthday", "Good luck", "Congratulations", "Get well", "Pep talk", "Thank a coach", "Team shout-out", "Other"];
 export type PresentsRules = {
   enabled: boolean; sharePct: number; minCents: number; maxCents: number; maxDays: number;
-  review: "minors" | "all" | "none"; problemDays: number; occasions: string[]; blocklist: string[];
+  review: "minors" | "all"; problemDays: number; occasions: string[]; blocklist: string[];
 };
 export function presentsRules(rules: Record<string, unknown> | undefined): PresentsRules {
   const r = rules ?? {};
@@ -67,7 +67,7 @@ export function presentsRules(rules: Record<string, unknown> | undefined): Prese
     minCents: num(r.presents_min_cents, 2000),
     maxCents: num(r.presents_max_cents, 50000),
     maxDays: num(r.presents_max_days, 7),
-    review: (r.presents_review === "all" || r.presents_review === "none" ? r.presents_review : "minors") as PresentsRules["review"],
+    review: (r.presents_review === "all" ? "all" : "minors") as PresentsRules["review"],
     problemDays: num(r.presents_problem_days, 7),
     occasions: Array.isArray(r.presents_occasions) && r.presents_occasions.length ? (r.presents_occasions as string[]) : PRESENTS_OCCASIONS,
     blocklist: Array.isArray(r.presents_blocklist) ? (r.presents_blocklist as string[]) : [],
@@ -88,6 +88,7 @@ export type NewRequest = {
   team?: string;
   buyerEmail?: string; // required when not signed in
   buyerName?: string;
+  buyerAdult?: boolean; // required when not signed in: Presents are bought by adults
 };
 export type CreateResult = { requestId: string; token: string; checkoutUrl?: string; devPaid?: boolean };
 export const createRequest = (body: NewRequest) => api<CreateResult>("/presents/requests", { method: "POST", body: JSON.stringify(body) });
@@ -182,4 +183,4 @@ export const adminPlayback = (id: string) => api<RequestPlayback>(`/presents/adm
 export const adminResolve = (id: string) => api<{ ok: true }>(`/presents/admin/${id}/resolve`, { method: "POST" });
 // Switch an athlete's Presents off (or back on): PATCH /admin/mentors/:id { presents_blocked: boolean } (lib/admin.ts updateMentor can send it).
 
-export const money = (cents: number) => `$${Math.round(cents / 100).toLocaleString("en-US")}`;
+export const money = (cents: number) => (cents % 100 ? `$${(cents / 100).toFixed(2)}` : `$${Math.round(cents / 100).toLocaleString("en-US")}`);

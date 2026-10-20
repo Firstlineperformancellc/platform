@@ -75,7 +75,7 @@ export function MentorCard({ mentor: m, settings, selected, onPress, compact, op
           </Pill>
         ))}
         {/* First Line Presents is a side offer: a quiet badge, no price on the tile. */}
-        {m.presents_enabled ? <Pill tone="muted">Presents</Pill> : null}
+        {m.presents_enabled ? <Pill tone="muted">Video messages</Pill> : null}
       </View>
       {selected ? <Pill tone="gold">{selected === "first" ? "First choice" : "Second choice"}</Pill> : null}
     </Card>

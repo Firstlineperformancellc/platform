@@ -48,7 +48,7 @@ export default function AdminSettings() {
   const [rules, setRules] = useState<Record<string, string>>({});
   const [payoutDays, setPayoutDays] = useState("");
   // First Line Presents, edited as text and sent as the API expects (cents, whole numbers, word lists)
-  const [pr, setPr] = useState({ enabled: true, share: "", min: "", max: "", days: "", review: "minors" as "minors" | "all" | "none", problemDays: "", occasions: "", blocklist: "" });
+  const [pr, setPr] = useState({ enabled: true, share: "", min: "", max: "", days: "", review: "minors" as "minors" | "all", problemDays: "", occasions: "", blocklist: "" });
   const [lists, setLists] = useState<Record<string, string>>({});
   const [adminEmail, setAdminEmail] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -131,7 +131,7 @@ export default function AdminSettings() {
         <Small>
           Personal video messages from FLP athletes, sold alongside mentoring. Mentors switch it on from My profile; athletes approved for Presents only never appear in the mentor marketplace. The floor and ceiling bound what an athlete may charge.
         </Small>
-        <Checkbox label="First Line Presents is on" checked={pr.enabled} onChange={(v) => setPr({ ...pr, enabled: v })} hint="Off hides it everywhere and stops new requests. Requests already paid are still finished." />
+        <Checkbox label="First Line Presents is on" checked={pr.enabled} onChange={(v) => setPr({ ...pr, enabled: v })} hint="Off empties the Presents pages, removes the badges and cards, and stops new requests. Requests already paid are still finished." />
         <View style={s.grid}>
           <View style={s.cell}><TextField label="FLP share (%)" value={pr.share} onChangeText={(v) => setPr({ ...pr, share: v.replace(/[^0-9]/g, "") })} keyboardType="number-pad" hint="The athlete keeps the rest." /></View>
           <View style={s.cell}><TextField label="Lowest price ($)" value={pr.min} onChangeText={(v) => setPr({ ...pr, min: v })} keyboardType="decimal-pad" /></View>
@@ -141,9 +141,9 @@ export default function AdminSettings() {
         </View>
         <Choice
           label="Review before delivery"
-          options={[{ key: "minors", label: "Under-18 recipients" }, { key: "all", label: "All videos" }, { key: "none", label: "None" }]}
+          options={[{ key: "minors", label: "Under-18 recipients" }, { key: "all", label: "All videos" }]}
           value={pr.review}
-          onChange={(v) => setPr({ ...pr, review: v as "minors" | "all" | "none" })}
+          onChange={(v) => setPr({ ...pr, review: v as "minors" | "all" })}
           hint="Reviewed videos wait under Presents until an admin approves them."
         />
         <TextField label="Occasions" value={pr.occasions} onChangeText={(v) => setPr({ ...pr, occasions: v })} hint="Comma-separated. Blank restores the standard list." />

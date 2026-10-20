@@ -99,7 +99,7 @@ export default function AthletePresents() {
                 <H3>For {r.recipient_name}</H3>
                 <Pill tone="gold">Being checked by FLP</Pill>
               </View>
-              <Body style={{ color: colors.muted }}>Your video is in. FLP checks every video made for someone under 18 before it goes out, usually within a day.</Body>
+              <Body style={{ color: colors.muted }}>Your video is in. {r.recipient_minor ? "FLP checks every video made for someone under 18 before it goes out" : "FLP checks this video before it goes out"}, usually within a day.</Body>
               <Small>{r.occasion} · you earn {money(r.athlete_share_cents)} once it's delivered</Small>
             </Card>
           ))}

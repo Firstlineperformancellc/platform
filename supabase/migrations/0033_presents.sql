@@ -1,4 +1,4 @@
--- 0033 First Line Presents: personal video messages from FLP athletes (spec docs/drafts/VIDEO_MESSAGES_SPEC_2026-10-20.md,
+-- 0033 First Line Presents: personal video messages from FLP athletes (spec docs/PRESENTS_SPEC_2026-10-20.md,
 -- named by Scott 2026-10-20). Providers are approved athletes: mentors who opt in, or athletes approved
 -- for Presents only (offers_mentoring = false; they never enter the marketplace or receive jobs).
 -- Buyers are signed-in parents or the public (email + private link). Every write goes through the API.

@@ -27,3 +27,6 @@ deploy/demo/avatars/
 
 # Scott's FLP business paperwork (receipts, invoices): not part of the handover repo
 finance/
+
+# Finder/iCloud duplicate copies ("name 2.ext") must never be committed
+* 2.*

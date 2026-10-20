@@ -13,6 +13,7 @@ import { supabase } from "@/lib/supabase";
 import { colors, space } from "@/theme/tokens";
 
 type Row = {
+  presents_request_id?: string | null;
   id: string; status: "owed" | "held" | "paid" | "voided" | "failed"; amount_cents: number; created_at: string; paid_at: string | null; held_reason: string | null;
   jobs: { delivered_at: string | null } | null; sessions: { scheduled_at: string | null; duration_minutes: number | null } | null;
 };
@@ -26,7 +27,7 @@ export default function Earnings() {
   const [rows, setRows] = useState<Row[] | null>(null);
   useFocusEffect(useCallback(() => {
     if (!session) return;
-    supabase.from("payouts").select("id, status, amount_cents, created_at, paid_at, held_reason, jobs(delivered_at), sessions(scheduled_at, duration_minutes)").eq("athlete_id", session.user.id).order("created_at", { ascending: false }).limit(300)
+    supabase.from("payouts").select("id, status, amount_cents, created_at, paid_at, held_reason, presents_request_id, jobs(delivered_at), sessions(scheduled_at, duration_minutes)").eq("athlete_id", session.user.id).order("created_at", { ascending: false }).limit(300)
       .then(({ data }) => setRows((data ?? []) as unknown as Row[]));
   }, [session]));
   if (!rows) return <Loading />;
@@ -48,11 +49,11 @@ export default function Earnings() {
       </View>
       <Card>
         <H3>Every payout</H3>
-        {rows.length === 0 ? <Body style={{ color: colors.muted }}>Nothing yet. Your share appears here the moment you deliver a breakdown or finish a Film Room.</Body> : null}
+        {rows.length === 0 ? <Body style={{ color: colors.muted }}>Nothing yet. Your share appears here the moment you deliver a breakdown, finish a Film Room or send a First Line Presents video.</Body> : null}
         {rows.map((r) => (
           <View key={r.id} style={s.line}>
             <View style={{ flex: 1, minWidth: 180 }}>
-              <Body>{r.sessions ? `Film Room${r.sessions.duration_minutes ? ` · ${r.sessions.duration_minutes} min` : ""}` : "Breakdown"}</Body>
+              <Body>{r.presents_request_id ? "First Line Presents video" : r.sessions ? `Film Room${r.sessions.duration_minutes ? ` · ${r.sessions.duration_minutes} min` : ""}` : "Breakdown"}</Body>
               <Small>{r.sessions ? day(r.sessions.scheduled_at) : `delivered ${day(r.jobs?.delivered_at ?? r.created_at)}`}{r.paid_at ? ` · paid ${day(r.paid_at)}` : ""}{r.status === "held" && r.held_reason ? ` · ${r.held_reason}` : ""}</Small>
             </View>
             <Body style={{ color: r.status === "voided" ? colors.faint : colors.ink }}>{money(r.amount_cents)}</Body>

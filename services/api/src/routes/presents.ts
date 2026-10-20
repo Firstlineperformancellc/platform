@@ -9,7 +9,7 @@ import { checkoutDownMessage, providerFailed } from "../failures.js";
 import { notifyAdmins, refundPayment } from "../billing.js";
 import {
   ATHLETE_VIEW_COLS, afterPresentsPaid, closeWithRefund, contactIn, deliverRequest, flagsIn, loadRequest, money, newShareToken,
-  PRESENTS_REQUEST_COLS, sendRequest, tellAthleteNewRequest, tellBuyer, tokenMatches, type PresentsRequest,
+  PRESENTS_REQUEST_COLS, esc, sendRequest, tellAthleteNewRequest, tellBuyer, tokenMatches, type PresentsRequest,
 } from "../presents.js";
 
 // First Line Presents. Buying needs no account: a public buyer gives an email and gets a private link.
@@ -17,7 +17,7 @@ import {
 export const presents = new Hono();
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+const str = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/[<>]/g, "").trim().slice(0, max) : ""); // no markup in anything we email
 
 async function requireAdmin(authorization: string | undefined) {
   const user = await userFromBearer(authorization);
@@ -73,6 +73,8 @@ presents.post("/requests", async (c) => {
   if (!instructions) return c.json({ error: "tell the athlete what to say" }, 400);
   if (!EMAIL.test(buyerEmail)) return c.json({ error: "enter the email address the video should go to" }, 400);
   if (body.recipientMinor !== true && body.recipientMinor !== false) return c.json({ error: "tell us whether the recipient is under 18" }, 400);
+  // Presents are bought by adults. A signed-in parent already is one; a guest says so.
+  if (!user && body.buyerAdult !== true) return c.json({ error: "First Line Presents is bought by adults. Tick the box to confirm you're 18 or over; a parent or guardian can order for a young player." }, 400);
   for (const [field, text] of [["recipient's name", recipientName], ["from name", fromName], ["message", instructions], ["team", team]] as const) {
     const found = contactIn(text);
     if (found) return c.json({ error: `Leave ${found} out of the ${field}. The athlete only records a video, so there's nothing to reply to.` }, 400);
@@ -173,7 +175,7 @@ presents.post("/requests/:id/problem", async (c) => {
   if (text.length < 10) return c.json({ error: "tell us what went wrong, in a sentence or two" }, 400);
   await admin.from("presents_requests").update({ problem_text: text, problem_at: new Date().toISOString() }).eq("id", r.id);
   await admin.from("payouts").update({ status: "held", held_reason: "buyer reported a problem" }).eq("presents_request_id", r.id).eq("status", "owed");
-  await notifyAdmins("presents.problem", "A family reported a problem with a Presents video", `<p>${text}</p><p>The athlete's payout is on hold until you decide.</p><p><a href="${appUrl("/admin/presents")}" style="color:#d4a32c">Open First Line Presents</a></p>`, r.id);
+  await notifyAdmins("presents.problem", "A family reported a problem with a Presents video", `<p>${esc(text)}</p><p>The athlete's payout is on hold until you decide.</p><p><a href="${appUrl("/admin/presents")}" style="color:#d4a32c">Open First Line Presents</a></p>`, r.id);
   await audit(null, "presents.problem", r.id, { text });
   return c.json({ ok: true });
 });
@@ -228,7 +230,7 @@ presents.post("/requests/:id/video", async (c) => {
   const got = await athleteOwned(c);
   if (got.error) return c.json({ error: got.error.error }, got.error.status);
   const { r, user } = got;
-  if (!["open", "in_review"].includes(r.status)) return c.json({ error: r.status === "flagged" ? "FLP is still looking at this request" : `this request is ${r.status}` }, 400);
+  if (r.status !== "open") return c.json({ error: r.status === "flagged" ? "FLP is still looking at this request" : r.status === "in_review" ? "FLP is checking the video you sent; wait for the result" : `this request is ${r.status}` }, 400);
   const body = (await c.req.json().catch(() => ({}))) as { mediaId?: unknown };
   const mediaId = str(body.mediaId, 60);
   const { data: m } = await admin.from("media").select("id, owner_id, purpose").eq("id", mediaId).maybeSingle();
@@ -242,7 +244,7 @@ presents.post("/requests/:id/send", async (c) => {
   const got = await athleteOwned(c);
   if (got.error) return c.json({ error: got.error.error }, got.error.status);
   const { r, user } = got;
-  if (!["open", "in_review"].includes(r.status)) return c.json({ error: `this request is ${r.status}` }, 400);
+  if (r.status !== "open") return c.json({ error: r.status === "in_review" ? "FLP is checking the video you sent; wait for the result" : `this request is ${r.status}` }, 400);
   if (!r.video_media_id) return c.json({ error: "upload the video first" }, 400);
   const res = await sendRequest(r, r.video_media_id);
   if (!res.ok) return c.json({ error: res.error }, 400);
@@ -293,7 +295,8 @@ presents.post("/admin/:id/approve", async (c) => {
   const r = await loadRequest(c.req.param("id"));
   if (!r) return c.json({ error: "not found" }, 404);
   if (r.status !== "in_review" || !r.video_media_id) return c.json({ error: "nothing is waiting for approval on this request" }, 400);
-  await deliverRequest(r, me.id);
+  const delivered = await deliverRequest(r, me.id);
+  if (!delivered) return c.json({ error: "this request changed while you were looking; reload" }, 409);
   await audit(me.id, "presents.approve", r.id);
   return c.json({ ok: true });
 });
@@ -311,7 +314,7 @@ presents.post("/admin/:id/reject", async (c) => {
   const due = new Date(Math.max(Date.now(), r.due_at ? new Date(r.due_at).getTime() : 0) + 2 * 86400000).toISOString();
   await admin.from("presents_requests").update({ status: "open", video_media_id: null, review_note: note, reviewed_by: me.id, reviewed_at: new Date().toISOString(), due_at: due, reminded: 0 }).eq("id", r.id);
   await notify(r.athlete_id, "presents.rerecord", "Please re-record a First Line Presents video",
-    `<p>FLP looked at your video for ${r.recipient_name} and asked for another take: <i>${note}</i></p><p>You have until ${new Date(due).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "America/New_York" })}.</p><p><a href="${appUrl("/athlete/presents")}" style="color:#d4a32c">Open your requests</a></p>`, { targetId: r.id });
+    `<p>FLP looked at your video for ${esc(r.recipient_name)} and asked for another take: <i>${esc(note)}</i></p><p>You have until ${new Date(due).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "America/New_York" })}.</p><p><a href="${appUrl("/athlete/presents")}" style="color:#d4a32c">Open your requests</a></p>`, { targetId: r.id });
   await audit(me.id, "presents.reject", r.id, { note });
   return c.json({ ok: true });
 });
@@ -323,8 +326,11 @@ presents.post("/admin/:id/release", async (c) => {
   const r = await loadRequest(c.req.param("id"));
   if (!r) return c.json({ error: "not found" }, 404);
   if (r.status !== "flagged") return c.json({ error: "this request isn't held" }, 400);
-  await admin.from("presents_requests").update({ status: "open", reviewed_by: me.id, reviewed_at: new Date().toISOString() }).eq("id", r.id);
-  await tellAthleteNewRequest({ ...r, status: "open" });
+  // FLP's review time never counts against the athlete: their window starts now.
+  const { data: ath } = await admin.from("athletes").select("presents_days").eq("user_id", r.athlete_id).maybeSingle();
+  const due = new Date(Date.now() + (ath?.presents_days ?? 7) * 86400000).toISOString();
+  await admin.from("presents_requests").update({ status: "open", due_at: due, reminded: 0, reviewed_by: me.id, reviewed_at: new Date().toISOString() }).eq("id", r.id);
+  await tellAthleteNewRequest({ ...r, status: "open", due_at: due });
   await audit(me.id, "presents.release", r.id);
   return c.json({ ok: true });
 });

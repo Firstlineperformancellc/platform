@@ -111,7 +111,7 @@ export function presentsRules(s: Settings) {
     minCents: num(r.presents_min_cents, 2000),
     maxCents: num(r.presents_max_cents, 50000),
     maxDays: num(r.presents_max_days, 7),
-    review: (r.presents_review === "all" || r.presents_review === "none" ? r.presents_review : "minors") as "minors" | "all" | "none",
+    review: (r.presents_review === "all" ? "all" : "minors") as "minors" | "all", // under-18 videos are always checked
     problemDays: num(r.presents_problem_days, 7),
     occasions: Array.isArray(r.presents_occasions) && r.presents_occasions.length ? (r.presents_occasions as string[]) : PRESENTS_OCCASIONS,
     blocklist: Array.isArray(r.presents_blocklist) ? (r.presents_blocklist as string[]) : [],

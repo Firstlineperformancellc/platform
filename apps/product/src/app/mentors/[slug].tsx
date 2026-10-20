@@ -162,16 +162,6 @@ export default function MentorProfile() {
       </>
       )}
 
-      {/* First Line Presents sits after the mentoring offers, in one quiet line. */}
-      {mentor.presents_enabled && mentor.presents_price_cents != null ? (
-        <Card style={s.presents}>
-          <Label>Also from {first}</Label>
-          <Body style={{ color: colors.muted }}>First Line Presents: a personal video message, {presentsMoney(mentor.presents_price_cents)}.</Body>
-          <Link href={{ pathname: "/presents/[slug]", params: { slug: mentor.slug } }} asChild>
-            <Button title="Request a video" variant="secondary" small />
-          </Link>
-        </Card>
-      ) : null}
 
       {reviews.length > 0 ? (
         <Card>
@@ -187,6 +177,17 @@ export default function MentorProfile() {
               {r.review ? <Body>{r.review}</Body> : null}
             </View>
           ))}
+        </Card>
+      ) : null}
+
+      {/* First Line Presents is the last thing on the page, after the mentoring offers and the reviews. */}
+      {mentor.presents_enabled && mentor.presents_price_cents != null ? (
+        <Card style={s.presents}>
+          <Label>Also from {first}</Label>
+          <Body style={{ color: colors.muted }}>First Line Presents: a personal video message, {presentsMoney(mentor.presents_price_cents)}.</Body>
+          <Link href={{ pathname: "/presents/[slug]", params: { slug: mentor.slug } }} asChild>
+            <Button title="Request a video" variant="secondary" small />
+          </Link>
         </Card>
       ) : null}
     </Screen>

@@ -4,6 +4,7 @@ import { Linking, Platform, StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
 import { Brand } from "@/components/Brand";
 import { Button } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { Card } from "@/components/ui/Card";
 import { Choice } from "@/components/ui/Choice";
 import { Dropdown } from "@/components/ui/Dropdown";
@@ -36,6 +37,7 @@ export default function PresentsRequest() {
   const [instructions, setInstructions] = useState("");
   const [team, setTeam] = useState("");
   const [email, setEmail] = useState("");
+  const [adult, setAdult] = useState(false);
   const [name, setName] = useState("");
 
   useEffect(() => {
@@ -79,6 +81,7 @@ export default function PresentsRequest() {
     if (!signedInEmail && !email.trim()) return setError("Enter the email address the video should go to.");
     setBusy(true);
     try {
+      if (!signedInEmail && !adult) { setError("First Line Presents is bought by adults. Tick the box to confirm you're 18 or over; a parent or guardian can order for a young player."); setBusy(false); return; }
       const res = await createRequest({
         slug: provider.slug,
         recipientName: recipient.trim(),
@@ -89,6 +92,7 @@ export default function PresentsRequest() {
         team: team.trim() || undefined,
         buyerEmail: signedInEmail ? undefined : email.trim(),
         buyerName: signedInEmail ? undefined : name.trim() || undefined,
+        buyerAdult: signedInEmail ? undefined : adult,
       });
       if (res.checkoutUrl) {
         if (Platform.OS === "web") window.location.assign(res.checkoutUrl);
@@ -134,6 +138,7 @@ export default function PresentsRequest() {
         <>
           <TextField label="Your email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" placeholder="Where the private link should go" />
           <TextField label="Your name (optional)" value={name} onChangeText={setName} maxLength={120} autoCapitalize="words" autoComplete="name" />
+          <Checkbox label="I'm 18 or over. A parent or guardian can order for a young player." checked={adult} onChange={setAdult} />
         </>
       )}
       <Body style={{ color: colors.muted }}>
@@ -196,6 +201,7 @@ export default function PresentsRequest() {
 
       <Card>
         <H3>Request a video</H3>
+        <Small>No account needed. You pay through Stripe, and the private link to the video goes to your email.</Small>
         {cancelled ? <Body style={{ color: colors.warn }}>Checkout was cancelled and nothing was charged. The form is here when you're ready.</Body> : null}
         {provider.available ? (
           form

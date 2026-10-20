@@ -58,7 +58,7 @@ export default function PresentsDirectory() {
         <H1>A personal video message from an FLP athlete</H1>
         <Body style={{ color: colors.muted }}>
           Pick an athlete and an occasion, say who it's for and what to say, and they record it on their phone. It arrives as a
-          private link, and FLP checks every video made for a young athlete before it goes out.
+          private link, and FLP checks every video made for a young athlete before it goes out. No account needed: the video arrives in your email as a private link.
         </Body>
       </View>
       {error ? <Body style={{ color: colors.danger }}>{error}</Body> : null}

@@ -198,7 +198,7 @@ export default function MentorProfileScreen() {
           <Pill tone={p.status === "approved" ? "ok" : "warn"}>{p.status}</Pill>
           {p.verified ? <Pill tone="ok">Verified by FLP</Pill> : null}
           {p.status === "approved" ? (
-            <Link href={{ pathname: "/mentors/[slug]", params: { slug: p.slug } }}>
+            <Link href={mentoring ? { pathname: "/mentors/[slug]", params: { slug: p.slug } } : { pathname: "/presents/[slug]", params: { slug: p.slug } }}>
               <Small style={{ color: colors.gold }}>See your public page</Small>
             </Link>
           ) : null}
@@ -221,7 +221,7 @@ export default function MentorProfileScreen() {
           options={settings.taxonomy.levels.map((l) => ({ key: l.key, label: l.label, hint: l.tier ? TIER_LABEL[l.tier] : "not offered yet" }))}
           value={p.highest_level}
           onChange={(v) => set({ highest_level: v as string })}
-          hint={p.status === "approved" ? "Your tier is set by FLP from this. If you're playing at a lower level now, say so in your bio." : undefined}
+          hint={p.status === "approved" && mentoring ? "Your tier is set by FLP from this. If you're playing at a lower level now, say so in your bio." : undefined}
         />
         {mentoring ? (
         <Choice label="Positions you review" options={settings.taxonomy.positions} value={p.positions} onChange={(v) => set({ positions: v as HockeyPosition[] })} multiple />
@@ -316,7 +316,7 @@ export default function MentorProfileScreen() {
       {pf && ps ? (
         <Card>
           <H3>{PRESENTS_NAME}</H3>
-          <Body style={{ color: colors.muted }}>Personal video messages for families and fans, separate from your mentoring work. You set the price; FLP handles payment and pays your share the same way.</Body>
+          <Body style={{ color: colors.muted }}>Personal video messages for families, teammates and coaches, separate from your mentoring work. You set the price; FLP handles payment and pays your share the same way.</Body>
           {presentsBlocked ? (
             <View style={{ gap: space.sm }}>
               <Pill tone="danger">Switched off by FLP</Pill>

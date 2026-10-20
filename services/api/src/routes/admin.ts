@@ -553,7 +553,7 @@ adminRoutes.patch("/settings", async (c) => {
     if (typeof pr.presents_min_cents === "number" && typeof pr.presents_max_cents === "number" && pr.presents_min_cents > pr.presents_max_cents) return c.json({ error: "the Presents floor must not exceed the ceiling" }, 400);
     if (!n("presents_max_days", 1, 14)) return c.json({ error: "presents_max_days must be 1 to 14" }, 400);
     if (!n("presents_problem_days", 0, 30)) return c.json({ error: "presents_problem_days must be 0 to 30" }, 400);
-    if (pr.presents_review !== undefined && !["minors", "all", "none"].includes(pr.presents_review as string)) return c.json({ error: "presents_review must be minors, all or none" }, 400);
+    if (pr.presents_review !== undefined && !["minors", "all"].includes(pr.presents_review as string)) return c.json({ error: "presents_review must be minors or all; videos for under-18 recipients are always checked" }, 400);
     for (const k of ["presents_occasions", "presents_blocklist"]) if (pr[k] !== undefined && !(Array.isArray(pr[k]) && (pr[k] as unknown[]).every((x) => typeof x === "string"))) return c.json({ error: `${k} must be a list of words` }, 400);
   }
   if (pr?.payout_delay_days !== undefined && (!Number.isInteger(pr.payout_delay_days) || (pr.payout_delay_days as number) < 0 || (pr.payout_delay_days as number) > 60)) return c.json({ error: "payout delay is a whole number of days from 0 to 60" }, 400);

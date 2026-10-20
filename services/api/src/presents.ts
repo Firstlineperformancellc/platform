@@ -32,6 +32,8 @@ export function tokenMatches(given: string | undefined | null, actual: string) {
 }
 export const viewUrl = (r: { id: string; share_token: string }) => appUrl(`/presents/view?r=${r.id}&t=${r.share_token}`);
 export const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+// Everything a buyer or athlete typed is escaped before it goes into an email.
+export const esc = (t: unknown) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
 
 // --- Screening ---------------------------------------------------------------------------------
 // Contact details are refused outright: the request must stay one-way. Words on FLP's list hold the
@@ -85,10 +87,10 @@ export async function afterPresentsPaid(id: string, paymentIntent: string | null
     ...(paymentIntent ? { stripe_payment_intent_id: paymentIntent } : {}),
   }).eq("id", id).eq("status", "draft");
   await tellBuyer(r, "presents.receipt", `Your First Line Presents request is in`,
-    `<p>Thanks. ${a.name} has until <b>${when(due.toISOString())}</b> to record a video for ${r.recipient_name}. We'll email you the moment it's ready. If ${a.name} can't do it, you're refunded automatically.</p><p>Paid: ${money(r.price_cents)}.</p>` + link(viewUrl(r), "See your request"));
+    `<p>Thanks. ${esc(a.name)} has until <b>${when(due.toISOString())}</b> to record a video for ${esc(r.recipient_name)}. We'll email you the moment it's ready. If ${esc(a.name)} can't do it, you're refunded automatically.</p><p>Paid: ${money(r.price_cents)}.</p>` + link(viewUrl(r), "See your request"));
   if (flagged) {
     await notifyAdmins("presents.flagged", "A Presents request needs a look before the athlete sees it",
-      `<p>A request for ${a.name} used words on the review list (${r.flags.join(", ")}). Release it to the athlete, or refund it.</p>` + link(appUrl("/admin/presents"), "Open First Line Presents"), id);
+      `<p>A request for ${esc(a.name)} used words on the review list (${esc(r.flags.join(", "))}). Release it to the athlete, or refund it.</p>` + link(appUrl("/admin/presents"), "Open First Line Presents"), id);
   } else {
     await tellAthleteNewRequest({ ...r, due_at: due.toISOString() });
   }
@@ -96,7 +98,7 @@ export async function afterPresentsPaid(id: string, paymentIntent: string | null
 
 export async function tellAthleteNewRequest(r: PresentsRequest) {
   await notify(r.athlete_id, "presents.new", "A First Line Presents request is waiting for you",
-    `<p>Someone asked you for a <b>${r.occasion.toLowerCase()}</b> video for <b>${r.recipient_name}</b>. You earn ${money(r.athlete_share_cents)}. Record it on your phone and send it by <b>${r.due_at ? when(r.due_at) : "the due date"}</b>.</p>` + link(appUrl("/athlete/presents"), "Open your requests"), { targetId: r.id });
+    `<p>Someone asked you for a <b>${esc(r.occasion.toLowerCase())}</b> video for <b>${esc(r.recipient_name)}</b>. You earn ${money(r.athlete_share_cents)}. Record it on your phone and send it by <b>${r.due_at ? when(r.due_at) : "the due date"}</b>.</p>` + link(appUrl("/athlete/presents"), "Open your requests"), { targetId: r.id });
 }
 
 // A video uploaded and sent by the athlete: deliver it, or hold it for FLP when the recipient is a child.
@@ -113,9 +115,9 @@ export async function sendRequest(r: PresentsRequest, mediaId: string) {
   if (review) {
     await admin.from("presents_requests").update({ status: "in_review", video_media_id: mediaId, review_note: null }).eq("id", r.id);
     await notifyAdmins("presents.review", "A Presents video is waiting for your check",
-      `<p>A video for ${r.recipient_name} (${r.recipient_minor ? "under 18" : "adult"}) is ready. Watch it and approve or send it back.</p>` + link(appUrl("/admin/presents"), "Open First Line Presents"), r.id);
+      `<p>A video for ${esc(r.recipient_name)} (${r.recipient_minor ? "under 18" : "adult"}) is ready. Watch it and approve or send it back.</p>` + link(appUrl("/admin/presents"), "Open First Line Presents"), r.id);
     await tellBuyer(r, "presents.in_review", "Your First Line Presents video is almost there",
-      `<p>The video for ${r.recipient_name} has been recorded. FLP checks every video made for a young athlete before it goes out, which usually takes less than a day.</p>` + link(viewUrl(r), "See your request"));
+      `<p>The video for ${esc(r.recipient_name)} has been recorded. ${r.recipient_minor ? "FLP checks every video made for a young athlete before it goes out" : "FLP checks this video before it goes out"}, which usually takes less than a day.</p>` + link(viewUrl(r), "See your request"));
     return { ok: true as const, status: "in_review" };
   }
   await deliverRequest({ ...r, video_media_id: mediaId }, null);
@@ -125,18 +127,21 @@ export async function sendRequest(r: PresentsRequest, mediaId: string) {
 export async function deliverRequest(r: PresentsRequest, reviewedBy: string | null) {
   if (!r.video_media_id) throw new Error("no video to deliver");
   const now = new Date().toISOString();
-  await admin.from("presents_requests").update({
+  // Only the first delivery wins: a second approve, or one racing a refund or expiry, changes nothing.
+  const { data: won } = await admin.from("presents_requests").update({
     status: "delivered", delivered_at: now, video_media_id: r.video_media_id,
     ...(reviewedBy ? { reviewed_by: reviewedBy, reviewed_at: now } : {}),
-  }).eq("id", r.id).in("status", ["open", "flagged", "in_review"]);
+  }).eq("id", r.id).in("status", ["open", "in_review"]).select("id");
+  if (!won?.length) return false;
   if (r.athlete_share_cents > 0) {
-    const { data: existing } = await admin.from("payouts").select("id").eq("presents_request_id", r.id).maybeSingle();
-    if (!existing) await admin.from("payouts").insert({ athlete_id: r.athlete_id, presents_request_id: r.id, amount_cents: r.athlete_share_cents, currency: r.currency, status: "owed" });
+    // the unique index on payouts.presents_request_id makes a duplicate insert fail quietly
+    await admin.from("payouts").insert({ athlete_id: r.athlete_id, presents_request_id: r.id, amount_cents: r.athlete_share_cents, currency: r.currency, status: "owed" });
   }
   const a = await athleteName(r.athlete_id);
   await tellBuyer(r, "presents.delivered", `Your video from ${a.name} is ready`,
-    `<p>${a.name} recorded a video for ${r.recipient_name}. Watch it, download it, and share the private link with the family.</p>` + link(viewUrl(r), "Watch the video"));
-  await notify(r.athlete_id, "presents.sent", "Your First Line Presents video went out", `<p>Your video for ${r.recipient_name} was delivered. ${money(r.athlete_share_cents)} is on your ledger.</p>` + link(appUrl("/athlete/earnings"), "See your earnings"), { targetId: r.id });
+    `<p>${esc(a.name)} recorded a video for ${esc(r.recipient_name)}. Watch it, download it, and share the private link with the family.</p>` + link(viewUrl(r), "Watch the video"));
+  await notify(r.athlete_id, "presents.sent", "Your First Line Presents video went out", `<p>Your video for ${esc(r.recipient_name)} was delivered. ${money(r.athlete_share_cents)} is on your ledger.</p>` + link(appUrl("/athlete/earnings"), "See your earnings"), { targetId: r.id });
+  return true;
 }
 
 // Refund everything and close the request. Used for a decline, an expiry, or an admin refund in full.
@@ -153,7 +158,7 @@ export async function closeWithRefund(r: PresentsRequest, status: "declined" | "
   }).eq("id", r.id);
   await admin.from("payouts").update({ status: "voided", note: `Presents request ${status}` }).eq("presents_request_id", r.id).in("status", ["owed", "held"]);
   const a = await athleteName(r.athlete_id);
-  const why = status === "expired" ? `${a.name} didn't record the video in time` : status === "declined" ? `${a.name} couldn't take this request` : "FLP refunded this request";
+  const why = status === "expired" ? `${esc(a.name)} didn't record the video in time` : status === "declined" ? `${esc(a.name)} couldn't take this request` : "FLP refunded this request";
   await tellBuyer(r, `presents.${status}`, `Your First Line Presents request was refunded`,
     `<p>${why}, so ${refundError ? "FLP is processing your refund of" : "we refunded"} ${money(left)}${r.stripe_payment_intent_id ? " to your card" : ""}. ${refundError ? "It will show within a few business days." : "It can take a few business days to show on your statement."}</p>` + link(appUrl("/presents"), "Choose another athlete"));
   if (refundError) await notifyAdmins("refund.failed", "A Presents refund did not go through", `<p>${refundError}</p>` + link(appUrl("/admin/presents"), "Open First Line Presents"), r.id);
@@ -164,7 +169,8 @@ export async function closeWithRefund(r: PresentsRequest, status: "declined" | "
 export async function presentsTick() {
   const now = Date.now();
   const report = { reminders: 0, expired: 0, draftsRemoved: 0 };
-  const { data: open } = await admin.from("presents_requests").select(PRESENTS_REQUEST_COLS).in("status", ["open", "flagged"]).not("due_at", "is", null);
+  // Held (flagged) requests are FLP's to release first; their clock restarts on release, so they never expire here.
+  const { data: open } = await admin.from("presents_requests").select(PRESENTS_REQUEST_COLS).eq("status", "open").not("due_at", "is", null);
   for (const row of (open ?? []) as PresentsRequest[]) {
     const due = new Date(row.due_at!).getTime();
     if (due <= now) {
@@ -172,12 +178,12 @@ export async function presentsTick() {
       report.expired++;
       continue;
     }
-    if (row.status !== "open") continue; // flagged requests are FLP's to release first
+    if (row.paid_at && now - new Date(row.paid_at).getTime() < 3600000) continue; // the new-request email just went out
     const hoursLeft = (due - now) / 3600000;
     const stage = hoursLeft <= 24 ? 2 : hoursLeft <= 48 ? 1 : 0;
     if (stage > row.reminded) {
       await notify(row.athlete_id, `presents.reminder${stage}`, `${stage === 2 ? "One day" : "Two days"} left on a Presents request`,
-        `<p>Your ${row.occasion.toLowerCase()} video for ${row.recipient_name} is due ${when(row.due_at!)}. ${money(row.athlete_share_cents)} is waiting on it; after the due date the family is refunded and the request closes.</p>` + link(appUrl("/athlete/presents"), "Record it now"), { targetId: row.id });
+        `<p>Your ${esc(row.occasion.toLowerCase())} video for ${esc(row.recipient_name)} is due ${when(row.due_at!)}. ${money(row.athlete_share_cents)} is waiting on it; after the due date the family is refunded and the request closes.</p>` + link(appUrl("/athlete/presents"), "Record it now"), { targetId: row.id });
       await admin.from("presents_requests").update({ reminded: stage }).eq("id", row.id);
       report.reminders++;
     }

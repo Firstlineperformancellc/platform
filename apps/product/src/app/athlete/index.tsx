@@ -189,7 +189,7 @@ export default function AthleteHome() {
             <View style={s.row}>
               <View style={{ flex: 1, minWidth: 220, gap: 2 }}>
                 <H3>{PRESENTS_NAME}</H3>
-                <Small>Personal video messages for families and fans. You set the price.</Small>
+                <Small>Personal video messages for families, teammates and coaches. You set the price.</Small>
               </View>
               {presents?.presents_enabled && !presents.presents_blocked_at ? (
                 <Link href="/athlete/presents" asChild>

@@ -52,6 +52,14 @@ export default function PresentsView() {
   useEffect(() => {
     load();
   }, [load]);
+  // Back from Stripe: the webhook that marks the request paid can land a few seconds after the redirect.
+  const [confirmTries, setConfirmTries] = useState(0);
+  const confirming = Boolean(paid) && req?.status === "draft" && confirmTries < 20;
+  useEffect(() => {
+    if (!confirming) return;
+    const id = setTimeout(() => { load(); setConfirmTries((n) => n + 1); }, 3000);
+    return () => clearTimeout(id);
+  }, [confirming, confirmTries, load]);
 
   // Playback (and the download) come with the private token, so a guest can watch. Tokens last two hours; refresh under a long visit.
   const delivered = req?.status === "delivered";
@@ -216,7 +224,14 @@ export default function PresentsView() {
         </>
       ) : null}
 
-      {req.status === "draft" ? (
+      {confirming ? (
+        <Card>
+          <H3>Confirming your payment</H3>
+          <Body style={{ color: colors.muted }}>Stripe took the payment and is telling us now. This page updates on its own in a few seconds.</Body>
+        </Card>
+      ) : null}
+
+      {req.status === "draft" && !confirming ? (
         <Card>
           <H3>Not paid yet</H3>
           <Body style={{ color: colors.muted }}>This request was started but the payment didn't go through. Nothing was charged.</Body>

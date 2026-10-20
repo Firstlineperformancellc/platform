@@ -235,7 +235,7 @@ export default function Apply() {
         />
         <View style={s.agreement}>
           <Label>Independent Contractor Agreement</Label>
-          <Body style={{ color: colors.muted }}>Every FLP athlete works under the {AGREEMENT.title}, which covers both mentoring and First Line Presents videos. It sets out how you're paid, who owns the breakdowns and videos, confidentiality, and keeping young athletes safe. Read it in full, then sign below. Your typed name is your signature.</Body>
+          <Body style={{ color: colors.muted }}>Every FLP athlete works under the {AGREEMENT.title}. It sets out how you're paid, who owns the work, confidentiality, and keeping young athletes safe. First Line Presents videos are made under the same agreement until FLP adds a video addendum, which you'll be asked to sign. Read it in full, then sign below. Your typed name is your signature.</Body>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
             <Button title="Open the agreement (PDF)" variant="secondary" small onPress={openAgreement} />
           </View>
