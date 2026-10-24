@@ -11,9 +11,11 @@ import { ticketCounts } from "@/lib/support";
 import { latestRun, type Run } from "@/lib/health";
 import { HealthBadge } from "@/components/HealthMeter";
 import { MANUAL, openManual } from "@/lib/legal";
+import { useSettings } from "@/lib/settings";
 import { colors, space } from "@/theme/tokens";
 
 export default function AdminHome() {
+  const { settings } = useSettings();
   const [c, setC] = useState<Awaited<ReturnType<typeof counts>> | null>(null);
   const [tc, setTc] = useState<{ open: number; pending: number } | null>(null);
   const [health, setHealth] = useState<Run | null | undefined>(undefined);
@@ -34,7 +36,7 @@ export default function AdminHome() {
     { n: c?.openAudits, label: "Open audits", blurb: "Quality Control Audits to resolve.", href: "/admin/audits" as const },
     { n: c?.owedPayouts, label: "Payouts owed", blurb: "Mentors waiting to be paid.", href: "/admin/ledger" as const },
     { n: c?.liveSessions, label: "Film Rooms upcoming", blurb: "Requested, scheduled, or live right now.", href: "/admin/sessions" as const },
-    { n: c?.pendingReviews, label: "Reviews to moderate", blurb: "Ratings under 3 stars.", href: "/admin/audits" as const },
+    { n: c?.pendingReviews, label: "Reviews to moderate", blurb: `Ratings under ${settings?.rules.review_auto_publish_min ?? 4} stars.`, href: "/admin/audits" as const },
     { n: presents ?? undefined, label: "Presents to check", blurb: "Videos waiting for a look, and held requests.", href: "/admin/presents" as const },
   ];
   return (

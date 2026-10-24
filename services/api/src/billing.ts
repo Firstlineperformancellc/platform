@@ -1,7 +1,7 @@
 import type Stripe from "stripe";
 import { stripe } from "./stripe.js";
 import { admin } from "./supabase.js";
-import { getSettings, presentsRules } from "./settings.js";
+import { getSettings, invalidateSettings, presentsRules, type Settings } from "./settings.js";
 import { alreadySent, appUrl, notify } from "./notify.js";
 
 // Money movement that touches Stripe: refunds, transfers to mentors, and the automatic payout run.
@@ -78,34 +78,110 @@ export async function payPayoutViaStripe(payoutId: string, paidBy: string | null
   }
 }
 
-// Called by the tick. When the admin has switched payouts to automatic, release each owed payout
-// once it is past the waiting period. Held and voided payouts are never touched.
-export async function autoPayoutsTick() {
-  const s = await getSettings();
+// --- Releasing payouts: Manual (admin presses Pay), Automatic (each one after the waiting period),
+// or Scheduled (a batch every other payday, 9:00 Eastern; Alex: Fridays). ----------------------------
+export type PayoutRules = { mode: "manual" | "auto" | "scheduled"; delayDays: number; anchor: string; hour: number; lastRunAt: string | null };
+export function payoutRules(s: Settings): PayoutRules {
   const r = s.rules as Record<string, unknown>;
-  if (r.payout_mode !== "auto" || !stripe) return { mode: (r.payout_mode as string) ?? "manual", paid: 0, failed: 0 };
-  const days = Number(r.payout_delay_days ?? r.qca_window_days ?? 7);
-  const before = new Date(Date.now() - days * 86400000).toISOString();
+  const mode = r.payout_mode === "auto" || r.payout_mode === "scheduled" ? r.payout_mode : "manual";
+  return {
+    mode,
+    delayDays: Number(r.payout_delay_days ?? r.qca_window_days ?? 7),
+    anchor: typeof r.payout_anchor === "string" && /^\d{4}-\d{2}-\d{2}$/.test(r.payout_anchor) ? r.payout_anchor : "2026-10-30", // a Friday
+    hour: typeof r.payout_hour === "number" && r.payout_hour >= 0 && r.payout_hour <= 23 ? r.payout_hour : 9,
+    lastRunAt: typeof r.payout_last_run_at === "string" ? r.payout_last_run_at : null,
+  };
+}
+
+// A clock time in New York on a calendar day, as an instant. Daylight saving is handled by asking Intl
+// what hour the first guess shows in New York and shifting by the difference.
+export function etInstant(dateStr: string, hour: number): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  let guess = new Date(Date.UTC(y, m - 1, d, hour + 5, 0, 0));
+  const shown = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hour12: false }).format(guess)) % 24;
+  const diff = shown - hour;
+  if (diff !== 0) guess = new Date(guess.getTime() - diff * 3600000);
+  return guess;
+}
+const etDate = (d: Date) => {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+  return parts; // YYYY-MM-DD
+};
+// The run that is due now (the latest payday at or before now) and the one after it, every 14 days from the anchor.
+export function scheduledRuns(rules: PayoutRules, now = new Date()): { due: Date | null; next: Date } {
+  const anchor = etInstant(rules.anchor, rules.hour);
+  const step = 14 * 86400000;
+  if (now < anchor) return { due: null, next: anchor };
+  const k = Math.floor((now.getTime() - anchor.getTime()) / step);
+  const at = (i: number) => etInstant(etDate(new Date(anchor.getTime() + i * step)), rules.hour); // re-pin to 9:00 ET across DST
+  // k lands within an hour of the right payday; look one either side so a DST shift or payday morning cannot fool it
+  const candidates = [at(k - 1), at(k), at(k + 1), at(k + 2)];
+  const due = candidates.filter((d) => d <= now).pop() ?? null;
+  const next = candidates.find((d) => d > now) ?? at(k + 3);
+  return { due, next };
+}
+
+// Send every owed payout that is past the waiting period (and, for Presents, past the buyer's problem window).
+// Held payouts are never touched. `trigger` says who asked: the automatic tick, the schedule, or an admin.
+export async function releaseOwedPayouts(trigger: "auto" | "scheduled" | "manual", actorId: string | null) {
+  const s = await getSettings();
+  const pr = payoutRules(s);
+  const before = new Date(Date.now() - pr.delayDays * 86400000).toISOString();
   const retryAfter = new Date(Date.now() - 6 * 3600000).toISOString();
   // Payouts tried in the last six hours are left out of the query itself, so a backlog that cannot be paid
   // (a mentor who has not onboarded, a free-preview sale) never crowds out the ones that can.
   const { data: due } = await admin.from("payouts").select("id, presents_request_id, created_at").eq("status", "owed").lt("created_at", before)
-    .or(`attempted_at.is.null,attempted_at.lt.${retryAfter}`).order("created_at").limit(25);
+    .or(`attempted_at.is.null,attempted_at.lt.${retryAfter}`).order("created_at").limit(trigger === "auto" ? 25 : 200);
   const problemWindow = presentsRules(s).problemDays * 86400000;
-  let paid = 0, failed = 0;
+  let paid = 0, failed = 0, skipped = 0;
+  const failures: string[] = [];
   for (const p of due ?? []) {
     // a Presents payout also waits out the buyer's problem window, whichever is longer
-    if (p.presents_request_id && Date.now() - new Date(p.created_at).getTime() < problemWindow) continue;
-    const res = await payPayoutViaStripe(p.id, null);
+    if (p.presents_request_id && Date.now() - new Date(p.created_at).getTime() < problemWindow) { skipped++; continue; }
+    const res = await payPayoutViaStripe(p.id, actorId);
     if (res.ok) { paid++; continue; }
+    if (res.skip) { skipped++; continue; } // waiting on the mentor's onboarding, or nothing to transfer: visible on the ledger, no alarm
     failed++;
-    if (res.skip) continue; // waiting on the mentor's onboarding, or nothing to transfer: visible on the ledger, no alarm
-    for (const a of await admins()) {
-      if (await alreadySent(a, "payout.failed", p.id)) continue;
-      await notify(a, "payout.failed", "A mentor payout did not go through", `<p>${res.error}</p><p><a href="${appUrl("/admin/ledger")}" style="color:#d4a32c">Open the ledger</a></p>`, { targetId: p.id });
+    failures.push(res.error);
+    if (trigger === "auto") {
+      for (const a of await admins()) {
+        if (await alreadySent(a, "payout.failed", p.id)) continue;
+        await notify(a, "payout.failed", "A mentor payout did not go through", `<p>${res.error}</p><p><a href="${appUrl("/admin/ledger")}" style="color:#d4a32c">Open the ledger</a></p>`, { targetId: p.id });
+      }
     }
   }
-  return { mode: "auto", paid, failed };
+  return { paid, failed, skipped, failures };
+}
+
+// Automatic mode: called by the tick every few minutes.
+export async function autoPayoutsTick() {
+  const pr = payoutRules(await getSettings());
+  if (pr.mode !== "auto" || !stripe) return { mode: pr.mode, paid: 0, failed: 0 };
+  const r = await releaseOwedPayouts("auto", null);
+  return { mode: "auto", paid: r.paid, failed: r.failed };
+}
+
+// One batch run, recorded and summarised to the admins. Used by the schedule and by "Run payouts now".
+export async function runPayoutBatch(trigger: "scheduled" | "manual", actorId: string | null) {
+  const r = await releaseOwedPayouts(trigger, actorId);
+  const { data: cur } = await admin.from("settings").select("rules").eq("id", 1).single();
+  await admin.from("settings").update({ rules: { ...((cur?.rules as Record<string, unknown>) ?? {}), payout_last_run_at: new Date().toISOString() } }).eq("id", 1);
+  invalidateSettings();
+  await admin.from("audit_log").insert({ actor_id: actorId, action: "payouts.run", target_type: "settings", target_id: null, meta: { trigger, ...r } });
+  const summary = `${r.paid} sent${r.failed ? `, ${r.failed} failed` : ""}${r.skipped ? `, ${r.skipped} waiting` : ""}`;
+  await notifyAdmins("payouts.run", `Mentor payout run: ${summary}`,
+    `<p>${trigger === "scheduled" ? "The scheduled payout run" : "A payout run started from the ledger"} finished: ${summary}.</p>${r.failures.length ? `<p>Failures: ${r.failures.map((f) => f.replace(/</g, "&lt;")).join("; ")}</p>` : ""}<p><a href="${appUrl("/admin/ledger")}" style="color:#d4a32c">Open the ledger</a></p>`, `run_${Date.now()}`);
+  return r;
+}
+
+// Scheduled mode: the tick runs the batch once per payday, the first tick after 9:00 Eastern.
+export async function scheduledPayoutsTick() {
+  const pr = payoutRules(await getSettings());
+  if (pr.mode !== "scheduled" || !stripe) return { mode: pr.mode, ran: false as const };
+  const { due, next } = scheduledRuns(pr);
+  if (!due || (pr.lastRunAt && new Date(pr.lastRunAt) >= due)) return { mode: "scheduled", ran: false as const, nextRunAt: next.toISOString() };
+  const r = await runPayoutBatch("scheduled", null);
+  return { mode: "scheduled", ran: true as const, ...r, nextRunAt: next.toISOString() };
 }
 
 // A session a parent started to book but never paid for holds its slot; let go of it.

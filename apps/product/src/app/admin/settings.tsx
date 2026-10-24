@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/Checkbox";
 import { Choice } from "@/components/ui/Choice";
 import { Pill } from "@/components/ui/Pill";
 import { Body, H3, Small } from "@/components/ui/Text";
-import { grantAdmin, patchSettings } from "@/lib/admin";
+import { grantAdmin, patchSettings, payoutSchedule, type PayoutSchedule } from "@/lib/admin";
 import { Loading } from "@/lib/auth";
 import { useSettings } from "@/lib/settings";
 import { presentsRules } from "@/lib/presents";
@@ -54,6 +54,8 @@ export default function AdminSettings() {
   const { settings } = useSettings();
   const [rules, setRules] = useState<Record<string, string>>({});
   const [payoutDays, setPayoutDays] = useState("");
+  const [payoutAnchor, setPayoutAnchor] = useState("2026-10-30");
+  const [schedule, setSchedule] = useState<PayoutSchedule | null>(null);
   // First Line Presents, edited as text and sent as the API expects (cents, whole numbers, word lists)
   const [pr, setPr] = useState({ enabled: true, share: "", min: "", max: "", days: "", review: "minors" as "minors" | "all", problemDays: "", occasions: "", blocklist: "" });
   const [lists, setLists] = useState<Record<string, string>>({});
@@ -66,6 +68,8 @@ export default function AdminSettings() {
   useEffect(() => {
     if (!settings) return;
     setPayoutDays(settings.rules.payout_delay_days != null ? String(settings.rules.payout_delay_days) : "");
+    setPayoutAnchor(settings.rules.payout_anchor ?? "2026-10-30");
+    payoutSchedule().then(setSchedule).catch(() => setSchedule(null));
     const p = presentsRules(settings.rules);
     setPr({ enabled: p.enabled, share: String(p.sharePct), min: String(p.minCents / 100), max: String(p.maxCents / 100), days: String(p.maxDays), review: p.review, problemDays: String(p.problemDays), occasions: p.occasions.join(", "), blocklist: p.blocklist.join(", ") });
     setRules(Object.fromEntries(RULES.map((r) => [r.key, String((settings.rules as Record<string, unknown>)[r.key] ?? "")])));
@@ -113,14 +117,14 @@ export default function AdminSettings() {
       <Card>
         <View style={s.row}>
           <H3>Mentor payouts</H3>
-          <Pill tone={settings.rules.payout_mode === "auto" ? "ok" : "muted"}>{settings.rules.payout_mode === "auto" ? "Automatic" : "Manual"}</Pill>
+          <Pill tone={settings.rules.payout_mode === "manual" || !settings.rules.payout_mode ? "muted" : "ok"}>{settings.rules.payout_mode === "auto" ? "Automatic" : settings.rules.payout_mode === "scheduled" ? "Every other Friday" : "Manual"}</Pill>
         </View>
         <Small>
-          Manual: an admin presses Pay via Stripe on the Ledger for each payout. Automatic: every owed payout is sent to the mentor on its own once the waiting period has passed, unless it is on hold. Held and disputed payouts are never sent automatically.
+          Manual: an admin presses Pay via Stripe on the Ledger for each payout. Automatic: every owed payout is sent on its own once the waiting period has passed. Scheduled: everything past the waiting period goes out in one batch every other Friday at 9:00 Eastern, and the admins get a summary email. Held and disputed payouts are never sent in any mode.
         </Small>
         <Choice
           label="How mentors are paid"
-          options={[{ key: "manual", label: "Manual (admin releases each one)" }, { key: "auto", label: "Automatic after the waiting period" }]}
+          options={[{ key: "manual", label: "Manual (admin releases each one)" }, { key: "auto", label: "Automatic after the waiting period" }, { key: "scheduled", label: "Every other Friday (scheduled batch)" }]}
           value={settings.rules.payout_mode ?? "manual"}
           onChange={(v) => save("payouts", { rules: { payout_mode: v } })}
         />
@@ -130,6 +134,17 @@ export default function AdminSettings() {
           </View>
         </View>
         <Button title="Save waiting period" small loading={busy === "payoutDays"} onPress={() => save("payoutDays", { rules: { payout_delay_days: payoutDays.trim() === "" ? settings.rules.qca_window_days : Number(payoutDays) } })} />
+        {settings.rules.payout_mode === "scheduled" ? (
+          <View style={{ gap: space.sm }}>
+            <View style={s.grid}>
+              <View style={s.cell}>
+                <TextField label="First payday (YYYY-MM-DD, a Friday)" value={payoutAnchor} onChangeText={setPayoutAnchor} autoCapitalize="none" placeholder="2026-10-30" hint="Runs every 14 days from this date at 9:00 Eastern." />
+              </View>
+            </View>
+            <Button title="Save payday" small loading={busy === "payoutAnchor"} onPress={() => save("payoutAnchor", { rules: { payout_anchor: payoutAnchor.trim() } })} />
+            <Small>{schedule?.nextRunAt ? `Next run: ${new Date(schedule.nextRunAt).toLocaleString("en-US", { weekday: "long", month: "long", day: "numeric", hour: "numeric", timeZone: "America/New_York" })} Eastern` : "Next run: calculating…"}{schedule?.lastRunAt ? ` · last run ${new Date(schedule.lastRunAt).toLocaleDateString("en-US")}` : ""}</Small>
+          </View>
+        ) : null}
       </Card>
 
       <Card>

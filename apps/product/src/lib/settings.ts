@@ -58,7 +58,10 @@ export type Settings = {
     season_arc_weeks?: number;
     session_reminder_hours?: number[];
     payments_mode?: "stripe" | "free_preview";
-    payout_mode?: "manual" | "auto";
+    payout_mode?: "manual" | "auto" | "scheduled";
+    payout_anchor?: string; // first payday, YYYY-MM-DD; runs every 14 days from it
+    payout_hour?: number; // Eastern
+    payout_last_run_at?: string | null;
     payout_delay_days?: number;
     // First Line Presents (defaults live in lib/presents presentsRules and mirror the API)
     presents_enabled?: boolean;

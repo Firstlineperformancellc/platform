@@ -169,7 +169,6 @@ function Inner() {
               <Label>Your rating</Label>
               <Stars value={sess.rating} />
               {sess.review ? <Body style={{ color: colors.muted }}>{sess.review}</Body> : null}
-              {sess.review_status === "pending_admin" ? <Small>FLP is reviewing this before it appears on the mentor's profile.</Small> : null}
             </View>
           ) : (
             <View style={{ gap: space.sm }}>
@@ -182,7 +181,7 @@ function Inner() {
                 loading={busy === "review"}
                 onPress={() => {
                   if (!rating) return setError("Pick a star rating.");
-                  run("review", () => reviewSession(sess.id, rating, review), "Thanks for the rating.");
+                  run("review", () => reviewSession(sess.id, rating, review), "Thanks, your review is posted.");
                 }}
               />
             </View>

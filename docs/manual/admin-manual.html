@@ -131,7 +131,7 @@
     <tr><td>Open audits</td><td>Quality Control Audits to resolve.</td><td>Audits</td></tr>
     <tr><td>Payouts owed</td><td>Mentors waiting to be paid.</td><td>Ledger</td></tr>
     <tr><td>Film Rooms upcoming</td><td>Requested, scheduled, or live right now.</td><td>Film Room</td></tr>
-    <tr><td>Reviews to moderate</td><td>Ratings under 3 stars.</td><td>Audits</td></tr>
+    <tr><td>Reviews to moderate</td><td>Ratings under 4 stars.</td><td>Audits</td></tr>
   </table>
   <p>Above the tiles, the <strong>health badge</strong> summarises the platform's services (Section 12). Below them, the <strong>Support desk</strong> card shows how many tickets are waiting on FLP and how many on a customer. The two manuals are linked at the bottom.</p>
   <h3>The tabs</h3>
@@ -145,7 +145,7 @@
     <li>Jobs needing a mentor: assign anything unassigned.</li>
     <li>Open audits: read, decide, close.</li>
     <li>Support desk: answer the inbox.</li>
-    <li>Payouts owed: pay what's past the quality window (or let Automatic do it; Section 9).</li>
+    <li>Payouts owed: pay what's past the quality window, or let the Friday schedule or Automatic do it (Section 9).</li>
     <li>Glance at Health. Green means leave it alone.</li>
   </ol>
 </section>
@@ -308,7 +308,7 @@
     <li><span class="btn">Hold</span> with a reason, and <span class="btn">Release</span>.</li>
   </ul>
   <h3>Manual or automatic</h3>
-  <p>Under <span class="tab">Settings</span>, <strong>Mentor payouts</strong> is <strong>Manual</strong> (you press Pay) or <strong>Automatic after the waiting period</strong>. On Automatic, each owed payout is sent once it is older than the waiting period; blank uses the audit window, so a parent's audit can still stop it. Held payouts are never sent automatically. A real failure emails the admins once and is retried every six hours. A mentor who hasn't finished Stripe setup, or a sale that was never charged (free preview), stays owed with the reason on the row and no alarm.</p>
+  <p>Under <span class="tab">Settings</span>, <strong>Mentor payouts</strong> is <strong>Manual</strong> (you press Pay), <strong>Automatic after the waiting period</strong>, or <strong>Every other Friday</strong> (a scheduled batch at 9:00 Eastern that sends everything past the waiting period and emails you a summary; the Ledger shows the next run and a button to run it now). On Automatic, each owed payout is sent once it is older than the waiting period; blank uses the audit window, so a parent's audit can still stop it. Held payouts are never sent automatically. A real failure emails the admins once and is retried every six hours. A mentor who hasn't finished Stripe setup, or a sale that was never charged (free preview), stays owed with the reason on the row and no alarm.</p>
   <h3>Stripe, in one paragraph</h3>
   <p>Parents pay FLP through Stripe Checkout. Mentors onboard to Stripe Express from their profile ("Set up payouts"), where Stripe collects identity, bank, and tax details; FLP never sees them. Stripe tells the platform when a payment lands, when a checkout is abandoned, when a refund is made, when a card is disputed (the mentor's payout is held and you're emailed), and when a mentor's account is verified. FLP's own Stripe dashboard, under FLP's Stripe login, is where FLP's money, fees, and disputes are managed; answer disputes there, then release or void the payout here.</p>
   <div class="warn"><strong>Payments mode.</strong> Settings → Payments has a <strong>Free preview</strong> mode in which orders and bookings complete with no charge, for demos and beta testing. A red banner shows in the panel while it's on. Switch it back to <strong>Stripe</strong> before real families use the platform.</div>
@@ -343,7 +343,7 @@
   <h3>Payments</h3>
   <p><strong>Mode:</strong> Stripe (charge at checkout) or Free preview (no charge). See Section 9.</p>
   <h3>Mentor payouts</h3>
-  <p><strong>How mentors are paid:</strong> Manual (admin releases each one) or Automatic after the waiting period. <strong>Waiting period (days after delivery):</strong> blank uses the audit window.</p>
+  <p><strong>How mentors are paid:</strong> Manual (admin releases each one), Automatic after the waiting period, or Every other Friday (scheduled batch; set the first payday). <strong>Waiting period (days after delivery):</strong> blank uses the audit window.</p>
   <h3>Prices and mentor levels</h3>
   <p>Live under Levels &amp; tiles, on each level (Section 5).</p>
   <h3>Rules</h3>
@@ -353,7 +353,7 @@
     <tr><td>Nudge mentors after (24)</td><td>When the reminder email about an unanswered offer goes out.</td></tr>
     <tr><td>Turnaround (72)</td><td>Hours from acceptance to delivery, unless the level sets its own.</td></tr>
     <tr><td>Days to file a Quality Control Audit (7)</td><td>The parent's window after delivery. Also the default payout waiting period.</td></tr>
-    <tr><td>Auto-publish reviews at (3 stars)</td><td>Ratings at or above this publish on their own; below wait for you.</td></tr>
+    <tr><td>Auto-publish reviews at (4 stars)</td><td>Ratings at or above this publish on their own; below wait for you.</td></tr>
     <tr><td>Default jobs on deck (3), Max (5)</td><td>A mentor's starting capacity (levels can override) and the most they may set.</td></tr>
     <tr><td>Suggested waitlist days (3)</td><td>The default offered to a parent whose first choice is busy.</td></tr>
     <tr><td>Film Room cancellation window (24 hours)</td><td>Free cancellation ends this many hours before; inside it, a late cancel.</td></tr>

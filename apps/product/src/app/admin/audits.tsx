@@ -12,9 +12,11 @@ import { closeAudit, listAudits, listPendingReviews, moderateReview, noteAudit, 
 import { Loading } from "@/lib/auth";
 import { listMentors, type MarketplaceMentor } from "@/lib/mentors";
 import { money } from "@/lib/settings";
+import { useSettings } from "@/lib/settings";
 import { colors, space } from "@/theme/tokens";
 
 export default function AdminAudits() {
+  const { settings } = useSettings();
   const [audits, setAudits] = useState<AdminAudit[] | null>(null);
   const [reviews, setReviews] = useState<PendingReview[]>([]);
   const [mentors, setMentors] = useState<MarketplaceMentor[]>([]);
@@ -122,7 +124,7 @@ export default function AdminAudits() {
       })}
 
       <H2>Reviews to moderate</H2>
-      {reviews.length === 0 ? <Body style={{ color: colors.muted }}>No ratings under 3 stars waiting.</Body> : null}
+      {reviews.length === 0 ? <Body style={{ color: colors.muted }}>No ratings under {settings?.rules.review_auto_publish_min ?? 4} stars waiting.</Body> : null}
       {reviews.map((r) => (
         <Card key={r.id}>
           <View style={s.head}>

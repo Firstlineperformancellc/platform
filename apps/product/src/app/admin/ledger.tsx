@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Choice } from "@/components/ui/Choice";
 import { Pill } from "@/components/ui/Pill";
-import { Body, H3, Small } from "@/components/ui/Text";
-import { holdPayout, listPayouts, payPayout, type AdminPayout } from "@/lib/admin";
+import { Body, H3, Label, Small } from "@/components/ui/Text";
+import { holdPayout, listPayouts, payPayout, type AdminPayout, payoutSchedule, runPayouts, type PayoutSchedule } from "@/lib/admin";
 import { Loading } from "@/lib/auth";
 import { money } from "@/lib/settings";
 import { colors, space } from "@/theme/tokens";
@@ -20,7 +20,9 @@ export default function AdminLedger() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(() => listPayouts().then(setRows).catch((e) => setError(e.message)), []);
+  const [schedule, setSchedule] = useState<PayoutSchedule | null>(null);
+  const [runReport, setRunReport] = useState<string | null>(null);
+  const load = useCallback(() => { listPayouts().then(setRows).catch((e) => setError(e.message)); payoutSchedule().then(setSchedule).catch(() => setSchedule(null)); }, []);
   useFocusEffect(
     useCallback(() => {
       load();
@@ -53,6 +55,23 @@ export default function AdminLedger() {
 
   return (
     <AdminShell title="Mentor payout ledger">
+      {schedule ? (
+        <Card>
+          <View style={s.rowWrap}>
+            <View style={{ flex: 1, minWidth: 240 }}>
+              <Label>Payout schedule</Label>
+              <Body>
+                {schedule.mode === "scheduled"
+                  ? `Every other Friday. Next run: ${schedule.nextRunAt ? new Date(schedule.nextRunAt).toLocaleString("en-US", { weekday: "long", month: "long", day: "numeric", hour: "numeric", timeZone: "America/New_York" }) + " Eastern" : "calculating…"}`
+                  : schedule.mode === "auto" ? "Automatic: each payout goes out after the waiting period." : "Manual: press Pay via Stripe on each payout, or pay everything that is past the waiting period at once."}
+              </Body>
+              {schedule.lastRunAt ? <Small>Last run {new Date(schedule.lastRunAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" })} Eastern</Small> : null}
+              {runReport ? <Small style={{ color: colors.ok }}>{runReport}</Small> : null}
+            </View>
+            <Button title="Pay everything past the waiting period now" variant="secondary" small disabled={!schedule.stripeConfigured} loading={busy === "run"} onPress={() => run("run", async () => { const r = await runPayouts(); setRunReport(`${r.paid} sent${r.failed ? `, ${r.failed} failed` : ""}${r.skipped ? `, ${r.skipped} waiting on onboarding or the problem window` : ""}.`); })} />
+          </View>
+        </Card>
+      ) : null}
       <View style={s.totals}>
         <Card style={s.tile}>
           <Small>Owed</Small>
@@ -122,6 +141,7 @@ export default function AdminLedger() {
 }
 
 const s = StyleSheet.create({
+  rowWrap: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.md, flexWrap: "wrap" },
   totals: { flexDirection: "row", flexWrap: "wrap", gap: space.md },
   tile: { flexGrow: 1, flexBasis: 160, gap: 2 },
   head: { flexDirection: "row", gap: space.md, alignItems: "flex-start" },

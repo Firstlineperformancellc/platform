@@ -232,6 +232,9 @@ export const moderateReview = (id: string, status: "published" | "hidden", kind:
 
 // Refund a paid order (all of what is left, or an amount in cents). Goes back through Stripe when the order was charged there.
 export const refundOrder = (orderId: string, amountCents?: number, reason?: string) => api<{ ok: true; refundedCents: number; totalRefundedCents: number; full: boolean; charged: boolean; mentorPaidCents: number }>(`/admin/orders/${orderId}/refund`, { method: "POST", body: JSON.stringify({ amountCents, reason }) });
+export type PayoutSchedule = { mode: "manual" | "auto" | "scheduled"; anchor: string; hour: number; nextRunAt: string | null; lastRunAt: string | null; stripeConfigured: boolean };
+export const payoutSchedule = () => api<PayoutSchedule>("/admin/payouts/schedule");
+export const runPayouts = () => api<{ ok: true; paid: number; failed: number; skipped: number; failures: string[] }>("/admin/payouts/run", { method: "POST" });
 export const patchSettings = (patch: Record<string, unknown>) => api<{ ok: true }>("/admin/settings", { method: "PATCH", body: JSON.stringify(patch) });
 
 // Sign-ups by program: youth athletes grouped by the "current team" their parent typed.

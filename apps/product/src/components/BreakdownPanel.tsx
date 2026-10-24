@@ -50,7 +50,7 @@ export function BreakdownPanel({ jobId }: { jobId: string }) {
     try {
       const res = await reviewBreakdown(bd!.id, rating, review);
       setBd({ ...bd!, rating, review, review_status: res.review_status });
-      setMsg(res.review_status === "published" ? "Thanks. Your review is live on the mentor's profile." : "Thanks. FLP will look at this review before it appears.");
+      setMsg("Thanks, your review is posted.");
     } catch (e) {
       setError((e as Error).message);
     }
@@ -119,7 +119,6 @@ export function BreakdownPanel({ jobId }: { jobId: string }) {
           <Label>Your rating</Label>
           <Stars value={bd.rating} />
           {bd.review ? <Body style={{ color: colors.muted }}>{bd.review}</Body> : null}
-          {bd.review_status === "pending_admin" ? <Small>FLP is reviewing this before it appears on the mentor's profile.</Small> : null}
         </View>
       ) : (
         <View style={{ gap: space.sm }}>

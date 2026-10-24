@@ -3,7 +3,7 @@ import { admin, userFromBearer } from "../supabase.js";
 import { getSettings, invalidateSettings, PRICE_KINDS } from "../settings.js";
 import { offerJob } from "../jobs.js";
 import { stripe } from "../stripe.js";
-import { payPayoutViaStripe, refundPayment } from "../billing.js";
+import { payoutRules, payPayoutViaStripe, refundPayment, runPayoutBatch, scheduledRuns } from "../billing.js";
 import { appUrl, notify } from "../notify.js";
 import { cancelAndRefund, completeSession } from "./sessions.js";
 
@@ -253,6 +253,25 @@ adminRoutes.post("/orders/:id/refund", async (c) => {
   await notify(o.parent_id, "order.refunded", full ? "Your FLP order was refunded" : "A partial refund on your FLP order",
     `<p>FLP refunded $${(amount / 100).toFixed(2)}${body.reason ? `: ${body.reason}` : "."}</p><p>It can take a few business days to show on your statement.</p>`, { targetId: id });
   return c.json({ ok: true, refundedCents: amount, totalRefundedCents: total, full, refundId, mentorPaidCents, charged: Boolean(o.stripe_payment_intent_id) });
+});
+
+// GET /admin/payouts/schedule — mode, the next scheduled run and the last run.
+adminRoutes.get("/payouts/schedule", async (c) => {
+  const me = await requireAdmin(c.req.header("authorization"));
+  if (!me) return c.json({ error: "admin only" }, 403);
+  const pr = payoutRules(await getSettings());
+  const { due, next } = scheduledRuns(pr);
+  const dueNow = Boolean(due && !(pr.lastRunAt && new Date(pr.lastRunAt) >= due));
+  return c.json({ mode: pr.mode, anchor: pr.anchor, hour: pr.hour, nextRunAt: (pr.mode === "scheduled" && dueNow ? due : next)?.toISOString() ?? null, lastRunAt: pr.lastRunAt, stripeConfigured: Boolean(stripe) });
+});
+
+// POST /admin/payouts/run — pay everything past the waiting period now, in any mode.
+adminRoutes.post("/payouts/run", async (c) => {
+  const me = await requireAdmin(c.req.header("authorization"));
+  if (!me) return c.json({ error: "admin only" }, 403);
+  if (!stripe) return c.json({ error: "Stripe is not configured on this server" }, 503);
+  const r = await runPayoutBatch("manual", me.id);
+  return c.json({ ok: true, ...r });
 });
 
 // POST /admin/payouts/:id/pay { method: "stripe" | "manual", note? }
@@ -545,7 +564,10 @@ adminRoutes.patch("/settings", async (c) => {
     if (body[key] && typeof body[key] === "object") patch[key] = { ...(current[key] as object), ...(body[key] as object) };
   }
   const pr = patch.rules as Record<string, unknown> | undefined;
-  if (pr?.payout_mode !== undefined && pr.payout_mode !== "manual" && pr.payout_mode !== "auto") return c.json({ error: "payout_mode must be manual or auto" }, 400);
+  if (pr?.payout_mode !== undefined && !["manual", "auto", "scheduled"].includes(pr.payout_mode as string)) return c.json({ error: "payout_mode must be manual, auto or scheduled" }, 400);
+  if (pr?.payout_anchor !== undefined && (typeof pr.payout_anchor !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(pr.payout_anchor) || Number.isNaN(Date.parse(pr.payout_anchor)))) return c.json({ error: "payout_anchor must be a date like 2026-10-30 (the first payday)" }, 400);
+  if (pr?.payout_hour !== undefined && (!Number.isInteger(pr.payout_hour) || (pr.payout_hour as number) < 0 || (pr.payout_hour as number) > 23)) return c.json({ error: "payout_hour must be 0 to 23 (Eastern)" }, 400);
+  if (pr?.payout_last_run_at !== undefined) delete pr.payout_last_run_at; // written by the payout run itself, never by hand
   if (pr) {
     // Video slots: a public Mux playback id, or blank to hide the slot.
     for (const k of ["explainer_parent_playback_id", "explainer_mentor_playback_id", "upload_help_playback_id"]) {
