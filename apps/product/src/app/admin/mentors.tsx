@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { GENDER_LABEL, MOTIVATION_LABEL } from "@/lib/types";
 import { useFocusEffect, Link } from "expo-router";
 import { StyleSheet, View } from "react-native";
@@ -8,10 +8,10 @@ import { Card } from "@/components/ui/Card";
 import { Choice } from "@/components/ui/Choice";
 import { Pill } from "@/components/ui/Pill";
 import { Body, H3, Small } from "@/components/ui/Text";
-import { deleteMentor, listDeletedMentors, listMentors, patchMentor, restoreMentor, type AdminMentor, type DeletedMentor } from "@/lib/admin";
+import { deleteMentor, EMPTY_REVENUE, listDeletedMentors, listMentors, mentorRevenue, patchMentor, restoreMentor, type AdminMentor, type DeletedMentor, type MentorRevenue, type RevenueDays } from "@/lib/admin";
 import { TextField } from "@/components/ui/TextField";
 import { Loading } from "@/lib/auth";
-import { levelLabel, TIER_LABEL, useSettings, type Tier } from "@/lib/settings";
+import { levelLabel, money, TIER_LABEL, useSettings, type Tier } from "@/lib/settings";
 import { latestTierChanges, listAllTiers, type TierAdmin, type TierChange } from "@/lib/tiers";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { AGREEMENT, MANUAL, openAgreement, openManual } from "@/lib/legal";
@@ -34,6 +34,15 @@ export default function AdminMentors() {
   const [msg, setMsg] = useState<string | null>(null);
   const [tierChange, setTierChange] = useState<Record<string, Tier>>({}); // picked, waiting for confirm
   const [lastChange, setLastChange] = useState<Record<string, TierChange>>({});
+  const [revDays, setRevDays] = useState<RevenueDays>(30);
+  const [revenue, setRevenue] = useState<Record<string, MentorRevenue> | null>(null);
+  // Money made and money left on the table (U-15), fetched once per window; nothing on this page changes it.
+  useEffect(() => {
+    let live = true;
+    setRevenue(null);
+    mentorRevenue(revDays).then((r) => { if (live) setRevenue(r); }).catch(() => { if (live) setRevenue({}); });
+    return () => { live = false; };
+  }, [revDays]);
 
   const [picked, setPicked] = useState(false); // the admin chose a filter; stop choosing for them
   const load = useCallback(() => {
@@ -141,6 +150,9 @@ export default function AdminMentors() {
         value={filter}
         onChange={(v) => { setPicked(true); setFilter(v as string); }}
       />
+      {filter !== "applied" && filter !== "deleted" ? (
+        <Choice label="Money" options={[{ key: "30", label: "30 days" }, { key: "90", label: "90 days" }, { key: "all", label: "All time" }]} value={String(revDays)} onChange={(v) => setRevDays(v === "all" ? "all" : v === "90" ? 90 : 30)} />
+      ) : null}
       {error ? <Body style={{ color: colors.danger }}>{error}</Body> : null}
       {msg ? <Body style={{ color: colors.ok }}>{msg}</Body> : null}
       {filter === "deleted" ? (
@@ -175,6 +187,7 @@ export default function AdminMentors() {
             const suggestedTier = (m.tier ?? (level?.tier && levels.some((t) => t.key === level.tier) ? level.tier : fallback)) as Tier;
             const tier = tierPick[m.user_id] ?? suggestedTier;
             const st = m.stats;
+            const rev = revenue?.[m.user_id] ?? EMPTY_REVENUE;
             return (
               <Card key={m.user_id}>
                 <View style={s.head}>
@@ -222,6 +235,9 @@ export default function AdminMentors() {
                   </View>
                 ) : null}
 
+                {m.status !== "applied" && revenue ? (
+                  <Small>Earned {money(rev.earned_cents)} · Left on the table {money(rev.left_cents)} · {money(rev.per_job_cents)} per job</Small>
+                ) : null}
                 {m.presents_enabled || m.presents_blocked_at ? (
                   <Small>First Line Presents: {m.presents_blocked_at ? `switched off by FLP ${new Date(m.presents_blocked_at).toLocaleDateString()}` : m.presents_price_cents != null ? `on at $${Math.round(m.presents_price_cents / 100)} a video` : "on, no price set yet"}.</Small>
                 ) : null}

@@ -8,11 +8,12 @@ import { TextField } from "@/components/ui/TextField";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Choice } from "@/components/ui/Choice";
 import { Pill } from "@/components/ui/Pill";
-import { Body, H3, Small } from "@/components/ui/Text";
+import { Body, H3, Label, Small } from "@/components/ui/Text";
 import { grantAdmin, patchSettings, payoutSchedule, type PayoutSchedule } from "@/lib/admin";
-import { Loading } from "@/lib/auth";
+import { Loading, useAuth } from "@/lib/auth";
 import { useSettings } from "@/lib/settings";
 import { presentsRules } from "@/lib/presents";
+import { supabase } from "@/lib/supabase";
 import { colors, space } from "@/theme/tokens";
 
 const RULES: { key: string; label: string; hint: string }[] = [
@@ -48,10 +49,23 @@ const VIDEOS: { key: "explainer_parent_playback_id" | "explainer_mentor_playback
   { key: "upload_help_playback_id", label: "Upload walkthrough (Mux playback id)" },
 ];
 const VIDEO_HINT = "Public playback id from the Mux dashboard, e.g. the part after stream.mux.com/ in the video URL. Blank hides the slot.";
+// Email alerts an admin can switch off for themselves. Keys match AlertType in the API; a missing key means on.
+const ALERTS: { key: string; label: string }[] = [
+  { key: "new_accounts", label: "New parent accounts" },
+  { key: "support", label: "Support tickets" },
+  { key: "money", label: "Money: payouts, refunds, disputes" },
+  { key: "health", label: "Service health" },
+  { key: "no_shows", label: "Mentor no-shows" },
+  { key: "presents", label: "First Line Presents" },
+];
 
 // Prices, splits, rules, and lists. Everything here changes the product without a deploy.
 export default function AdminSettings() {
   const { settings } = useSettings();
+  const { session } = useAuth();
+  const me = session?.user.id;
+  // this admin's own alert switches; every admin has their own row
+  const [alerts, setAlerts] = useState<Record<string, boolean> | null>(null);
   const [rules, setRules] = useState<Record<string, string>>({});
   const [payoutDays, setPayoutDays] = useState("");
   const [payoutAnchor, setPayoutAnchor] = useState("2026-10-30");
@@ -77,7 +91,26 @@ export default function AdminSettings() {
     setVideos(Object.fromEntries(VIDEOS.map((v) => [v.key, settings.rules[v.key] ?? ""])));
   }, [settings]);
 
+  useEffect(() => {
+    if (!me) return;
+    supabase.from("profiles").select("admin_alerts").eq("id", me).maybeSingle().then(({ data }) => setAlerts((data?.admin_alerts as Record<string, boolean> | null) ?? {}));
+  }, [me]);
+
   if (!settings) return <Loading />;
+
+  // Saved on each tick; the row is the admin's own, so RLS lets the app write it directly.
+  async function toggleAlert(key: string, on: boolean) {
+    if (!me || !alerts) return;
+    const prev = alerts;
+    const next = { ...alerts, [key]: on };
+    setAlerts(next);
+    setError(null);
+    const { error: e } = await supabase.from("profiles").update({ admin_alerts: next }).eq("id", me);
+    if (e) {
+      setAlerts(prev);
+      setError(e.message);
+    }
+  }
 
   async function save(section: string, patch: Record<string, unknown>) {
     setBusy(section);
@@ -248,6 +281,11 @@ export default function AdminSettings() {
             setBusy(null);
           }}
         />
+        <View style={s.alerts}>
+          <Label>Your email alerts</Label>
+          <Small>These are yours only; other admins set their own.</Small>
+          {alerts ? ALERTS.map((a) => <Checkbox key={a.key} label={a.label} checked={alerts[a.key] !== false} onChange={(v) => toggleAlert(a.key, v)} />) : <Small>Loading…</Small>}
+        </View>
       </Card>
     </AdminShell>
   );
@@ -257,4 +295,5 @@ const s = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: space.md, flexWrap: "wrap", justifyContent: "space-between" },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: space.lg },
   cell: { flexGrow: 1, flexBasis: 220, maxWidth: 320, gap: space.sm },
+  alerts: { borderTopWidth: 1, borderTopColor: colors.line, marginTop: space.sm, paddingTop: space.md, gap: space.sm },
 });

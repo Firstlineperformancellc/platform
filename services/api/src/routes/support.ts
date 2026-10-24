@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { admin, userFromBearer } from "../supabase.js";
 import { env } from "../env.js";
-import { appUrl, mailShell, notify, sendMail } from "../notify.js";
+import { appUrl, mailShell, notifyAdmins, sendMail } from "../notify.js";
 
 // Support desk. Tickets arrive by email (the inbound script posts to /support/inbound), from the
 // app, or from the marketing site; admins answer from /admin/support. Every outbound reply is a
@@ -27,11 +27,6 @@ async function requesterId(email: string) {
   return data;
 }
 
-async function admins() {
-  const { data } = await admin.from("profiles").select("id").eq("role", "admin");
-  return (data ?? []).map((a) => a.id);
-}
-
 async function createTicket(input: { subject: string; body: string; html?: string | null; email: string; name?: string; channel: "email" | "app" | "site"; messageId?: string | null; inReplyTo?: string | null; attachments?: unknown[] }) {
   const who = await requesterId(input.email);
   const { data: t, error } = await admin
@@ -47,11 +42,9 @@ async function createTicket(input: { subject: string; body: string; html?: strin
     subject: `${tag(t.number)} We got your message: ${input.subject.slice(0, 120) || "support request"}`,
     html: mailShell("We got your message", `<p>Thanks for writing to First Line Performance. This is ticket <b>${tag(t.number)}</b>. A real person reads every one of these, usually within a business day.</p><p>Reply to this email at any time to add to it.</p>`),
   });
-  for (const a of await admins()) {
-    await notify(a, "support.new", `${tag(t.number)} New support ticket: ${input.subject.slice(0, 80)}`,
-      `<p><b>${escape(input.name ?? input.email)}</b> (${escape(input.email)}) wrote via ${input.channel}:</p><blockquote style="border-left:3px solid #d4a32c;padding-left:12px;color:#ccc">${textToHtml(input.body.slice(0, 1200))}</blockquote><p><a href="${appUrl(`/admin/support/${t.id}`)}" style="color:#d4a32c">Open the ticket</a></p>`,
-      { targetId: t.id });
-  }
+  await notifyAdmins("support", "support.new", `${tag(t.number)} New support ticket: ${input.subject.slice(0, 80)}`,
+    `<p><b>${escape(input.name ?? input.email)}</b> (${escape(input.email)}) wrote via ${input.channel}:</p><blockquote style="border-left:3px solid #d4a32c;padding-left:12px;color:#ccc">${textToHtml(input.body.slice(0, 1200))}</blockquote><p><a href="${appUrl(`/admin/support/${t.id}`)}" style="color:#d4a32c">Open the ticket</a></p>`,
+    t.id);
   return t;
 }
 
@@ -102,7 +95,7 @@ support.post("/tickets/:id/reply", async (c) => {
   if (!text) return c.json({ error: "write something first" }, 400);
   await admin.from("support_messages").insert({ ticket_id: t.id, direction: "in", from_email: user.email ?? "", to_email: SUPPORT_ADDR, subject: t.subject, body_text: text.slice(0, 20000) });
   await admin.from("support_tickets").update({ status: "open", last_message_at: new Date().toISOString(), last_direction: "in", resolved_at: null }).eq("id", t.id);
-  for (const a of await admins()) await notify(a, "support.reply", `${tag(t.number)} Reply from ${user.email}`, `<blockquote style="border-left:3px solid #d4a32c;padding-left:12px;color:#ccc">${textToHtml(text.slice(0, 1200))}</blockquote><p><a href="${appUrl(`/admin/support/${t.id}`)}" style="color:#d4a32c">Open the ticket</a></p>`, { targetId: t.id });
+  await notifyAdmins("support", "support.reply", `${tag(t.number)} Reply from ${user.email}`, `<blockquote style="border-left:3px solid #d4a32c;padding-left:12px;color:#ccc">${textToHtml(text.slice(0, 1200))}</blockquote><p><a href="${appUrl(`/admin/support/${t.id}`)}" style="color:#d4a32c">Open the ticket</a></p>`, t.id);
   return c.json({ ok: true });
 });
 
@@ -144,7 +137,7 @@ support.post("/inbound", async (c) => {
   if (ticket) {
     await admin.from("support_messages").insert({ ticket_id: ticket.id, direction: "in", from_email: email, to_email: m.to ?? SUPPORT_ADDR, subject, body_text: text.slice(0, 20000), body_html: m.html ?? null, message_id: m.messageId ?? null, in_reply_to: m.inReplyTo ?? null, attachments: m.attachments ?? [] });
     await admin.from("support_tickets").update({ status: "open", last_message_at: new Date().toISOString(), last_direction: "in", resolved_at: null }).eq("id", ticket.id);
-    for (const a of await admins()) await notify(a, "support.reply", `${tag(ticket.number)} Reply from ${name || email}`, `<blockquote style="border-left:3px solid #d4a32c;padding-left:12px;color:#ccc">${textToHtml(text.slice(0, 1200))}</blockquote><p><a href="${appUrl(`/admin/support/${ticket.id}`)}" style="color:#d4a32c">Open the ticket</a></p>`, { targetId: ticket.id });
+    await notifyAdmins("support", "support.reply", `${tag(ticket.number)} Reply from ${name || email}`, `<blockquote style="border-left:3px solid #d4a32c;padding-left:12px;color:#ccc">${textToHtml(text.slice(0, 1200))}</blockquote><p><a href="${appUrl(`/admin/support/${ticket.id}`)}" style="color:#d4a32c">Open the ticket</a></p>`, ticket.id);
     return c.json({ ok: true, ticket: ticket.number, appended: true });
   }
   const t = await createTicket({ subject: subject.replace(/^(re|fwd?):\s*/i, ""), body: text, html: m.html ?? null, email, name, channel: "email", messageId: m.messageId ?? null, inReplyTo: m.inReplyTo ?? null, attachments: m.attachments ?? [] });

@@ -6,6 +6,7 @@ import { stripe } from "../stripe.js";
 import { payoutRules, payPayoutViaStripe, refundPayment, runPayoutBatch, scheduledRuns } from "../billing.js";
 import { appUrl, notify } from "../notify.js";
 import { cancelAndRefund, completeSession } from "./sessions.js";
+import { mentorRevenue, parseDays } from "../revenue.js";
 
 // Alex and Bryan's control center. Every route checks the admin role first; reads mostly come
 // straight from Supabase under RLS in the app, so this file is the write side: approvals,
@@ -102,6 +103,25 @@ adminRoutes.patch("/mentors/:id", async (c) => {
     await admin.auth.admin.updateUserById(id, { ban_duration: "876000h" }).catch(() => {});
   }
   return c.json({ ok: true });
+});
+
+// GET /admin/mentors/revenue?days=30|90|all — money made and money left on the table, per mentor (U-15).
+adminRoutes.get("/mentors/revenue", async (c) => {
+  const me = await requireAdmin(c.req.header("authorization"));
+  if (!me) return c.json({ error: "admin only" }, 403);
+  const days = parseDays(c.req.query("days"));
+  const mentors = await mentorRevenue(null, days);
+  return c.json({ days: days ?? "all", mentors });
+});
+
+// GET /admin/mentors/:id/revenue?days=  — the same figures for one mentor.
+adminRoutes.get("/mentors/:id/revenue", async (c) => {
+  const me = await requireAdmin(c.req.header("authorization"));
+  if (!me) return c.json({ error: "admin only" }, 403);
+  const id = c.req.param("id");
+  const days = parseDays(c.req.query("days"));
+  const figures = await mentorRevenue([id], days);
+  return c.json({ days: days ?? "all", revenue: figures[id] });
 });
 
 // --- Jobs ------------------------------------------------------------------

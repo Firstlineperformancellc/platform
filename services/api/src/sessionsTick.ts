@@ -1,6 +1,6 @@
 import { admin } from "./supabase.js";
 import { getSettings } from "./settings.js";
-import { alreadySent, appUrl, notify } from "./notify.js";
+import { alreadySent, appUrl, notify, notifyAdmins } from "./notify.js";
 import { cancelAndRefund, completeSession } from "./routes/sessions.js";
 import { deleteRecording } from "./daily.js";
 
@@ -55,8 +55,7 @@ export async function sessionsTick() {
       await admin.from("audit_log").insert({ actor_id: null, action: "session.no_show_mentor", target_type: "session", target_id: x.id, meta: { auto: true } });
       await notify(x.athlete_id, "session.no_show", "You missed a Film Room",
         `<p>A booked Film Room passed without you joining. The family has been refunded and this is on your scorecard. If something went wrong, reply to this email.</p>`, { targetId: x.id });
-      const { data: admins } = await admin.from("profiles").select("id").eq("role", "admin");
-      for (const a of admins ?? []) await notify(a.id, "session.no_show.admin", "Mentor no-show on a Film Room", `<p>A mentor never joined a booked session; the family was refunded automatically.</p><p><a href="${appUrl("/admin/sessions")}" style="color:#d4a32c">Film Room sessions</a></p>`, { targetId: x.id });
+      await notifyAdmins("no_shows", "session.no_show.admin", "Mentor no-show on a Film Room", `<p>A mentor never joined a booked session; the family was refunded automatically.</p><p><a href="${appUrl("/admin/sessions")}" style="color:#d4a32c">Film Room sessions</a></p>`, x.id);
       report.mentorNoShows++;
     }
   }

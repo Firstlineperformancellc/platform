@@ -1,6 +1,8 @@
 import { api } from "./api";
 import { supabase } from "./supabase";
 import type { HockeyPosition } from "./types";
+import type { MentorRevenue, RevenueDays } from "./admin";
+export type { MentorRevenue, RevenueDays };
 
 export type AvailabilityWindow = { dow: number; start: string; end: string }; // dow 0=Sun..6=Sat, "19:00"
 
@@ -104,5 +106,8 @@ export function avatarUrl(path: string | null | undefined) {
 export const startConnect = () => api<{ url: string }>("/mentors/me/connect", { method: "POST" });
 export const stripeDashboard = () => api<{ url: string }>("/mentors/me/connect/dashboard", { method: "POST" });
 export const connectStatus = () => api<{ configured: boolean; connected: boolean; payouts_enabled: boolean; requirements?: string[] }>("/mentors/me/connect");
+
+// My numbers (U-15): earned, paid, owed, and what I left on the table by declining or letting offers expire.
+export const myRevenue = (days: RevenueDays) => api<{ days: RevenueDays; revenue: MentorRevenue }>(`/mentors/me/revenue?days=${days}`).then((r) => r.revenue);
 
 export const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

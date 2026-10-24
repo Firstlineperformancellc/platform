@@ -2,16 +2,12 @@ import type Stripe from "stripe";
 import { stripe } from "./stripe.js";
 import { admin } from "./supabase.js";
 import { getSettings, invalidateSettings, presentsRules, type Settings } from "./settings.js";
-import { alreadySent, appUrl, notify } from "./notify.js";
+import { adminIds, alreadySent, appUrl, notify, notifyAdmins as alertAdmins, type AlertType } from "./notify.js";
 
 // Money movement that touches Stripe: refunds, transfers to mentors, and the automatic payout run.
 // Every call carries an idempotency key, so a retry (ours or Stripe's) can never pay or refund twice.
 
 const short = (e: unknown) => String((e as Error)?.message ?? e).replace(/\s+/g, " ").slice(0, 300);
-async function admins() {
-  const { data } = await admin.from("profiles").select("id").eq("role", "admin");
-  return (data ?? []).map((a) => a.id as string);
-}
 
 // Refund all or part of a payment. `key` must be unique to the business event (not to the attempt).
 export async function refundPayment(paymentIntentId: string, amountCents: number | undefined, key: string): Promise<{ ok: true; refundId: string; amount: number } | { ok: false; error: string }> {
@@ -144,7 +140,7 @@ export async function releaseOwedPayouts(trigger: "auto" | "scheduled" | "manual
     failed++;
     failures.push(res.error);
     if (trigger === "auto") {
-      for (const a of await admins()) {
+      for (const a of await adminIds("money")) {
         if (await alreadySent(a, "payout.failed", p.id)) continue;
         await notify(a, "payout.failed", "A mentor payout did not go through", `<p>${res.error}</p><p><a href="${appUrl("/admin/ledger")}" style="color:#d4a32c">Open the ledger</a></p>`, { targetId: p.id });
       }
@@ -192,6 +188,10 @@ export async function releaseUnpaidSessions() {
   return (data ?? []).length;
 }
 
+// Admin alert by template name, for callers that only know the template. The kind each admin can switch
+// off comes from the prefix: Presents events, provider failures (admin.*, which point at Service health),
+// and everything else is money (payouts, refunds, disputes).
+const alertType = (template: string): AlertType => (template.startsWith("presents.") ? "presents" : template.startsWith("admin.") ? "health" : "money");
 export async function notifyAdmins(template: string, subject: string, html: string, targetId: string) {
-  for (const a of await admins()) await notify(a, template, subject, html, { targetId });
+  await alertAdmins(alertType(template), template, subject, html, targetId);
 }

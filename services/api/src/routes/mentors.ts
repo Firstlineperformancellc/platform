@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { admin, userFromBearer } from "../supabase.js";
 import { stripe } from "../stripe.js";
 import { appUrl } from "../notify.js";
+import { mentorRevenue, parseDays } from "../revenue.js";
 
 // Mentor self-service that needs the server: Stripe Connect onboarding and status.
 // Profile fields are edited directly through Supabase under RLS (athletes_self_update).
@@ -64,6 +65,15 @@ mentors.get("/me/connect", async (c) => {
   const enabled = Boolean(acct.payouts_enabled);
   if (enabled !== m.athlete.payouts_enabled) await admin.from("athletes").update({ payouts_enabled: enabled }).eq("user_id", m.user.id);
   return c.json({ configured: true, connected: true, payouts_enabled: enabled, requirements: acct.requirements?.currently_due ?? [] });
+});
+
+// GET /mentors/me/revenue?days=30|90|all — my own numbers: earned, paid, owed, and what I left on the table.
+mentors.get("/me/revenue", async (c) => {
+  const user = await userFromBearer(c.req.header("authorization"));
+  if (!user) return c.json({ error: "sign in as a mentor" }, 401);
+  const days = parseDays(c.req.query("days"));
+  const figures = await mentorRevenue([user.id], days);
+  return c.json({ days: days ?? "all", revenue: figures[user.id] });
 });
 
 // --- Career history (U-19) -------------------------------------------------------------------------

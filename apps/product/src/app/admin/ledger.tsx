@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Choice } from "@/components/ui/Choice";
 import { Pill } from "@/components/ui/Pill";
 import { Body, H3, Label, Small } from "@/components/ui/Text";
-import { holdPayout, listPayouts, payPayout, type AdminPayout, payoutSchedule, runPayouts, type PayoutSchedule } from "@/lib/admin";
+import { holdPayout, listPayouts, mentorRevenue, payPayout, type AdminPayout, type MentorRevenue, payoutSchedule, runPayouts, type PayoutSchedule } from "@/lib/admin";
 import { Loading } from "@/lib/auth";
 import { money } from "@/lib/settings";
 import { colors, space } from "@/theme/tokens";
@@ -22,7 +22,8 @@ export default function AdminLedger() {
 
   const [schedule, setSchedule] = useState<PayoutSchedule | null>(null);
   const [runReport, setRunReport] = useState<string | null>(null);
-  const load = useCallback(() => { listPayouts().then(setRows).catch((e) => setError(e.message)); payoutSchedule().then(setSchedule).catch(() => setSchedule(null)); }, []);
+  const [revenue, setRevenue] = useState<Record<string, MentorRevenue>>({}); // all-time, for "left on the table" beside each subtotal
+  const load = useCallback(() => { listPayouts().then(setRows).catch((e) => setError(e.message)); payoutSchedule().then(setSchedule).catch(() => setSchedule(null)); mentorRevenue("all").then(setRevenue).catch(() => {}); }, []);
   useFocusEffect(
     useCallback(() => {
       load();
@@ -48,9 +49,13 @@ export default function AdminLedger() {
     return t;
   }, [rows]);
   const byMentor = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const r of shown) m.set(r.athletes?.display_name ?? "?", (m.get(r.athletes?.display_name ?? "?") ?? 0) + r.amount_cents);
-    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+    const m = new Map<string, { name: string; cents: number }>();
+    for (const r of shown) {
+      const cur = m.get(r.athlete_id) ?? { name: r.athletes?.display_name ?? "?", cents: 0 };
+      cur.cents += r.amount_cents;
+      m.set(r.athlete_id, cur);
+    }
+    return [...m.entries()].sort((a, b) => b[1].cents - a[1].cents);
   }, [shown]);
 
   return (
@@ -90,10 +95,13 @@ export default function AdminLedger() {
       {byMentor.length > 0 ? (
         <Card>
           <Small>By mentor, this view</Small>
-          {byMentor.map(([name, cents]) => (
-            <View key={name} style={s.line}>
+          {byMentor.map(([id, { name, cents }]) => (
+            <View key={id} style={s.line}>
               <Body>{name}</Body>
-              <Body style={{ color: colors.gold }}>{money(cents)}</Body>
+              <View style={s.subtotal}>
+                <Body style={{ color: colors.gold }}>{money(cents)}</Body>
+                {revenue[id] ? <Small style={{ color: colors.muted }}>left on the table {money(revenue[id].left_cents)}</Small> : null}
+              </View>
             </View>
           ))}
         </Card>
@@ -146,5 +154,6 @@ const s = StyleSheet.create({
   tile: { flexGrow: 1, flexBasis: 160, gap: 2 },
   head: { flexDirection: "row", gap: space.md, alignItems: "flex-start" },
   row: { flexDirection: "row", gap: space.sm, flexWrap: "wrap", alignItems: "center" },
-  line: { flexDirection: "row", justifyContent: "space-between" },
+  line: { flexDirection: "row", justifyContent: "space-between", gap: space.md },
+  subtotal: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-end", alignItems: "baseline", gap: space.sm },
 });

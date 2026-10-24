@@ -35,6 +35,17 @@ export async function alreadySent(userId: string, template: string, targetId: st
   return (count ?? 0) > 0;
 }
 
+// Admin alerts. Each admin chooses which kinds reach them (Settings > Admin seats > Your email alerts);
+// the choice lives in profiles.admin_alerts, and a missing key means on.
+export type AlertType = "new_accounts" | "support" | "money" | "health" | "no_shows" | "presents";
+export async function adminIds(type: AlertType): Promise<string[]> {
+  const { data } = await admin.from("profiles").select("id, admin_alerts").eq("role", "admin");
+  return (data ?? []).filter((a) => ((a.admin_alerts ?? {}) as Record<string, unknown>)[type] !== false).map((a) => a.id as string);
+}
+export async function notifyAdmins(type: AlertType, template: string, subject: string, html: string, targetId: string) {
+  for (const a of await adminIds(type)) await notify(a, template, subject, html, { targetId });
+}
+
 function shell(title: string, body: string) {
   return `<!doctype html><body style="margin:0;background:#000;color:#f2f2f2;font-family:Helvetica,Arial,sans-serif">
   <div style="max-width:560px;margin:0 auto;padding:32px 24px">

@@ -1,13 +1,15 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useFocusEffect } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { Brand } from "@/components/Brand";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Choice } from "@/components/ui/Choice";
 import { Pill } from "@/components/ui/Pill";
 import { Screen } from "@/components/ui/Screen";
 import { Body, Display, H1, H3, Label, Small } from "@/components/ui/Text";
 import { Loading, useAuth } from "@/lib/auth";
+import { myRevenue, type MentorRevenue, type RevenueDays } from "@/lib/mentorProfile";
 import { money } from "@/lib/settings";
 import { supabase } from "@/lib/supabase";
 import { colors, space } from "@/theme/tokens";
@@ -30,6 +32,16 @@ export default function Earnings() {
     supabase.from("payouts").select("id, status, amount_cents, created_at, paid_at, held_reason, presents_request_id, jobs(delivered_at), sessions(scheduled_at, duration_minutes)").eq("athlete_id", session.user.id).order("created_at", { ascending: false }).limit(300)
       .then(({ data }) => setRows((data ?? []) as unknown as Row[]));
   }, [session]));
+  // Your numbers (U-15): earned, paid, owed, and what was left on the table, fetched once per window.
+  const [days, setDays] = useState<RevenueDays>(90);
+  const [rev, setRev] = useState<MentorRevenue | null>(null);
+  useEffect(() => {
+    if (!session) return;
+    let live = true;
+    setRev(null);
+    myRevenue(days).then((r) => { if (live) setRev(r); }).catch(() => {});
+    return () => { live = false; };
+  }, [session, days]);
   if (!rows) return <Loading />;
   const sum = (st: Row["status"]) => rows.filter((r) => r.status === st).reduce((n, r) => n + r.amount_cents, 0);
   return (
@@ -47,6 +59,16 @@ export default function Earnings() {
         <Card style={s.cell}><Display style={{ color: colors.ink }}>{money(sum("owed"))}</Display><H3>On its way</H3><Small>Earned and waiting to be sent.</Small></Card>
         {sum("held") > 0 ? <Card style={s.cell}><Display style={{ color: colors.warn }}>{money(sum("held"))}</Display><H3>On hold</H3><Small>Held while FLP looks into something.</Small></Card> : null}
       </View>
+      <Card>
+        <H3>Your numbers</H3>
+        <Choice label="Since" options={[{ key: "90", label: "Last 90 days" }, { key: "all", label: "All time" }]} value={String(days)} onChange={(v) => setDays(v === "all" ? "all" : 90)} />
+        <View style={s.grid}>
+          <Num k="Earned" v={rev ? money(rev.earned_cents) : "–"} />
+          <Num k="Paid out" v={rev ? money(rev.paid_cents) : "–"} />
+          <Num k="Owed" v={rev ? money(rev.owed_cents) : "–"} />
+          <Num k="Left on the table" v={rev ? money(rev.left_cents) : "–"} color={colors.warn} note="Offers you declined or let expire. Each one was yours to take." />
+        </View>
+      </Card>
       <Card>
         <H3>Every payout</H3>
         {rows.length === 0 ? <Body style={{ color: colors.muted }}>Nothing yet. Your share appears here the moment you deliver a breakdown, finish a Film Room or send a First Line Presents video.</Body> : null}
@@ -66,8 +88,19 @@ export default function Earnings() {
   );
 }
 
+function Num({ k, v, color, note }: { k: string; v: string; color?: string; note?: string }) {
+  return (
+    <View style={s.num}>
+      <Small>{k}</Small>
+      <H3 style={{ color: color ?? colors.ink }}>{v}</H3>
+      {note ? <Small style={{ color: colors.muted }}>{note}</Small> : null}
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
   topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  num: { flexGrow: 1, flexBasis: 150, gap: 2 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: space.md },
   cell: { flexGrow: 1, flexBasis: 200, gap: 2 },
   line: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space.md, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.line },

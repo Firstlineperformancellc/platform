@@ -6,6 +6,7 @@ import { healthTick } from "../health.js";
 import { autoPayoutsTick, releaseUnpaidSessions, scheduledPayoutsTick } from "../billing.js";
 import { sessionsTick } from "../sessionsTick.js";
 import { presentsTick } from "../presents.js";
+import { signupAlertsTick } from "../alerts.js";
 
 export const jobs = new Hono();
 
@@ -45,5 +46,6 @@ internal.get("/tick", async (c) => {
   const applicants = await notifyTeamOfNewApplicants().catch((e) => ({ sent: 0, error: (e as Error).message }));
   const presentsReport = await presentsTick().catch((e) => ({ reminders: 0, expired: 0, draftsRemoved: 0, error: (e as Error).message }));
   const scheduled = await scheduledPayoutsTick().catch((e) => ({ mode: "error", ran: false, error: (e as Error).message }));
-  return c.json({ ok: true, ...report, sessions: sessionReport, health: healthReport, unpaidSessionsReleased: released, payouts, presents: presentsReport, applicants, at: new Date().toISOString() });
+  const signupAlerts = await signupAlertsTick().catch((e) => ({ sent: 0, error: (e as Error).message }));
+  return c.json({ ok: true, ...report, sessions: sessionReport, health: healthReport, unpaidSessionsReleased: released, payouts, presents: presentsReport, applicants, signupAlerts, at: new Date().toISOString() });
 });

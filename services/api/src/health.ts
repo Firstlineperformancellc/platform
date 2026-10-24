@@ -3,7 +3,7 @@ import { admin } from "./supabase.js";
 import { env } from "./env.js";
 import { mux, muxConfigured, muxSigningConfigured } from "./mux.js";
 import { stripe } from "./stripe.js";
-import { appUrl, notify } from "./notify.js";
+import { appUrl, notifyAdmins } from "./notify.js";
 
 // Service Health Meter. Every connected service gets one cheap, read-only probe; the worst result
 // is the overall state. "off" means not connected yet (Stripe before launch) and does not count.
@@ -136,11 +136,10 @@ export async function recordRun(trigger: "schedule" | "manual") {
   const broke = results.filter((c) => c.status === "unhealthy" && before.get(c.key) !== "unhealthy" && previous);
   const fixed = results.filter((c) => c.status !== "unhealthy" && before.get(c.key) === "unhealthy");
   if (broke.length || fixed.length) {
-    const { data: admins } = await admin.from("profiles").select("id").eq("role", "admin");
     const line = (c: Check) => `<li><b>${c.label}</b>: ${c.detail}</li>`;
     const html = `${broke.length ? `<p>Unhealthy since this check:</p><ul>${broke.map(line).join("")}</ul>` : ""}${fixed.length ? `<p>Back to normal:</p><ul>${fixed.map(line).join("")}</ul>` : ""}<p><a href="${appUrl("/admin/health")}" style="color:#d4a32c">Service health</a></p>`;
     const subject = broke.length ? `Service health: ${broke.map((c) => c.label).join(", ")} unhealthy` : `Service health: ${fixed.map((c) => c.label).join(", ")} recovered`;
-    for (const a of admins ?? []) await notify(a.id, broke.length ? "health.down" : "health.recovered", subject, html, { targetId: run?.id ?? "" });
+    await notifyAdmins("health", broke.length ? "health.down" : "health.recovered", subject, html, run?.id ?? "");
   }
   // keep a month of history
   await admin.from("service_health_runs").delete().lt("ran_at", new Date(Date.now() - 30 * 24 * HOUR).toISOString());

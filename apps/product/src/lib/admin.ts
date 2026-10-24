@@ -132,6 +132,7 @@ export const closeAudit = (id: string, body: { outcome: string; note: string; re
 
 export type AdminPayout = {
   id: string;
+  athlete_id: string;
   status: string;
   amount_cents: number;
   currency: string;
@@ -152,7 +153,7 @@ export type AdminPayout = {
 export async function listPayouts(): Promise<AdminPayout[]> {
   const { data, error } = await supabase
     .from("payouts")
-    .select("id, status, amount_cents, currency, held_reason, note, created_at, paid_at, stripe_transfer_id, error, attempted_at, athletes(display_name, stripe_account_id, payouts_enabled), jobs(id, delivered_at, orders(players(first_name, last_name))), sessions(id, scheduled_at, players(first_name, last_name)), presents_request_id, presents_requests(id, recipient_name, occasion)")
+    .select("id, athlete_id, status, amount_cents, currency, held_reason, note, created_at, paid_at, stripe_transfer_id, error, attempted_at, athletes(display_name, stripe_account_id, payouts_enabled), jobs(id, delivered_at, orders(players(first_name, last_name))), sessions(id, scheduled_at, players(first_name, last_name)), presents_request_id, presents_requests(id, recipient_name, occasion)")
     .order("created_at", { ascending: false })
     .limit(300);
   if (error) throw new Error(error.message);
@@ -161,6 +162,12 @@ export async function listPayouts(): Promise<AdminPayout[]> {
 
 export const payPayout = (id: string, method: "stripe" | "manual", note?: string) => api<{ ok: true; transferId: string | null }>(`/admin/payouts/${id}/pay`, { method: "POST", body: JSON.stringify({ method, note }) });
 export const holdPayout = (id: string, hold: boolean, reason?: string) => api<{ ok: true }>(`/admin/payouts/${id}/hold`, { method: "POST", body: JSON.stringify({ hold, reason }) });
+
+// Per-mentor revenue (U-15): money made and money left on the table, for the last 30 or 90 days or all time.
+export type RevenueDays = 30 | 90 | "all";
+export type MentorRevenue = { earned_cents: number; paid_cents: number; owed_cents: number; left_cents: number; jobs_completed: number; per_job_cents: number; declined: number; expired: number };
+export const EMPTY_REVENUE: MentorRevenue = { earned_cents: 0, paid_cents: 0, owed_cents: 0, left_cents: 0, jobs_completed: 0, per_job_cents: 0, declined: 0, expired: 0 };
+export const mentorRevenue = (days: RevenueDays) => api<{ days: RevenueDays; mentors: Record<string, MentorRevenue> }>(`/admin/mentors/revenue?days=${days}`).then((r) => r.mentors);
 
 export type PendingReview = { id: string; kind: "breakdown" | "session"; rating: number; review: string | null; reviewed_at: string; mentor: string };
 export async function listPendingReviews(): Promise<PendingReview[]> {
