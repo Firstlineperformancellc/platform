@@ -32,6 +32,14 @@
   var esc = function (t) { return String(t == null ? "" : t).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
   var get = function (path) { return fetch(SUPABASE + "/rest/v1/" + path, { headers: headers }).then(function (r) { return r.ok ? r.json() : []; }); };
   var ASK = "Please contact for pricing";
+
+  // Mux's player web component, loaded once and only when there is a video to show. testimonials.html
+  // ships the same script statically, so a page that already has it is left alone.
+  var MUX_SRC = "https://cdn.jsdelivr.net/npm/@mux/mux-player";
+  function loadMux() {
+    if (document.querySelector('script[src="' + MUX_SRC + '"]')) return;
+    var s = document.createElement("script"); s.src = MUX_SRC; document.head.appendChild(s);
+  }
   var FORMATS = [["film_room_30_cents", 0], ["film_room_60_cents", 1], ["addon_30_cents", 2], ["season_arc_cents", 3]];
 
   // First Line Presents: the athletes offering a personal video message, from the same public view the
@@ -63,9 +71,9 @@
     }).join("");
   }
 
-  var levelsBox = document.getElementById("levels"), table = document.getElementById("level-prices"), presentsBox = document.getElementById("presents");
+  var levelsBox = document.getElementById("levels"), table = document.getElementById("level-prices"), presentsBox = document.getElementById("presents"), explainerBox = document.getElementById("explainer");
   var names = document.querySelectorAll("[data-level-names]"), rules = document.querySelectorAll("[data-rule]"), cents = document.querySelectorAll("[data-rule-cents]");
-  if (ANON && (levelsBox || table || names.length || rules.length || cents.length || presentsBox)) {
+  if (ANON && (levelsBox || table || names.length || rules.length || cents.length || presentsBox || explainerBox)) {
     Promise.all([
       (levelsBox || table || names.length) ? get("mentor_tiers_public?select=key,name,description,sort,price_visible,breakdown_price_cents,film_room_30_cents,film_room_60_cents,addon_30_cents,season_arc_cents,color,turnaround_hours&visible=eq.true&order=sort.asc") : [],
       get("settings?select=rules,taxonomy&id=eq.1"),
@@ -74,6 +82,13 @@
       var levels = res[0] || [], row = (res[1] && res[1][0]) || {}, r = row.rules || {};
       rules.forEach(function (el) { var v = r[el.getAttribute("data-rule")]; if (v != null) el.textContent = v; });
       cents.forEach(function (el) { var v = r[el.getAttribute("data-rule-cents")]; if (typeof v === "number") el.textContent = money(v); });
+      // Home-page explainer: the parent video the admin sets in Settings. The slot stays hidden while blank.
+      var explainer = typeof r.explainer_parent_playback_id === "string" ? r.explainer_parent_playback_id.trim() : "";
+      if (explainerBox && explainer) {
+        loadMux();
+        explainerBox.innerHTML = '<mux-player stream-type="on-demand" playback-id="' + esc(explainer) + '" accent-color="#d4a32c" metadata-video-title="How FLP works"></mux-player>';
+        explainerBox.hidden = false;
+      }
       if (presentsBox) renderPresents(presentsBox, res[2] || [], row.taxonomy);
       if (!levels.length) return; // the static fallback stays
       if (levelsBox) levelsBox.innerHTML = levels.map(function (l, i) {

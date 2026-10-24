@@ -7,6 +7,7 @@ import { Pill } from "./ui/Pill";
 import { Body, H3, Small } from "./ui/Text";
 import { api } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
+import { videoFileProblem } from "@/lib/video";
 import { colors, radius, space } from "@/theme/tokens";
 
 type Phase = "idle" | "requesting" | "uploading" | "paused" | "processing" | "ready" | "error";
@@ -57,6 +58,9 @@ export function VideoUpload({ purpose, buttonTitle = "Choose a video file", onUp
     if (picked.canceled || !picked.assets[0]) return;
     const asset = picked.assets[0];
     if (Platform.OS !== "web" || !asset.file) return setError("Uploading from the app arrives with the native build. Use a browser for now.");
+    // Turn away non-videos and oversized files here, in words, rather than letting Mux fail later.
+    const problem = videoFileProblem(asset.name, asset.mimeType ?? asset.file.type, asset.size ?? asset.file.size);
+    if (problem) return setError(problem);
     setFile({ name: asset.name, size: asset.size ?? asset.file.size });
     setPhase("requesting");
     try {

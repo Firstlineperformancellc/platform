@@ -547,6 +547,13 @@ adminRoutes.patch("/settings", async (c) => {
   const pr = patch.rules as Record<string, unknown> | undefined;
   if (pr?.payout_mode !== undefined && pr.payout_mode !== "manual" && pr.payout_mode !== "auto") return c.json({ error: "payout_mode must be manual or auto" }, 400);
   if (pr) {
+    // Video slots: a public Mux playback id, or blank to hide the slot.
+    for (const k of ["explainer_parent_playback_id", "explainer_mentor_playback_id", "upload_help_playback_id"]) {
+      const v = pr[k];
+      if (v === undefined || v === null || v === "") continue;
+      if (typeof v !== "string" || !/^[A-Za-z0-9]{8,80}$/.test(v.trim())) return c.json({ error: `${k} must be a Mux playback id (letters and digits only)` }, 400);
+      pr[k] = v.trim();
+    }
     const n = (k: string, lo: number, hi: number) => { const v = pr[k]; return v === undefined || (typeof v === "number" && Number.isInteger(v) && v >= lo && v <= hi); };
     if (!n("presents_share_pct", 0, 90)) return c.json({ error: "presents_share_pct must be a whole number from 0 to 90" }, 400);
     if (!n("presents_min_cents", 100, 1_000_000) || !n("presents_max_cents", 100, 1_000_000)) return c.json({ error: "Presents price bounds are whole cents between $1 and $10,000" }, 400);

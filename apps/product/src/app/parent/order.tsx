@@ -35,6 +35,7 @@ export default function OrderWizard() {
   const [playerId, setPlayerId] = useState<string | null>(params.player ?? null);
   const [focus, setFocus] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState(""); // instead of uploading a file after paying
   const [mentors, setMentors] = useState<MarketplaceMentor[] | null>(null);
   const [first, setFirst] = useState<string | null>(null);
   const [second, setSecond] = useState<string | null>(null);
@@ -116,6 +117,7 @@ export default function OrderWizard() {
           waitDays: firstMentor && !firstMentor.available ? Number(waitDays) || null : null,
           focusAreas: focus,
           notes,
+          youtubeUrl: youtubeUrl.trim() || null,
         }),
       });
       if (res.checkoutUrl) {
@@ -192,6 +194,16 @@ export default function OrderWizard() {
             numberOfLines={4}
             style={{ height: 110, paddingTop: space.md, textAlignVertical: "top" }}
             placeholder="What's the situation? Jersey number and color helps. Anything you want them to watch for."
+          />
+          <TextField
+            label="Already on YouTube? Paste the link (optional)"
+            value={youtubeUrl}
+            onChangeText={setYoutubeUrl}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+            placeholder="https://youtube.com/watch?v=…"
+            hint="Unlisted is fine. Leave this blank to upload the file after you pay."
           />
         </Card>
       ) : null}

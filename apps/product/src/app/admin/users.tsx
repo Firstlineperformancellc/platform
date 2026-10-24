@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useFocusEffect } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, useWindowDimensions } from "react-native";
 import { AdminShell } from "@/components/AdminShell";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -8,7 +8,7 @@ import { Choice } from "@/components/ui/Choice";
 import { Pill } from "@/components/ui/Pill";
 import { TextField } from "@/components/ui/TextField";
 import { Body, H3, Small } from "@/components/ui/Text";
-import { deleteMentor, deleteUser, listUsers, suspendUser, unsuspendUser, userActivity, type ActivityRow, type AdminUser } from "@/lib/admin";
+import { deleteMentor, deleteUser, downloadProgramsCsv, listPrograms, listUsers, suspendUser, unsuspendUser, userActivity, type ActivityRow, type AdminUser, type ProgramRow } from "@/lib/admin";
 import { contactUser } from "@/lib/support";
 import { useAuth } from "@/lib/auth";
 import { money } from "@/lib/settings";
@@ -49,11 +49,31 @@ export default function AdminUsers() {
   const [cSubject, setCSubject] = useState("");
   const [cBody, setCBody] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<"users" | "programs">("users");
+  const [programs, setPrograms] = useState<ProgramRow[] | null>(null);
 
   const load = useCallback(() => {
     listUsers().then(setRows).catch((e) => setError((e as Error).message));
   }, []);
   useFocusEffect(load);
+
+  // The programs report is fetched once someone opens that view.
+  useEffect(() => {
+    if (view !== "programs") return;
+    listPrograms().then(setPrograms).catch((e) => setError((e as Error).message));
+  }, [view]);
+
+  async function exportCsv() {
+    setBusy("csv");
+    setError(null);
+    setMsg(null);
+    try {
+      setMsg(`Downloaded ${await downloadProgramsCsv()}.`);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+    setBusy(null);
+  }
 
   async function toggle(id: string) {
     if (open === id) return setOpen(null);
@@ -97,25 +117,41 @@ export default function AdminUsers() {
     });
   }, [rows, q, filter]);
 
+  const shownPrograms = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return (programs ?? []).filter((p) => !needle || p.team.toLowerCase().includes(needle));
+  }, [programs, q]);
+
   const spent = (u: AdminUser) => u.spent_orders_cents + u.spent_sessions_cents + u.spent_packs_cents;
 
   return (
     <AdminShell title="Users">
       <View style={s.toolbar}>
+        <Choice label="View" options={[{ key: "users", label: "Users" }, { key: "programs", label: "Programs" }]} value={view} onChange={(v) => setView(v as "users" | "programs")} />
         <View style={{ flexGrow: 1, flexBasis: 260 }}>
-          <TextField label="Search" value={q} onChangeText={setQ} placeholder="Name or email" autoCapitalize="none" />
+          <TextField label="Search" value={q} onChangeText={setQ} placeholder={view === "programs" ? "Team or program" : "Name or email"} autoCapitalize="none" />
         </View>
-        <Choice
-          label="Show"
-          options={[{ key: "all", label: `All (${rows?.length ?? 0})` }, { key: "parents", label: "Parents" }, { key: "mentors", label: "Mentors" }, { key: "admins", label: "Admins" }, { key: "suspended", label: "Suspended / deleted" }]}
-          value={filter}
-          onChange={(v) => setFilter(v as string)}
-        />
+        {view === "programs" ? (
+          <Button title="Export CSV" variant="secondary" small loading={busy === "csv"} disabled={!programs?.length} onPress={exportCsv} />
+        ) : (
+          <Choice
+            label="Show"
+            options={[{ key: "all", label: `All (${rows?.length ?? 0})` }, { key: "parents", label: "Parents" }, { key: "mentors", label: "Mentors" }, { key: "admins", label: "Admins" }, { key: "suspended", label: "Suspended / deleted" }]}
+            value={filter}
+            onChange={(v) => setFilter(v as string)}
+          />
+        )}
       </View>
       {msg ? <Body style={{ color: colors.ok }}>{msg}</Body> : null}
       {error ? <Body style={{ color: colors.danger }}>{error}</Body> : null}
-      {rows === null ? <Body style={{ color: colors.muted }}>Loading…</Body> : shown.length === 0 ? <Body style={{ color: colors.muted }}>No accounts match.</Body> : null}
-      {shown.map((u) => {
+      {view === "programs" ? (
+        <Programs rows={programs} shown={shownPrograms} />
+      ) : rows === null ? (
+        <Body style={{ color: colors.muted }}>Loading…</Body>
+      ) : shown.length === 0 ? (
+        <Body style={{ color: colors.muted }}>No accounts match.</Body>
+      ) : null}
+      {view === "users" ? shown.map((u) => {
         const st = status(u);
         const isMe = u.id === session?.user.id;
         const canAct = !isMe && u.role !== "admin" && !u.deleted_at;
@@ -212,7 +248,7 @@ export default function AdminUsers() {
             ) : null}
           </Card>
         );
-      })}
+      }) : null}
     </AdminShell>
   );
 }
@@ -226,6 +262,57 @@ function Stat({ k, v }: { k: string; v: string }) {
   );
 }
 
+// Sign-ups by program: one row per team, spelling differences folded together, families who left the
+// team blank at the bottom. A table on a laptop; stacked rows on a phone.
+function Programs({ rows, shown }: { rows: ProgramRow[] | null; shown: ProgramRow[] }) {
+  const narrow = useWindowDimensions().width < 720;
+  if (rows === null) return <Body style={{ color: colors.muted }}>Loading…</Body>;
+  if (rows.length === 0) return <Body style={{ color: colors.muted }}>No youth athletes yet.</Body>;
+  const total = rows.reduce((n, r) => n + r.players, 0);
+  const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString() : "–");
+  return (
+    <Card>
+      <Small>
+        {rows.length} program{rows.length === 1 ? "" : "s"} · {total} youth athlete{total === 1 ? "" : "s"} · grouped by the current team a parent typed
+      </Small>
+      {!narrow ? (
+        <View style={s.prow}>
+          <Small style={s.pteam}>Team</Small>
+          <Small style={s.pnum}>Youth athletes</Small>
+          <Small style={s.pnum}>Parents</Small>
+          <Small style={s.pnum}>Orders</Small>
+          <Small style={s.pnum}>Film Rooms</Small>
+          <Small style={s.pdate}>Last sign-up</Small>
+        </View>
+      ) : null}
+      {shown.length === 0 ? <Body style={{ color: colors.muted }}>No programs match.</Body> : null}
+      {shown.map((r) =>
+        narrow ? (
+          <View key={r.team} style={[s.pline, { gap: 4 }]}>
+            <Body>{r.team}</Body>
+            <View style={s.stats}>
+              <Stat k="Youth athletes" v={String(r.players)} />
+              <Stat k="Parents" v={String(r.parents)} />
+              <Stat k="Orders" v={String(r.orders)} />
+              <Stat k="Film Rooms" v={String(r.sessions)} />
+              <Stat k="Last sign-up" v={day(r.last_signup)} />
+            </View>
+          </View>
+        ) : (
+          <View key={r.team} style={[s.prow, s.pline]}>
+            <Body style={s.pteam}>{r.team}</Body>
+            <Body style={s.pnum}>{r.players}</Body>
+            <Body style={s.pnum}>{r.parents}</Body>
+            <Body style={s.pnum}>{r.orders}</Body>
+            <Body style={s.pnum}>{r.sessions}</Body>
+            <Body style={s.pdate}>{day(r.last_signup)}</Body>
+          </View>
+        ),
+      )}
+    </Card>
+  );
+}
+
 const s = StyleSheet.create({
   actions: { flexDirection: "row", gap: 8, alignItems: "center", flexWrap: "wrap" },
   composer: { gap: 8, borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 10, marginTop: 4 },
@@ -236,4 +323,9 @@ const s = StyleSheet.create({
   row: { flexDirection: "row", flexWrap: "wrap", gap: space.sm, alignItems: "flex-end" },
   timeline: { borderTopWidth: 1, borderTopColor: colors.line, paddingTop: space.sm, gap: 6 },
   event: { flexDirection: "row", flexWrap: "wrap", gap: space.sm, alignItems: "baseline" },
+  prow: { flexDirection: "row", gap: space.md, alignItems: "flex-end" },
+  pline: { borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 6 },
+  pteam: { flex: 1, minWidth: 0 },
+  pnum: { width: 96, textAlign: "right" },
+  pdate: { width: 110, textAlign: "right" },
 });

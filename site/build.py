@@ -2,7 +2,7 @@
 """Generates the static marketing pages in site/www from one shared frame.
 Edit the copy here, run `python3 site/build.py`, commit the generated HTML.
 Only site/www is deployed; site/index.html (the coming-soon page) is untouched."""
-import os, pathlib
+import html, json, os, pathlib, re
 
 ROOT = pathlib.Path(__file__).resolve().parent
 OUT = ROOT / "www"
@@ -21,7 +21,34 @@ ANON_PROD = anon_key(".env.prod")
 if not ANON_PROD:
     raise SystemExit("apps/product/.env.prod is missing or has no anon key; the production site would have no prices")
 
-NAV = [("index.html", "Home"), ("how-it-works.html", "How it works"), ("for-mentors.html", "For mentors"), ("pricing.html", "Pricing"), ("faq.html", "FAQ"), ("presents.html", "Presents")]
+# Testimonials are real words from real families, supplied by FLP in site/content/testimonials.json as
+# [{name, context, quote, playback_id}]. The file ships empty and nothing here invents an entry; until
+# FLP fills it, testimonials.html says so and the home page shows no strip.
+def testimonials():
+    path = ROOT / "content" / "testimonials.json"
+    data = json.loads(path.read_text()) if path.exists() else []
+    if not isinstance(data, list):
+        raise SystemExit("site/content/testimonials.json must be a JSON array")
+    for t in data:
+        ok = isinstance(t, dict) and str(t.get("name") or "").strip() and (str(t.get("quote") or "").strip() or t.get("playback_id"))
+        if not ok:
+            raise SystemExit("site/content/testimonials.json: every entry needs a name and a quote or a playback_id")
+        if t.get("playback_id") and not re.fullmatch(r"[A-Za-z0-9]{8,80}", str(t["playback_id"])):
+            raise SystemExit("site/content/testimonials.json: playback_id must be a public Mux playback id (letters and digits)")
+    return data
+TESTIMONIALS = testimonials()
+esc = html.escape
+# Mux's player web component (same CDN build Mux documents); only pages with a video load it.
+MUX_SCRIPT = '<script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>'
+
+def quote_card(t):
+    """One testimonial card: the video when FLP has one, the quote, then who said it."""
+    video = '<mux-player stream-type="on-demand" playback-id="%s" accent-color="#d4a32c" metadata-video-title="%s"></mux-player>' % (esc(str(t["playback_id"])), esc(t["name"])) if t.get("playback_id") else ""
+    quote = "<blockquote><p>“%s”</p></blockquote>" % esc(str(t["quote"]).strip()) if str(t.get("quote") or "").strip() else ""
+    context = "<span>%s</span>" % esc(str(t["context"])) if t.get("context") else ""
+    return '<figure class="quote card">%s%s<figcaption><b>%s</b>%s</figcaption></figure>' % (video, quote, esc(t["name"]), context)
+
+NAV = [("index.html", "Home"), ("how-it-works.html", "How it works"), ("for-mentors.html", "For mentors"), ("pricing.html", "Pricing"), ("faq.html", "FAQ"), ("testimonials.html", "Testimonials"), ("presents.html", "Presents")]
 
 def frame(title, desc, body, current):
     links = []
@@ -62,7 +89,7 @@ def frame(title, desc, body, current):
       <a class="brand" href="index.html" style="margin-bottom:10px"><img src="assets/logo.png" alt="" width="44" height="45"><span>First Line Performance</span></a>
       <p class="small">Personalized video breakdowns and live Film Room mentoring from athletes who played at the level your youth athlete is chasing.</p>
     </div>
-    <div><h4>Product</h4><a href="how-it-works.html">How it works</a><a href="pricing.html">Pricing</a><a href="faq.html">FAQ</a><a data-app="/mentors" href="#">Browse FLP Mentors</a><a href="presents.html">First Line Presents</a></div>
+    <div><h4>Product</h4><a href="how-it-works.html">How it works</a><a href="pricing.html">Pricing</a><a href="faq.html">FAQ</a><a href="testimonials.html">Testimonials</a><a data-app="/mentors" href="#">Browse FLP Mentors</a><a href="presents.html">First Line Presents</a></div>
     <div><h4>Mentors</h4><a href="for-mentors.html">Become an FLP Mentor</a><a data-app="/apply" href="#">Apply</a></div>
     <div><h4>Company</h4><a href="contact.html">Contact</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></div>
     <div class="copy">&copy; 2026 First Line Performance LLC. All rights reserved.</div>
@@ -75,6 +102,23 @@ def frame(title, desc, body, current):
 
 PAGES = {}
 
+# Home-page strip: up to three testimonials, only once FLP has supplied some.
+INDEX_QUOTES = ""
+if TESTIMONIALS:
+    cards = "".join(quote_card(t) for t in TESTIMONIALS[:3])
+    script = MUX_SCRIPT if any(t.get("playback_id") for t in TESTIMONIALS[:3]) else ""
+    INDEX_QUOTES = '''
+<section>
+  <div class="wrap">
+    <p class="kicker">What families say</p>
+    <h2>In their <span class="gold">own words</span></h2>
+    <div class="quotes">%s</div>
+    <div class="btns" style="margin-top:26px"><a class="btn secondary" href="testimonials.html">More from families</a></div>
+  </div>
+</section>
+%s''' % (cards, script)
+
+# The explainer slot in the hero stays hidden until site.js finds a parent explainer video in settings.
 PAGES["index.html"] = ("Film breakdowns from athletes who've done it", "Upload your youth athlete's game film. An FLP Mentor who played NCAA, PWHL or pro breaks it down on video, with a Player Development Worksheet, within 72 hours.", '''
 <section class="hero">
   <div class="wrap">
@@ -90,6 +134,7 @@ PAGES["index.html"] = ("Film breakdowns from athletes who've done it", "Upload y
     </div>
     <img class="logo" src="assets/logo.png" alt="First Line Performance" width="800" height="810">
   </div>
+  <div class="wrap explainer" id="explainer" hidden></div>
 </section>
 
 <section class="band">
@@ -116,7 +161,7 @@ PAGES["index.html"] = ("Film breakdowns from athletes who've done it", "Upload y
     <div class="btns" style="margin-top:26px"><a class="btn secondary" href="pricing.html">See pricing</a></div>
   </div>
 </section>
-
+''' + INDEX_QUOTES + '''
 <section class="band">
   <div class="wrap">
     <p class="kicker">Built for families</p>
@@ -328,6 +373,7 @@ PAGES["faq.html"] = ("FAQ", "Answers for parents and for athletes who want to me
     <details><summary>Can my youth athlete have their own login?</summary><p>No. Accounts belong to parents. Your youth athlete is a profile under your account, and there is no direct messaging between mentors and minors.</p></details>
     <details><summary>Is the Film Room recorded?</summary><p>Always. Recording starts the moment the mentor joins and nobody in the room can stop it. Parents may join any session. FLP keeps recordings for quality control and safeguarding.</p></details>
     <details><summary>What if the breakdown isn't good?</summary><p>File a Quality Control Audit from the order page within <span data-rule="qca_window_days">7</span> days. FLP reviews the video and worksheet and decides on a refund, a re-review by another mentor, or another fix. The mentor's payout is held while the audit is open.</p></details>
+    <details><summary>How do I upload the game film?</summary><p>Any phone video works; MP4 or MOV is ideal, and any length is fine. Keep the tab open until the bar reaches 100%. If your connection drops, the upload resumes on its own. A full game is usually 1 to 4 GB. Or paste a YouTube link on the order step instead.</p></details>
     <details><summary>Where does my film go?</summary><p>To a private video service. Only you, your chosen mentor once they've accepted, and FLP can view it. Links don't work without being signed in.</p></details>
     <details><summary>What is First Line Presents?</summary><p>A personal video message recorded by an FLP athlete for an occasion: a birthday, a big game, a comeback. You pick the athlete, tell them who it's for and what to say, and get a private link by email within a few days. Anyone can order one, no account needed, and FLP checks every video made for a young athlete. <a href="presents.html">More about Presents</a>.</p></details>
     <h2 id="mentors" style="margin-top:48px">For mentors</h2>
@@ -339,6 +385,51 @@ PAGES["faq.html"] = ("FAQ", "Answers for parents and for athletes who want to me
   </div>
 </section>
 ''')
+
+# testimonials.html: every entry FLP has supplied, or an honest "coming" page while the file is empty.
+def testimonials_page():
+    desc = "What parents and youth athletes say after a breakdown or a Film Room with an FLP Mentor."
+    if not TESTIMONIALS:
+        return ("What families say", desc, '''
+<section class="hero" style="padding-bottom:24px">
+  <div class="wrap" style="grid-template-columns:1fr">
+    <div>
+      <p class="kicker">Testimonials</p>
+      <h1>What <span class="gold">families say</span></h1>
+      <div class="rule"></div>
+      <p class="lead">Testimonials are coming. FLP launched in October 2026; as families finish their first breakdowns, their words will appear here.</p>
+      <div class="btns"><a class="btn secondary" href="how-it-works.html">How it works</a></div>
+    </div>
+  </div>
+</section>
+''')
+    cards = "".join(quote_card(t) for t in TESTIMONIALS)
+    script = MUX_SCRIPT if any(t.get("playback_id") for t in TESTIMONIALS) else ""
+    return ("What families say", desc, '''
+<section class="hero" style="padding-bottom:24px">
+  <div class="wrap" style="grid-template-columns:1fr">
+    <div>
+      <p class="kicker">Testimonials</p>
+      <h1>What <span class="gold">families say</span></h1>
+      <div class="rule"></div>
+      <p class="lead">Parents and youth athletes, in their own words, after a breakdown or a Film Room with an FLP Mentor.</p>
+    </div>
+  </div>
+</section>
+<section class="tight">
+  <div class="wrap">
+    <div class="quotes">%s</div>
+  </div>
+</section>
+<section>
+  <div class="wrap" style="text-align:center">
+    <h2>Ready when the film is</h2>
+    <p class="lead" style="margin:0 auto 24px">Create a parent account, add your youth athlete, pick a mentor.</p>
+    <div class="btns" style="justify-content:center"><a class="btn primary" data-app="/sign-up" href="#">Create a parent account</a><a class="btn secondary" href="how-it-works.html">How it works</a></div>
+  </div>
+</section>
+%s''' % (cards, script))
+PAGES["testimonials.html"] = testimonials_page()
 
 PAGES["presents.html"] = ("First Line Presents", "A personal video message recorded by an FLP athlete for a birthday, a big game or a comeback. Delivered as a private link within a few days. No account needed.", '''
 <section class="hero" style="padding-bottom:24px">
@@ -455,7 +546,7 @@ PAGES["terms.html"] = ("Terms", "Terms of service for First Line Performance.", 
 </section>
 ''')
 
-CURRENT = {"index.html": "index.html", "how-it-works.html": "how-it-works.html", "for-mentors.html": "for-mentors.html", "pricing.html": "pricing.html", "faq.html": "faq.html", "presents.html": "presents.html"}
+CURRENT = {"index.html": "index.html", "how-it-works.html": "how-it-works.html", "for-mentors.html": "for-mentors.html", "pricing.html": "pricing.html", "faq.html": "faq.html", "testimonials.html": "testimonials.html", "presents.html": "presents.html"}
 OUT.mkdir(exist_ok=True)
 for slug, (title, desc, body) in PAGES.items():
     (OUT / slug).write_text(frame(title, desc, body, CURRENT.get(slug, "")))

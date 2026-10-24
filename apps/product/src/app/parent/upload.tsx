@@ -4,6 +4,7 @@ import { Platform, StyleSheet, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { createUpload, type UpChunk } from "@mux/upchunk";
 import { Brand } from "@/components/Brand";
+import { ExplainerVideo } from "@/components/ExplainerVideo";
 import { MuxPlayer } from "@/components/MuxPlayer";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -11,7 +12,9 @@ import { Pill } from "@/components/ui/Pill";
 import { Screen } from "@/components/ui/Screen";
 import { Body, H1, H3, Label, Small } from "@/components/ui/Text";
 import { api } from "@/lib/api";
+import { useSettings } from "@/lib/settings";
 import { supabase } from "@/lib/supabase";
+import { UPLOAD_TIPS, videoFileProblem } from "@/lib/video";
 import { colors, radius, space } from "@/theme/tokens";
 
 type Phase = "idle" | "requesting" | "uploading" | "paused" | "processing" | "ready" | "error";
@@ -23,11 +26,13 @@ function fmtBytes(n: number) {
   return `${Math.round(n / 1e3)} KB`;
 }
 
-// Week-1 upload spike: pick a game file, upload it straight to Mux in resumable chunks,
-// survive a dropped connection, then stream it back. This screen becomes step 2 of the order wizard.
-export default function UploadSpike() {
+// Game film upload, step 2 of an order: pick the game file, send it straight to Mux in resumable
+// chunks, survive a dropped connection, then play it back once processed. Reached from the order
+// page after payment; without an order it is a plain upload for the parent's library.
+export default function GameFilmUpload() {
   const { order } = useLocalSearchParams<{ order?: string }>();
   const router = useRouter();
+  const { settings } = useSettings();
   const [phase, setPhase] = useState<Phase>("idle");
   const [file, setFile] = useState<{ name: string; size: number } | null>(null);
   const [progress, setProgress] = useState(0);
@@ -52,7 +57,7 @@ export default function UploadSpike() {
       if (data.status === "ready") setPhase("ready");
       if (data.status === "errored") {
         setPhase("error");
-        setError("Mux could not process this file.");
+        setError("The video could not be processed. Try a different file.");
       }
     }, 3000);
     return () => clearInterval(t);
@@ -64,7 +69,13 @@ export default function UploadSpike() {
     if (picked.canceled || !picked.assets[0]) return;
     const asset = picked.assets[0];
     if (Platform.OS !== "web" || !asset.file) {
-      setError("Native upload lands in week 7. Use a browser for this test.");
+      setError("Uploading from the app arrives with the native build. Use a browser for now.");
+      return;
+    }
+    // Turn away non-videos and oversized files here, in words, rather than letting Mux fail later.
+    const problem = videoFileProblem(asset.name, asset.mimeType ?? asset.file.type, asset.size ?? asset.file.size);
+    if (problem) {
+      setError(problem);
       return;
     }
     setFile({ name: asset.name, size: asset.size ?? asset.file.size });
@@ -129,14 +140,22 @@ export default function UploadSpike() {
           <Button title="Back" variant="ghost" small />
         </Link>
       </View>
-      <View>
-        <Label>{order ? "Step 2 of your order" : "Upload test"}</Label>
+      <View style={{ gap: space.sm }}>
+        <Label>{order ? "Step 2 of your order" : "Game film"}</Label>
         <H1>Game film upload</H1>
         <Body style={{ color: colors.muted }}>
-          Pick a full game file. It uploads straight to the video service in chunks, pauses if the connection drops,
-          and resumes on its own. When processing finishes it plays back below.
+          Choose the game file and we take it from there; your FLP Mentor gets it as soon as it has processed.
         </Body>
+        <View style={s.tips}>
+          <Label>What works</Label>
+          {UPLOAD_TIPS.map((tip) => (
+            <Small key={tip}>· {tip}</Small>
+          ))}
+        </View>
       </View>
+
+      {/* Admin-filled walkthrough (Settings → upload help video). Renders nothing until an id is set. */}
+      <ExplainerVideo playbackId={settings?.rules.upload_help_playback_id} title="How to upload your game film" label="A 30-second walkthrough" />
 
       <Card>
         {phase === "idle" || phase === "error" ? (
@@ -164,6 +183,9 @@ export default function UploadSpike() {
               {!online ? <Pill tone="warn">Offline, will resume</Pill> : null}
               {phase === "processing" ? <Pill tone="gold">Processing</Pill> : null}
             </View>
+            {phase === "uploading" || phase === "paused" ? (
+              <Small>Keep this tab open. You can pause and come back; if the connection drops it resumes on its own.</Small>
+            ) : null}
             <View style={s.row}>
               {phase === "uploading" ? <Button title="Pause" variant="secondary" small onPress={pause} /> : null}
               {phase === "paused" ? <Button title="Resume" small onPress={resume} /> : null}
@@ -194,6 +216,7 @@ export default function UploadSpike() {
 
 const s = StyleSheet.create({
   topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  tips: { gap: space.xs, marginTop: space.xs },
   track: { height: 10, borderRadius: radius.pill, backgroundColor: colors.panel2, overflow: "hidden" },
   fill: { height: "100%", backgroundColor: colors.gold },
   row: { flexDirection: "row", alignItems: "center", gap: space.md, flexWrap: "wrap" },

@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import { api } from "./api";
 import { supabase } from "./supabase";
 
@@ -232,6 +233,33 @@ export const moderateReview = (id: string, status: "published" | "hidden", kind:
 // Refund a paid order (all of what is left, or an amount in cents). Goes back through Stripe when the order was charged there.
 export const refundOrder = (orderId: string, amountCents?: number, reason?: string) => api<{ ok: true; refundedCents: number; totalRefundedCents: number; full: boolean; charged: boolean; mentorPaidCents: number }>(`/admin/orders/${orderId}/refund`, { method: "POST", body: JSON.stringify({ amountCents, reason }) });
 export const patchSettings = (patch: Record<string, unknown>) => api<{ ok: true }>("/admin/settings", { method: "PATCH", body: JSON.stringify(patch) });
+
+// Sign-ups by program: youth athletes grouped by the "current team" their parent typed.
+export type ProgramRow = { team: string; players: number; parents: number; orders: number; sessions: number; last_signup: string | null };
+export const listPrograms = () => api<{ programs: ProgramRow[] }>("/admin/programs").then((r) => r.programs);
+
+// The CSV needs the bearer token, so it cannot be a plain link: fetch it and hand the browser a file.
+export const programsCsvUrl = `${process.env.EXPO_PUBLIC_API_URL ?? "https://api-dev.firstlineperform.com"}/admin/programs.csv`;
+export async function downloadProgramsCsv(): Promise<string> {
+  if (Platform.OS !== "web" || typeof document === "undefined") throw new Error("Export the CSV from a web browser.");
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  const res = await fetch(programsCsvUrl, { headers: token ? { authorization: `Bearer ${token}` } : {} });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? `API error ${res.status}`);
+  }
+  const name = `flp-programs-${new Date().toISOString().slice(0, 10)}.csv`;
+  const url = URL.createObjectURL(new Blob([await res.text()], { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return name;
+}
 export const grantAdmin = (email: string) => api<{ ok: true }>("/admin/admins", { method: "POST", body: JSON.stringify({ email }) });
 
 export async function counts() {

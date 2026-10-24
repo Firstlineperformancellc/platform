@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useFocusEffect, useRouter } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { Brand } from "@/components/Brand";
+import { ExplainerVideo } from "@/components/ExplainerVideo";
 import { MentorSessions } from "@/components/MentorSessions";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -79,6 +80,9 @@ export default function AthleteHome() {
   const status = athlete?.status;
   const onDeck = jobs.filter((j) => j.status === "accepted");
   const done = jobs.filter((j) => j.status === "delivered" || j.status === "closed");
+  // What the mentor is leaving waiting, in dollars: their share of the unanswered offers and of the accepted breakdowns not yet delivered.
+  const waitingCents = offers.reduce((t, o) => t + (o.jobs.orders?.mentor_share_cents ?? 0), 0);
+  const onClockCents = onDeck.reduce((t, j) => t + (j.orders?.mentor_share_cents ?? 0), 0);
 
   // An athlete approved for First Line Presents only has no breakdown or Film Room work to show.
   const mentoring = presents?.offers_mentoring !== false;
@@ -100,6 +104,7 @@ export default function AthleteHome() {
         <Label>{presents && !presents.offers_mentoring ? `FLP Athlete · ${PRESENTS_NAME}` : `FLP Mentor${athlete?.tier ? ` · ${TIER_LABEL[athlete.tier as Tier]}` : ""}`}</Label>
         <H1>Welcome, {firstName(profile?.full_name)}</H1>
       </View>
+      <ExplainerVideo playbackId={settings?.rules.explainer_mentor_playback_id} title="How mentoring on FLP works" label="Watch how it works" />
 
       <Card style={{ borderColor: colors.goldDim }}>
         <View style={s.row}>
@@ -125,6 +130,11 @@ export default function AthleteHome() {
       ) : status === "approved" ? (
         <>
           {mentoring ? (<>
+          {waitingCents > 0 || onClockCents > 0 ? (
+            <Body style={{ color: colors.gold }}>
+              {[waitingCents > 0 ? `${money(waitingCents)} is waiting on your answer` : null, onClockCents > 0 ? `${money(onClockCents)} is on the clock` : null].filter(Boolean).join(" · ")}
+            </Body>
+          ) : null}
           <View>
             <H2>New requests</H2>
             {offers.length === 0 ? <Body style={{ color: colors.muted }}>Nothing waiting on you.</Body> : null}

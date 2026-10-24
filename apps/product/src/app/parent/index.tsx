@@ -1,6 +1,7 @@
 import { Link } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { Brand } from "@/components/Brand";
+import { ExplainerVideo } from "@/components/ExplainerVideo";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Screen } from "@/components/ui/Screen";
@@ -28,6 +29,8 @@ export default function ParentHome() {
         <Label>Parent account</Label>
         <H1>Welcome, {firstName(profile?.full_name)}</H1>
       </View>
+      {/* The parent explainer, set from admin Settings; nothing renders until Alex drops a video in. */}
+      <ExplainerVideo playbackId={settings?.rules.explainer_parent_playback_id} title="How FLP works" label="Watch how it works" />
       <View style={s.grid}>
         <Card style={s.cell}>
           <H3>Your youth athletes</H3>

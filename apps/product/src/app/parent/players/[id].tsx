@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Brand } from "@/components/Brand";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -8,11 +8,12 @@ import { Choice } from "@/components/ui/Choice";
 import { Screen } from "@/components/ui/Screen";
 import { TextField } from "@/components/ui/TextField";
 import { Body, H1, Label, Small } from "@/components/ui/Text";
+import { api } from "@/lib/api";
 import { Loading } from "@/lib/auth";
 import { getPlayer, savePlayer, type PlayerInput } from "@/lib/players";
 import { useSettings } from "@/lib/settings";
 import type { HockeyPosition } from "@/lib/types";
-import { colors, space } from "@/theme/tokens";
+import { colors, radius, space } from "@/theme/tokens";
 
 const EMPTY: PlayerInput = { first_name: "", last_name: "", age_group: "", position: "forward", skill_level: "", current_team: "", notes: "" };
 
@@ -29,6 +30,27 @@ export default function PlayerForm() {
   useEffect(() => {
     if (!isNew && id) getPlayer(id).then((p) => setForm(p ? { ...EMPTY, ...p } : EMPTY));
   }, [id, isNew]);
+
+  // Offer team names other families already typed, so one program is spelled one way. Asked 300 ms
+  // after the last keystroke, from two characters on; a reply that lands after more typing is dropped.
+  const [teams, setTeams] = useState<string[]>([]);
+  const typed = form?.current_team.trim().replace(/\s+/g, " ") ?? "";
+  useEffect(() => {
+    if (typed.length < 2) {
+      setTeams([]);
+      return;
+    }
+    let stale = false;
+    const t = setTimeout(() => {
+      api<{ teams: string[] }>(`/programs/suggest?q=${encodeURIComponent(typed)}`)
+        .then((r) => { if (!stale) setTeams(r.teams); })
+        .catch(() => {});
+    }, 300);
+    return () => {
+      stale = true;
+      clearTimeout(t);
+    };
+  }, [typed]);
 
   if (!form || !settings) return <Loading />;
   const set = (patch: Partial<PlayerInput>) => setForm({ ...form, ...patch });
@@ -69,6 +91,16 @@ export default function PlayerForm() {
         <Choice label="Position" options={settings.taxonomy.positions} value={form.position} onChange={(v) => set({ position: v as HockeyPosition })} />
         <Choice label="Level" options={settings.taxonomy.skill_levels.map((l) => ({ key: l, label: l }))} value={form.skill_level} onChange={(v) => set({ skill_level: v as string })} />
         <TextField label="Current team" value={form.current_team} onChangeText={(v) => set({ current_team: v })} placeholder="e.g. Detroit Little Caesars 14U AAA" />
+        {teams.length > 0 && !teams.includes(form.current_team.trim()) ? (
+          <View style={s.suggest}>
+            <Small>Already on FLP:</Small>
+            {teams.map((t) => (
+              <Pressable key={t} accessibilityRole="button" onPress={() => set({ current_team: t })} style={({ hovered }: { hovered?: boolean }) => [s.chip, hovered && s.chipHover]}>
+                <Small style={{ color: colors.gold }}>{t}</Small>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
         {error ? <Body style={{ color: colors.danger }}>{error}</Body> : null}
         <Button title={isNew ? "Add youth athlete" : "Save"} full loading={busy} onPress={submit} />
         <Small>You're their Original Coach. Everything ordered here is filed under them.</Small>
@@ -77,4 +109,9 @@ export default function PlayerForm() {
   );
 }
 
-const s = StyleSheet.create({ topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" } });
+const s = StyleSheet.create({
+  topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  suggest: { flexDirection: "row", flexWrap: "wrap", gap: space.sm, alignItems: "center" },
+  chip: { paddingHorizontal: space.md, paddingVertical: space.xs, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.line2, backgroundColor: colors.panel },
+  chipHover: { borderColor: colors.gold, backgroundColor: colors.goldSoft },
+});

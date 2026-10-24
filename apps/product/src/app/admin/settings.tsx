@@ -41,6 +41,13 @@ const LISTS: { key: string; label: string }[] = [
   { key: "focus_skater", label: "Focus areas, skaters" },
   { key: "focus_goalie", label: "Focus areas, goalies" },
 ];
+// Video slots on the parent dashboard, the mentor dashboard and the film upload step. Public Mux playback ids.
+const VIDEOS: { key: "explainer_parent_playback_id" | "explainer_mentor_playback_id" | "upload_help_playback_id"; label: string }[] = [
+  { key: "explainer_parent_playback_id", label: "Parent explainer (Mux playback id)" },
+  { key: "explainer_mentor_playback_id", label: "Mentor explainer (Mux playback id)" },
+  { key: "upload_help_playback_id", label: "Upload walkthrough (Mux playback id)" },
+];
+const VIDEO_HINT = "Public playback id from the Mux dashboard, e.g. the part after stream.mux.com/ in the video URL. Blank hides the slot.";
 
 // Prices, splits, rules, and lists. Everything here changes the product without a deploy.
 export default function AdminSettings() {
@@ -50,6 +57,7 @@ export default function AdminSettings() {
   // First Line Presents, edited as text and sent as the API expects (cents, whole numbers, word lists)
   const [pr, setPr] = useState({ enabled: true, share: "", min: "", max: "", days: "", review: "minors" as "minors" | "all", problemDays: "", occasions: "", blocklist: "" });
   const [lists, setLists] = useState<Record<string, string>>({});
+  const [videos, setVideos] = useState<Record<string, string>>({});
   const [adminEmail, setAdminEmail] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -62,6 +70,7 @@ export default function AdminSettings() {
     setPr({ enabled: p.enabled, share: String(p.sharePct), min: String(p.minCents / 100), max: String(p.maxCents / 100), days: String(p.maxDays), review: p.review, problemDays: String(p.problemDays), occasions: p.occasions.join(", "), blocklist: p.blocklist.join(", ") });
     setRules(Object.fromEntries(RULES.map((r) => [r.key, String((settings.rules as Record<string, unknown>)[r.key] ?? "")])));
     setLists(Object.fromEntries(LISTS.map((l) => [l.key, ((settings.taxonomy as Record<string, unknown>)[l.key] as string[]).join(", ")])));
+    setVideos(Object.fromEntries(VIDEOS.map((v) => [v.key, settings.rules[v.key] ?? ""])));
   }, [settings]);
 
   if (!settings) return <Loading />;
@@ -121,6 +130,15 @@ export default function AdminSettings() {
           </View>
         </View>
         <Button title="Save waiting period" small loading={busy === "payoutDays"} onPress={() => save("payoutDays", { rules: { payout_delay_days: payoutDays.trim() === "" ? settings.rules.qca_window_days : Number(payoutDays) } })} />
+      </Card>
+
+      <Card>
+        <H3>Explainer videos</H3>
+        <Small>Short videos that play on the parent dashboard, the mentor dashboard and the film upload step. Upload to Mux, paste the playback id here, and the slot appears; blank keeps it hidden.</Small>
+        {VIDEOS.map((v) => (
+          <TextField key={v.key} label={v.label} value={videos[v.key] ?? ""} onChangeText={(t) => setVideos({ ...videos, [v.key]: t })} autoCapitalize="none" autoCorrect={false} hint={VIDEO_HINT} />
+        ))}
+        <Button title="Save explainer videos" small loading={busy === "videos"} onPress={() => save("videos", { rules: Object.fromEntries(VIDEOS.map((v) => [v.key, (videos[v.key] ?? "").trim()])) })} />
       </Card>
 
       <Card>

@@ -131,3 +131,18 @@ label.small{margin-bottom:-8px}
 .athlete .rating small{color:var(--faint);font-size:13px}
 .athlete.off .photo{filter:grayscale(1);opacity:.6}
 .athlete .paused{margin:12px 0 0;font-size:13px;color:var(--faint)}
+
+/* Video: Mux's player, on testimonials.html and in the home-page explainer slot that site.js fills */
+[hidden]{display:none!important}
+mux-player{display:block;width:100%;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#000;--media-accent-color:var(--gold)}
+.hero .wrap.explainer{display:block;margin-top:44px}
+.explainer mux-player{max-width:880px;margin:0 auto;border:1px solid var(--line)}
+
+/* Testimonials: the cards on testimonials.html and the home-page strip */
+.quotes{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px}
+.quote{margin:0;min-width:0}
+.quote mux-player{margin-bottom:16px}
+.quote blockquote{margin:0 0 14px}
+.quote blockquote p{margin:0;font-size:18px;font-weight:500;color:var(--ink);overflow-wrap:anywhere}
+.quote figcaption{font-size:14px;color:var(--muted)}
+.quote figcaption b{display:block;color:var(--white);font-weight:700}

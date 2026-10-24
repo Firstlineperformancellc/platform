@@ -27,6 +27,10 @@ export type Settings = {
   mentor_share_pct: Record<Tier, number>;
   session_prices: Record<string, Partial<Record<Tier, number>>>;
   rules: {
+    // Video slots filled by the admin (public Mux playback ids); empty = the slot does not render.
+    explainer_parent_playback_id?: string | null;
+    explainer_mentor_playback_id?: string | null;
+    upload_help_playback_id?: string | null;
     accept_hours: number;
     accept_nudge_hours: number;
     turnaround_hours: number;

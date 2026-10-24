@@ -1,6 +1,7 @@
 import { admin } from "./supabase.js";
 import { getSettings, turnaroundHours } from "./settings.js";
 import { alreadySent, appUrl, notify } from "./notify.js";
+import { dollars, earningsAtStake } from "./stake.js";
 
 // The assignment engine. Parent picks a mentor; the job is OFFERED to that mentor with an
 // acceptance window; on decline or expiry it goes to the second choice; if nobody takes it the job
@@ -134,12 +135,14 @@ export async function tick() {
     report.expired++;
   }
 
-  // 2. Nudge mentors sitting on an offer past the nudge point.
+  // 2. Nudge mentors sitting on an offer past the nudge point, with the dollars they're leaving waiting.
   const { data: open } = await admin.from("job_offers").select("id, job_id, athlete_id, offered_at").is("response", null).is("nudged_at", null);
   for (const o of open ?? []) {
     if (now - new Date(o.offered_at).getTime() >= hours(s.rules.accept_nudge_hours)) {
+      const { waitingCents } = await earningsAtStake(o.athlete_id);
+      const stake = waitingCents > 0 ? `<p><b>${dollars(waitingCents)}</b> is waiting on your answer.</p>` : "";
       await notify(o.athlete_id, "offer.nudge", "A breakdown request is waiting on you",
-        `<p>You have less than ${s.rules.accept_hours - s.rules.accept_nudge_hours} hours left to accept a request before it moves to another mentor.</p><p><a href="${appUrl("/athlete")}" style="color:#d4a32c">Respond now</a></p>`,
+        `<p>You have less than ${s.rules.accept_hours - s.rules.accept_nudge_hours} hours left to accept a request before it moves to another mentor.</p>${stake}<p><a href="${appUrl("/athlete")}" style="color:#d4a32c">Respond now</a></p>`,
         { targetId: o.job_id });
       await admin.from("job_offers").update({ nudged_at: iso(now) }).eq("id", o.id);
       report.nudges++;
@@ -171,8 +174,10 @@ export async function tick() {
         const template = `job.reminder.${h}`;
         if (await alreadySent(j.athlete_id, template, j.id)) continue;
         const left = Math.max(0, Math.round((new Date(j.due_at!).getTime() - now) / 3600000));
+        const { onClockCents } = await earningsAtStake(j.athlete_id);
+        const stake = onClockCents > 0 ? `<p><b>${dollars(onClockCents)}</b> is on the clock.</p>` : "";
         await notify(j.athlete_id, template, `${left} hours left on a breakdown`,
-          `<p>Friendly reminder: a breakdown you accepted is due in about ${left} hours.</p><p><a href="${appUrl("/athlete")}" style="color:#d4a32c">Open the job</a></p>`,
+          `<p>Friendly reminder: a breakdown you accepted is due in about ${left} hours.</p>${stake}<p><a href="${appUrl("/athlete")}" style="color:#d4a32c">Open the job</a></p>`,
           { targetId: j.id });
         report.reminders++;
       }
