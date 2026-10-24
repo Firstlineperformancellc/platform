@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Screen } from "@/components/ui/Screen";
 import { Body, H1, H3, Label, Small } from "@/components/ui/Text";
 import { useAuth } from "@/lib/auth";
+import { openParentGuide } from "@/lib/legal";
 import { presentsRules } from "@/lib/presents";
 import { useSettings } from "@/lib/settings";
 import { firstName } from "@/lib/types";
@@ -29,6 +30,14 @@ export default function ParentHome() {
         <Label>Parent account</Label>
         <H1>Welcome, {firstName(profile?.full_name)}</H1>
       </View>
+      {/* The Parent Guide, one quiet card; the PDF ships with the app under /manual. */}
+      <Card style={s.slim}>
+        <Label>Parent Guide</Label>
+        <Body style={{ color: colors.muted }}>How ordering, uploading, Film Rooms and ratings work. Searchable PDF.</Body>
+        <View style={s.row}>
+          <Button title="Open the guide" variant="ghost" small onPress={openParentGuide} />
+        </View>
+      </Card>
       {/* The parent explainer, set from admin Settings; nothing renders until Alex drops a video in. */}
       <ExplainerVideo playbackId={settings?.rules.explainer_parent_playback_id} title="How FLP works" label="Watch how it works" />
       <View style={s.grid}>

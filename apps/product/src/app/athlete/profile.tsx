@@ -18,7 +18,7 @@ import { CareerEditor } from "@/components/CareerEditor";
 import { TextField } from "@/components/ui/TextField";
 import { Body, H1, H3, Label, Small } from "@/components/ui/Text";
 import { Loading } from "@/lib/auth";
-import { avatarUrl, BIO_MAX, connectStatus, SECTION_MAX, stripeDashboard, DOW, getMyProfile, saveMyProfile, startConnect, uploadAvatar, type AvailabilityWindow, type MentorProfile } from "@/lib/mentorProfile";
+import { avatarUrl, BIO_MAX, cleanHandle, connectStatus, SECTION_MAX, SOCIAL_NETWORKS, stripeDashboard, DOW, getMyProfile, saveMyProfile, startConnect, uploadAvatar, type AvailabilityWindow, type MentorProfile } from "@/lib/mentorProfile";
 import { listMyCareer, type CareerRow } from "@/lib/career";
 import { athleteTake, getMyPresentsSettings, money, PRESENTS_NAME, presentsRules, saveMyPresentsSettings, type PresentsSettings } from "@/lib/presents";
 import { levelLabel, TIER_LABEL, useSettings, type Tier } from "@/lib/settings";
@@ -39,6 +39,21 @@ const toPresentsForm = (ps: PresentsSettings): PresentsForm => ({
   occasions: ps.presents_occasions ?? [],
   blurb: ps.presents_blurb ?? "",
 });
+
+// The social handles as saved: cleaned, and only the ones filled in. A pasted link or an odd handle throws
+// with the network named, so the message says which box to fix.
+function cleanSocial(raw: Record<string, string> | null | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const n of SOCIAL_NETWORKS) {
+    try {
+      const h = cleanHandle(raw?.[n.key] ?? "");
+      if (h) out[n.key] = h;
+    } catch (e) {
+      throw new Error(`${n.label}: ${(e as Error).message}`);
+    }
+  }
+  return out;
+}
 
 // The mentor's own profile: this is their advertising deck on the marketplace plus their working
 // settings (capacity, Film Room availability) and payout setup.
@@ -216,6 +231,14 @@ export default function MentorProfileScreen() {
         <TextField label="Display name" value={p.display_name} onChangeText={(v) => set({ display_name: v })} />
         <TextField label="Current team or status" value={p.current_team} onChangeText={(v) => set({ current_team: v })} placeholder="e.g. Michigan Tech alum, now coaching in Grand Rapids" />
         <TextField label="Elite Prospects profile link" value={p.eliteprospects_url ?? ""} onChangeText={(v) => set({ eliteprospects_url: v || null })} autoCapitalize="none" autoCorrect={false} keyboardType="url" placeholder="eliteprospects.com/player/…" />
+        <View style={[s.row, { alignItems: "flex-start" }]}>
+          {SOCIAL_NETWORKS.map((n) => (
+            <View key={n.key} style={s.handle}>
+              <TextField label={n.label} value={p.social?.[n.key] ?? ""} onChangeText={(v) => set({ social: { ...(p.social ?? {}), [n.key]: v } })} autoCapitalize="none" autoCorrect={false} placeholder="handle, not a link" />
+            </View>
+          ))}
+        </View>
+        <Small>Shown as links on your tile and your public page. Leave blank any you don't use.</Small>
         <Choice
           label="Highest level you played"
           options={settings.taxonomy.levels.map((l) => ({ key: l.key, label: l.label, hint: l.tier ? TIER_LABEL[l.tier] : "not offered yet" }))}
@@ -235,7 +258,16 @@ export default function MentorProfileScreen() {
           title="Save profile"
           small
           loading={busy === "profile"}
-          onPress={() => save("profile", { display_name: p.display_name.trim(), current_team: p.current_team.trim(), highest_level: p.highest_level, positions: p.positions, badges: p.badges, specialties: p.specialties, bio: p.bio.trim(), teaching_focus: p.teaching_focus?.trim() || null, who_i_help: p.who_i_help?.trim() || null })}
+          onPress={() => {
+            let social: Record<string, string>;
+            try {
+              social = cleanSocial(p.social);
+            } catch (e) {
+              return setError((e as Error).message);
+            }
+            set({ social }); // the boxes show what was saved: no @, no link
+            save("profile", { display_name: p.display_name.trim(), current_team: p.current_team.trim(), highest_level: p.highest_level, positions: p.positions, badges: p.badges, specialties: p.specialties, bio: p.bio.trim(), teaching_focus: p.teaching_focus?.trim() || null, who_i_help: p.who_i_help?.trim() || null, social });
+          }}
         />
       </Card>
 
@@ -387,6 +419,7 @@ const s = StyleSheet.create({
   wrapRow: { flexDirection: "row", flexWrap: "wrap", columnGap: space.lg },
   avatar: { width: 88, height: 88, borderRadius: 44, backgroundColor: colors.panel2 },
   avatarEmpty: { borderWidth: 1, borderColor: colors.line2 },
+  handle: { flexGrow: 1, flexBasis: 140, maxWidth: 240 },
   multi: { height: 120, paddingTop: space.sm, textAlignVertical: "top" },
   bio: { height: 220, paddingTop: space.sm, textAlignVertical: "top" },
   window: { borderWidth: 1, borderColor: colors.line, borderRadius: radius.md, padding: space.md, gap: space.sm },

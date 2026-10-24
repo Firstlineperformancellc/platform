@@ -12,6 +12,7 @@ import { TextField } from "@/components/ui/TextField";
 import { Body, H1, H2, H3, Label, Small } from "@/components/ui/Text";
 import { api } from "@/lib/api";
 import { Loading } from "@/lib/auth";
+import { openParentGuide } from "@/lib/legal";
 import { getMentor, listMentors, priceOf, type MarketplaceMentor } from "@/lib/mentors";
 import { listPlayers, playerName, type Player } from "@/lib/players";
 import { money, useSettings } from "@/lib/settings";
@@ -152,6 +153,7 @@ export default function OrderWizard() {
             </Pill>
           ))}
         </View>
+        <Small style={s.guide} onPress={openParentGuide}>Not sure what to pick? Read the Parent Guide.</Small>
       </View>
       {params.cancelled ? <Body style={{ color: colors.warn }}>Checkout was cancelled. Nothing was charged.</Body> : null}
 
@@ -312,6 +314,7 @@ export default function OrderWizard() {
 const s = StyleSheet.create({
   topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   steps: { flexDirection: "row", flexWrap: "wrap", gap: space.sm, marginTop: space.md },
+  guide: { color: colors.gold, marginTop: space.sm },
   row: { gap: space.md },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: space.md },
   cell: { flexGrow: 1, flexBasis: 300, maxWidth: 480 },

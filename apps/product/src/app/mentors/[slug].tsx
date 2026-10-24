@@ -11,7 +11,9 @@ import { Screen } from "@/components/ui/Screen";
 import { Body, H1, H3, Label, Small } from "@/components/ui/Text";
 import { Loading, useAuth } from "@/lib/auth";
 import { hasGoalie, hasSkater, listCareerPublic, type CareerPublicRow } from "@/lib/career";
+import { SOCIAL_NETWORKS } from "@/lib/mentorProfile";
 import { getMentor, listReviews, type MarketplaceMentor, type MentorReview, priceOf } from "@/lib/mentors";
+import { openExternal } from "@/lib/open";
 import { money as presentsMoney } from "@/lib/presents";
 import { money, TIER_LABEL, useSettings } from "@/lib/settings";
 import { colors, radius, space } from "@/theme/tokens";
@@ -53,6 +55,7 @@ export default function MentorProfile() {
   const orderHref = { pathname: "/parent/order" as const, params: { mentor: mentor.slug } };
   const canOrder = !session || profile?.role === "parent";
   const showCareer = career.length > 0 || (mentor.awards ?? []).length > 0 || !!mentor.career_note;
+  const socials = SOCIAL_NETWORKS.filter((n) => mentor.social?.[n.key]);
 
   return (
     <Screen title="FLP Mentor" width="content">
@@ -93,6 +96,16 @@ export default function MentorProfile() {
             </View>
           ) : null}
         </Card>
+      ) : null}
+      {socials.length ? (
+        <View style={s.social}>
+          <Label>Find them online</Label>
+          <View style={s.row}>
+            {socials.map((n) => (
+              <Button key={n.key} title={n.label} variant="secondary" small onPress={() => openExternal(async () => n.url(mentor.social![n.key])).catch(() => {})} />
+            ))}
+          </View>
+        </View>
       ) : null}
       {mentor.eliteprospects_url && !showCareer ? (
         <Small style={{ color: colors.gold }} onPress={() => window.open(mentor.eliteprospects_url!, "_blank", "noopener")}>Elite Prospects profile ↗</Small>
@@ -201,6 +214,7 @@ const s = StyleSheet.create({
   topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   section: { gap: 4, marginTop: space.xs },
   row: { flexDirection: "row", alignItems: "center", gap: space.md, flexWrap: "wrap" },
+  social: { gap: space.sm },
   review: { borderTopWidth: 1, borderTopColor: colors.line, paddingTop: space.sm, gap: 4 },
   presents: { gap: space.sm, paddingVertical: space.lg },
 });

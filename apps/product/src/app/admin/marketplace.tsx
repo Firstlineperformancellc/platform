@@ -50,6 +50,7 @@ const TILE_TOGGLES: { key: keyof MarketplaceOptions; label: string }[] = [
   { key: "show_positions", label: "Positions" },
   { key: "show_badges", label: "Credential badges" },
   { key: "show_bio", label: "Bio excerpt" },
+  { key: "show_social", label: "Social links" },
 ];
 
 // The marketplace control center: the level hierarchy, what the mentor tiles show, and who is listed.

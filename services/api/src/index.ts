@@ -18,6 +18,7 @@ import { media } from "./routes/media.js";
 import { support } from "./routes/support.js";
 import { health } from "./routes/health.js";
 import { tiers } from "./routes/tiers.js";
+import { announcements } from "./routes/announcements.js";
 import { presents } from "./routes/presents.js";
 import { programs, programsAdmin } from "./routes/programs.js";
 
@@ -77,6 +78,7 @@ app.route("/programs", programs);
 app.route("/support", support);
 app.route("/admin/health", health);
 app.route("/admin/tiers", tiers);
+app.route("/admin/announcements", announcements);
 app.route("/admin", programsAdmin); // /admin/programs and /admin/programs.csv
 app.route("/internal", internal);
 app.route("/webhooks", webhooks);

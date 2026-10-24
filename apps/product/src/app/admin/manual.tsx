@@ -3,7 +3,7 @@ import { AdminShell } from "@/components/AdminShell";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Body, H3, Small } from "@/components/ui/Text";
-import { ADMIN_MANUAL, MANUAL, manualUrl, openAdminManual, openManual } from "@/lib/legal";
+import { ADMIN_MANUAL, MANUAL, PARENT_GUIDE, manualUrl, openAdminManual, openManual, openParentGuide } from "@/lib/legal";
 import { colors, space } from "@/theme/tokens";
 
 const SECTIONS = [
@@ -38,6 +38,7 @@ export default function AdminManual() {
           <View style={{ gap: space.sm }}>
             <Button title="Open in a new tab" small onPress={openAdminManual} />
             <Button title={MANUAL.title} variant="ghost" small onPress={openManual} />
+            <Button title={PARENT_GUIDE.title} variant="ghost" small onPress={openParentGuide} />
           </View>
         </View>
       </Card>

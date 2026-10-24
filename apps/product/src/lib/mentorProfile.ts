@@ -17,6 +17,7 @@ export type MentorProfile = {
   positions: HockeyPosition[];
   current_team: string;
   eliteprospects_url: string | null;
+  social: Record<string, string>;
   highest_level: string | null;
   badges: string[];
   tier: string | null;
@@ -31,7 +32,7 @@ export type MentorProfile = {
   payouts_enabled: boolean;
 };
 
-const COLS = "user_id, slug, display_name, bio, teaching_focus, who_i_help, awards, career_note, specialties, positions, current_team, highest_level, badges, eliteprospects_url, tier, status, verified, capacity_on_deck, availability, timezone, photo_path, video_media_id, stripe_account_id, payouts_enabled";
+const COLS = "user_id, slug, display_name, bio, teaching_focus, who_i_help, awards, career_note, specialties, positions, current_team, highest_level, badges, eliteprospects_url, social, tier, status, verified, capacity_on_deck, availability, timezone, photo_path, video_media_id, stripe_account_id, payouts_enabled";
 
 export async function getMyProfile(): Promise<MentorProfile | null> {
   const { data: auth } = await supabase.auth.getUser();
@@ -40,10 +41,39 @@ export async function getMyProfile(): Promise<MentorProfile | null> {
   return (data as MentorProfile | null) ?? null;
 }
 
-export type MentorProfilePatch = Partial<Pick<MentorProfile, "display_name" | "bio" | "teaching_focus" | "who_i_help" | "specialties" | "positions" | "current_team" | "eliteprospects_url" | "highest_level" | "badges" | "capacity_on_deck" | "availability" | "timezone" | "photo_path" | "video_media_id">>;
+export type MentorProfilePatch = Partial<Pick<MentorProfile, "display_name" | "bio" | "teaching_focus" | "who_i_help" | "specialties" | "positions" | "current_team" | "eliteprospects_url" | "social" | "highest_level" | "badges" | "capacity_on_deck" | "availability" | "timezone" | "photo_path" | "video_media_id">>;
 
 export const BIO_MAX = 3000;
 export const SECTION_MAX = 500;
+
+// Social handles, stored bare; the link is built here so a pasted URL never reaches the database.
+export type SocialNetwork = { key: "instagram" | "tiktok" | "x" | "youtube"; label: string; url: (handle: string) => string };
+export const SOCIAL_NETWORKS: SocialNetwork[] = [
+  { key: "instagram", label: "Instagram", url: (h) => "https://instagram.com/" + h },
+  { key: "tiktok", label: "TikTok", url: (h) => "https://www.tiktok.com/@" + h },
+  { key: "x", label: "X", url: (h) => "https://x.com/" + h },
+  { key: "youtube", label: "YouTube", url: (h) => "https://www.youtube.com/@" + h },
+];
+const HANDLE = /^[A-Za-z0-9._-]{1,60}$/;
+
+// What a mentor typed, as a bare handle: no @, and from a pasted link only the last path segment.
+// Null when blank; throws when what is left is still not a handle.
+export function cleanHandle(input: string): string | null {
+  let h = input.trim();
+  if (h.startsWith("@")) h = h.slice(1);
+  if (h.includes("/")) {
+    // A pasted link: drop the scheme and the host, keep the last path segment.
+    const segs = h.split(/[?#]/)[0].split("/").map((x) => x.trim()).filter(Boolean);
+    if (/^https?:$/i.test(segs[0] ?? "")) segs.shift();
+    if (/^[\w.-]+\.[a-z]{2,}$/i.test(segs[0] ?? "")) segs.shift();
+    h = segs.pop() ?? "";
+    if (h.startsWith("@")) h = h.slice(1);
+    if (!h) throw new Error("Use the handle only, like flp_hockey, not a link.");
+  }
+  if (!h) return null;
+  if (HANDLE.test(h)) return h;
+  throw new Error("Use the handle only, like flp_hockey, not a link.");
+}
 
 export async function saveMyProfile(patch: MentorProfilePatch) {
   const { data: auth } = await supabase.auth.getUser();

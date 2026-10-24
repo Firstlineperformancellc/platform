@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Render the manuals to searchable PDFs with bookmarks, using the Chrome on this Mac.
 # Output goes to the app's static folder (served at /manual/...) and to docs/manual/.
-#   docs/manual/build.sh            # both manuals
-#   docs/manual/build.sh mentor     # one of: mentor, admin
+#   docs/manual/build.sh            # all three manuals
+#   docs/manual/build.sh mentor     # one of: mentor, admin, parent
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
@@ -19,4 +19,5 @@ build() {
 which="${1:-all}"
 [ "$which" = all ] || [ "$which" = mentor ] && build mentor FLP-Mentor-Service-User-Manual.pdf
 [ "$which" = all ] || [ "$which" = admin ] && build admin FLP-Admin-User-Manual.pdf
+[ "$which" = all ] || [ "$which" = parent ] && build parent FLP-Parent-Guide.pdf
 true

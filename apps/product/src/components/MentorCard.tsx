@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View, type GestureResponderEvent } from "react-native";
 import { Image } from "expo-image";
-import { avatarUrl } from "@/lib/mentorProfile";
+import { avatarUrl, SOCIAL_NETWORKS } from "@/lib/mentorProfile";
+import { openExternal } from "@/lib/open";
 import { Card } from "./ui/Card";
 import { useHoverPreview } from "./HoverPreview";
 import { MentorPreview } from "./MentorPreview";
@@ -28,6 +29,15 @@ export function MentorCard({ mentor: m, settings, selected, onPress, compact, op
   const price = priceOf(m, settings, "breakdown");
   const o = marketOptions(settings);
   const priceHidden = m.price_visible === false;
+  // Social handles as small links, behind the admin's switch. The compact tile (profile header, order
+  // picker) leaves them out: the profile page has its own "Find them online" row.
+  const socials = compact || o.show_social === false ? [] : SOCIAL_NETWORKS.filter((n) => m.social?.[n.key]);
+  const openSocial = (e: GestureResponderEvent, url: string) => {
+    // The link is its own press: the tile's onPress (open the profile, pick this mentor) must not fire too.
+    e.preventDefault?.();
+    e.stopPropagation?.();
+    openExternal(async () => url).catch(() => {});
+  };
   const hover = useHoverPreview({
     enabled: Boolean(preview && onPress),
     label: `${m.display_name}, ${m.tier_name ?? TIER_LABEL[m.tier]} mentor.${previewHint ? ` ${previewHint}` : ""}`,
@@ -77,6 +87,20 @@ export function MentorCard({ mentor: m, settings, selected, onPress, compact, op
         {/* First Line Presents is a side offer: a quiet badge, no price on the tile. */}
         {m.presents_enabled ? <Pill tone="muted">Video messages</Pill> : null}
       </View>
+      {socials.length ? (
+        <View style={s.social} onStartShouldSetResponder={() => true}>
+          {socials.map((n) => (
+            <Pressable
+              key={n.key}
+              accessibilityRole="link"
+              accessibilityLabel={`${m.display_name} on ${n.label}, opens in a new tab`}
+              onPress={(e) => openSocial(e, n.url(m.social![n.key]))}
+              style={({ hovered }: { hovered?: boolean }) => [hovered && s.socialHover]}>
+              <Pill tone="muted">{n.label}</Pill>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
       {selected ? <Pill tone="gold">{selected === "first" ? "First choice" : "Second choice"}</Pill> : null}
     </Card>
   );
@@ -110,6 +134,8 @@ const s = StyleSheet.create({
   avatarEmpty: { borderWidth: 1, borderColor: colors.line2 },
   head: { flexDirection: "row", gap: space.md, alignItems: "flex-start" },
   meta: { flexDirection: "row", flexWrap: "wrap", gap: space.md, alignItems: "center" },
+  social: { flexDirection: "row", flexWrap: "wrap", gap: space.sm, alignItems: "center" },
+  socialHover: { opacity: 0.75 },
   first: { borderColor: colors.gold, borderWidth: 2 },
   second: { borderColor: colors.goldDim, borderWidth: 2, borderStyle: "dashed" },
   hover: { borderRadius: radius.lg, opacity: 0.95 },

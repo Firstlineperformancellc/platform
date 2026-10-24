@@ -25,8 +25,22 @@ export const ADMIN_MANUAL = {
   path: "/manual/FLP-Admin-User-Manual.pdf",
 };
 
-export function manualUrl(which: "mentor" | "admin" = "mentor") {
-  return `${appOrigin()}${which === "admin" ? ADMIN_MANUAL.path : MANUAL.path}`;
+// The parent guide, the third manual in the set. Same build script, same folder.
+export const PARENT_GUIDE = {
+  title: "FLP Parent Guide",
+  path: "/manual/FLP-Parent-Guide.pdf",
+  edition: "1.0",
+};
+
+export function manualUrl(which: "mentor" | "admin" | "parent" = "mentor") {
+  const path = which === "admin" ? ADMIN_MANUAL.path : which === "parent" ? PARENT_GUIDE.path : MANUAL.path;
+  return `${appOrigin()}${path}`;
+}
+
+export function openParentGuide() {
+  const url = manualUrl("parent");
+  if (Platform.OS === "web" && typeof window !== "undefined") window.open(url, "_blank", "noopener");
+  else Linking.openURL(url).catch(() => {});
 }
 
 export function openAdminManual() {

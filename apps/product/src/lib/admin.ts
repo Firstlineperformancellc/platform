@@ -278,3 +278,39 @@ export async function counts() {
   ]);
   return { applications: mentors.count ?? 0, needsAssignment: jobs.count ?? 0, openAudits: audits.count ?? 0, owedPayouts: payouts.count ?? 0, pendingReviews: (reviews.count ?? 0) + (sessionReviews.count ?? 0), liveSessions: sessions.count ?? 0, users: users.count ?? 0 };
 }
+
+// Announcements: one plain email to account holders for service notices, never marketing. Reads and
+// writes both go through the API, which resolves the audience and does the sending.
+export type BroadcastAudience = "everyone" | "parents" | "mentors" | "admins" | "me";
+export type Broadcast = {
+  id: string; audience: BroadcastAudience; subject: string;
+  recipient_count: number; sent_count: number; failed_count: number; failures: { email: string; error: string }[];
+  created_at: string; finished_at: string | null;
+  sender: { full_name: string | null; email: string | null } | null;
+};
+export type BroadcastPreview = { recipients: number; sample: string[] };
+export type BroadcastInput = { subject: string; body: string; audience: BroadcastAudience; confirmRepeat?: boolean };
+export type BroadcastResult =
+  | { ok: true; id: string; recipients: number; sent: number; failed: number; failures: { email: string; error: string }[] }
+  | { started: true; id: string; recipients: number }; // a big send carries on behind the request
+export const listBroadcasts = () => api<{ broadcasts: Broadcast[] }>("/admin/announcements").then((r) => r.broadcasts);
+export const previewBroadcast = (input: Omit<BroadcastInput, "confirmRepeat">) => api<BroadcastPreview>("/admin/announcements/preview", { method: "POST", body: JSON.stringify(input) });
+// The API answers 409 when the same message went out in the last ten minutes; the page asks before sending again.
+export class BroadcastRepeat extends Error {}
+export async function sendBroadcast(input: BroadcastInput): Promise<BroadcastResult> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL ?? "https://api-dev.firstlineperform.com"}/admin/announcements/send`, {
+    method: "POST",
+    headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify(input),
+  });
+  const body = (await res.json().catch(() => ({}))) as BroadcastResult & { error?: string; code?: string };
+  if (res.status === 409) throw new BroadcastRepeat(body.error ?? "This message went out a few minutes ago. Send it again?");
+  if (res.status === 401 && body.code === "session_ended") {
+    await supabase.auth.signOut({ scope: "local" }).catch(() => {});
+    throw new Error("Your session has ended. Sign in again to continue.");
+  }
+  if (!res.ok) throw new Error(body.error ?? `API error ${res.status}`);
+  return body;
+}

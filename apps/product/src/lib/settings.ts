@@ -13,10 +13,10 @@ export type TierInfo = {
 };
 // What the marketplace tiles show and how the list is ordered.
 export type MarketplaceOptions = {
-  show_price: boolean; show_rating: boolean; show_turnaround: boolean; show_availability: boolean; show_badges: boolean; show_positions: boolean; show_bio: boolean;
+  show_price: boolean; show_rating: boolean; show_turnaround: boolean; show_availability: boolean; show_badges: boolean; show_positions: boolean; show_bio: boolean; show_social: boolean;
   group_by_tier: boolean; sort: "tier" | "rating" | "name";
 };
-export const MARKETPLACE_DEFAULTS: MarketplaceOptions = { show_price: true, show_rating: true, show_turnaround: true, show_availability: true, show_badges: true, show_positions: true, show_bio: true, group_by_tier: false, sort: "tier" };
+export const MARKETPLACE_DEFAULTS: MarketplaceOptions = { show_price: true, show_rating: true, show_turnaround: true, show_availability: true, show_badges: true, show_positions: true, show_bio: true, show_social: true, group_by_tier: false, sort: "tier" };
 export const marketOptions = (s: Settings | null | undefined): MarketplaceOptions => ({ ...MARKETPLACE_DEFAULTS, ...((s?.marketplace as Partial<MarketplaceOptions> | undefined) ?? {}) });
 export type Level = { key: string; label: string; tier: Tier | null };
 

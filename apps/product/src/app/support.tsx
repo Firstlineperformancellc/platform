@@ -9,6 +9,7 @@ import { Screen } from "@/components/ui/Screen";
 import { TextField } from "@/components/ui/TextField";
 import { Body, H1, H3, Label, Small } from "@/components/ui/Text";
 import { Loading, useAuth } from "@/lib/auth";
+import { openParentGuide } from "@/lib/legal";
 import { age, listMessages, myTickets, openTicket, requesterReply, STATUS_LABEL, type Message, type Ticket } from "@/lib/support";
 import { colors, radius, space } from "@/theme/tokens";
 
@@ -54,7 +55,10 @@ export default function Support() {
     <Screen title="Support" width="content">
       <View style={s.topbar}>
         <Link href={home as never} asChild><Brand size={44} /></Link>
-        <Link href={home as never} asChild><Button title="Dashboard" variant="ghost" small /></Link>
+        <View style={s.links}>
+          {profile?.role === "parent" ? <Button title="Parent Guide" variant="ghost" small onPress={openParentGuide} /> : null}
+          <Link href={home as never} asChild><Button title="Dashboard" variant="ghost" small /></Link>
+        </View>
       </View>
       <View>
         <Label>Support</Label>
@@ -115,6 +119,7 @@ export default function Support() {
 
 const s = StyleSheet.create({
   topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  links: { flexDirection: "row", alignItems: "center", gap: 8 },
   row: { flexDirection: "row", alignItems: "center", gap: space.md, flexWrap: "wrap" },
   multi: { minHeight: 120, textAlignVertical: "top" },
   multiSmall: { minHeight: 72, textAlignVertical: "top" },
