@@ -28,7 +28,7 @@ One Expo app (Expo Router, TypeScript) shipping to web, iOS, and Android. Admin 
 
 - `apps/product/` — the product app (Expo SDK 57, Expo Router, TypeScript; `src/app` routes, `src/components/ui` kit, `src/theme/tokens.ts`, `src/lib/supabase.ts` + `auth.tsx`). Own `node_modules` and `.env` (copy `.env.example`). Run the web build with `npm --prefix apps/product run web` (port 8081) or the `product-web` launch config. Typecheck: `./node_modules/.bin/tsc --noEmit` inside the app. Laptop-first, phone second.
 - `supabase/` — migrations and the CLI config linked to the dev project.
-- `site/` — the live marketing/coming-soon page at firstlineperform.com (nginx on droplet `flp-web-01`).
+- `site/` — the marketing site. `site/build.py` generates `site/www` from one frame; `site/deploy/deploy-site-live.sh` publishes it at firstlineperform.com (nginx on droplet `flp-web-01`, www redirects to the bare domain); `site/deploy/deploy-site-dev.sh` publishes it to dev.firstlineperform.com/site/. `site/moved/` is the "we've moved" page at beta.firstlineperform.com (`deploy-site-moved.sh`, droplet `flp-prod`). `site/index.html` is the retired coming-soon page, also kept on flp-web-01 at /var/www/firstlineperform.com/coming-soon.
 - `deck/` — the client communications deck at comms.firstlineperform.com. Separate git repo, deploy with `deck/deploy/deploy.sh`. Frozen except for fixes.
 - `docs/` — spec, decisions, and the handover package as it grows.
 - `Current Landscape/` — client-supplied brand mockups, pilot video, signed agreement. Reference only, not tracked in git.

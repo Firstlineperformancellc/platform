@@ -36,7 +36,7 @@ async function timed(key: string, label: string, probe: Probe): Promise<Check> {
 const http = (url: string, init: RequestInit = {}) => fetch(url, { ...init, signal: AbortSignal.timeout(TIMEOUT_MS) });
 
 const mailDomain = () => ((process.env.MAIL_FROM ?? "").match(/@([^>\s]+)/)?.[1] ?? "mail.firstlineperform.com");
-const siteUrl = () => (env.appEnv === "prod" ? "https://beta.firstlineperform.com/" : "https://dev.firstlineperform.com/site/");
+const siteUrl = () => (env.appEnv === "prod" ? "https://firstlineperform.com/" : "https://dev.firstlineperform.com/site/");
 
 export async function runChecks(): Promise<Check[]> {
   return Promise.all([
