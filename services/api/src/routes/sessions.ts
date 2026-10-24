@@ -4,7 +4,7 @@ import { getSettings, paymentPath, priceFor, selfServeTier, shareCents, type Pri
 import { stripe, stripeConfigured } from "../stripe.js";
 import { notifyAdmins, refundPayment } from "../billing.js";
 import { env } from "../env.js";
-import { appUrl, notify } from "../notify.js";
+import { appUrl, notify, esc } from "../notify.js";
 import { slotsForMentor } from "../slots.js";
 import { createRoom, dailyConfigured, deleteRoom, meetingToken, recordingAccessLink } from "../daily.js";
 import { checkoutDownMessage, providerFailed } from "../failures.js";
@@ -29,7 +29,7 @@ async function mentorBySlug(slug: string) {
 async function sessionFor(id: string) {
   const { data } = await admin
     .from("sessions")
-    .select("id, athlete_id, parent_id, player_id, status, scheduled_at, duration_minutes, format, price_cents, mentor_share_cents, tier, daily_room_name, daily_room_url, recording_daily_id, recording_status, recordings, accept_by, paid_at, pack_id, recap, breakdown_id, film_media_id, parent_note, parent_present, stripe_payment_intent_id")
+    .select("id, athlete_id, parent_id, player_id, status, scheduled_at, duration_minutes, format, price_cents, mentor_share_cents, tier, daily_room_name, daily_room_url, recording_daily_id, recording_status, recordings, accept_by, paid_at, pack_id, recap, breakdown_id, film_media_id, parent_note, parent_present, stripe_payment_intent_id, athlete_joined_at, parent_joined_at")
     .eq("id", id)
     .maybeSingle();
   return data;
@@ -193,6 +193,7 @@ sessions.post("/:id/accept", async (c) => {
   const sess = await sessionFor(c.req.param("id"));
   if (!sess || sess.athlete_id !== user.id) return c.json({ error: "not found" }, 404);
   if (sess.status !== "requested") return c.json({ error: `session is ${sess.status}` }, 400);
+  if (!sess.paid_at) return c.json({ error: "this booking hasn't been paid yet" }, 400);
   const patch = await scheduleRoom(sess);
   await admin.from("sessions").update(patch).eq("id", sess.id);
   const when = new Date(sess.scheduled_at!).toLocaleString("en-US", { timeZone: "America/Detroit", dateStyle: "medium", timeStyle: "short" });
@@ -208,6 +209,7 @@ sessions.post("/:id/decline", async (c) => {
   const sess = await sessionFor(c.req.param("id"));
   if (!sess || sess.athlete_id !== user.id) return c.json({ error: "not found" }, 404);
   if (sess.status !== "requested") return c.json({ error: `session is ${sess.status}` }, 400);
+  if (!sess.paid_at) return c.json({ error: "this booking hasn't been paid yet" }, 400);
   await cancelAndRefund(sess.id, "declined", "mentor declined", null);
   return c.json({ ok: true });
 });
@@ -321,7 +323,9 @@ export async function completeSession(sessionId: string) {
   if (!sess || sess.status === "completed") return;
   const due = iso(Date.now() + ((s.rules as Record<string, number>).recap_due_hours ?? 24) * 3600000);
   const retention = ((s.rules as Record<string, number>).recording_retention_days ?? 90) * 86400000;
-  await admin.from("sessions").update({ status: "completed", ended_at: iso(Date.now()), recap_due_at: due, recording_expires_at: iso(Date.now() + retention) }).eq("id", sessionId);
+  // Four callers can overlap (mentor, Daily webhook, the tick, admin): only the one that wins the transition pays.
+  const { data: won } = await admin.from("sessions").update({ status: "completed", ended_at: iso(Date.now()), recap_due_at: due, recording_expires_at: iso(Date.now() + retention) }).eq("id", sessionId).in("status", ["scheduled", "in_progress"]).select("id");
+  if (!won?.length) return;
   if (sess.mentor_share_cents) {
     await admin.from("payouts").insert({ athlete_id: sess.athlete_id, session_id: sessionId, amount_cents: sess.mentor_share_cents, status: "owed" });
   }
@@ -345,7 +349,7 @@ sessions.post("/:id/recap", async (c) => {
   if (takeaways.length === 0 || !next_step) return c.json({ error: "at least one takeaway and a next step" }, 400);
   await admin.from("sessions").update({ recap: { takeaways, drills, next_step }, recap_at: iso(Date.now()) }).eq("id", sess.id);
   await notify(sess.parent_id, "session.recap", "Your Film Room recap is in",
-    `<p><b>Takeaways:</b> ${takeaways.join(" · ")}</p>${drills.length ? `<p><b>Drills:</b> ${drills.join(" · ")}</p>` : ""}<p><b>Next step:</b> ${next_step}</p><p><a href="${appUrl(`/parent/sessions/${sess.id}`)}" style="color:#d4a32c">Rate the session</a></p>`,
+    `<p><b>Takeaways:</b> ${takeaways.map(esc).join(" · ")}</p>${drills.length ? `<p><b>Drills:</b> ${drills.map(esc).join(" · ")}</p>` : ""}<p><b>Next step:</b> ${esc(next_step)}</p><p><a href="${appUrl(`/parent/sessions/${sess.id}`)}" style="color:#d4a32c">Rate the session</a></p>`,
     { targetId: sess.id });
   return c.json({ ok: true });
 });
@@ -376,11 +380,15 @@ sessions.post("/:id/no-show", async (c) => {
   const ends = new Date(sess.scheduled_at!).getTime() + (sess.duration_minutes ?? 30) * 60000;
   if (Date.now() < new Date(sess.scheduled_at!).getTime() + 10 * 60000) return c.json({ error: "give it ten minutes past the start first" }, 400);
   if (!["scheduled", "in_progress"].includes(sess.status) || Date.now() > ends + 86400000) return c.json({ error: `session is ${sess.status}` }, 400);
+  // The room knows who came: a no-show can only be reported against someone who never joined, by someone who did.
+  if (who === "mentor" && sess.athlete_joined_at) return c.json({ error: "your mentor joined this session" }, 400);
+  if (who === "parent" && (!sess.athlete_joined_at || sess.parent_joined_at)) return c.json({ error: sess.parent_joined_at ? "the family joined this session" : "join the room first; a no-show is reported from inside the session" }, 400);
   if (who === "mentor") {
     await cancelAndRefund(sess.id, "no_show_mentor", "Your FLP Mentor didn't show", user.id);
     await admin.from("audit_log").insert({ actor_id: user.id, action: "session.no_show_mentor", target_type: "session", target_id: sess.id });
   } else {
     await admin.from("sessions").update({ status: "no_show_parent", no_show_by: "parent", ended_at: iso(Date.now()) }).eq("id", sess.id);
+    await admin.from("audit_log").insert({ actor_id: user.id, action: "session.no_show_parent", target_type: "session", target_id: sess.id });
     if (sess.mentor_share_cents) await admin.from("payouts").insert({ athlete_id: sess.athlete_id, session_id: sess.id, amount_cents: sess.mentor_share_cents, status: "owed", note: "parent no-show" });
   }
   return c.json({ ok: true });

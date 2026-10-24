@@ -28,6 +28,7 @@ export default function JobScreen() {
   const [videoReady, setVideoReady] = useState(false);
   const [w, setW] = useState<Worksheet>(emptyWorksheet());
   const [busy, setBusy] = useState(false);
+  const [delivered, setDelivered] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useFocusEffect(
@@ -49,7 +50,7 @@ export default function JobScreen() {
     );
 
   const o = job.orders;
-  const player = o?.players ? `${o.players.first_name}${o.players.last_name ? ` ${o.players.last_name[0]}.` : ""}` : "Youth athlete";
+  const player = o?.players ? `${o.players.first_name}${o.players.last_initial ? ` ${o.players.last_initial}.` : ""}` : "Youth athlete";
   const filmPlayback = o?.media?.mux_playback_id ?? null;
   const left = hoursLeft(job.due_at);
 
@@ -64,7 +65,7 @@ export default function JobScreen() {
     setError(null);
     try {
       const res = await deliverBreakdown(job!.id, mediaId, w);
-      router.replace({ pathname: "/athlete/jobs/[id]", params: { id: job!.id, delivered: res.onTime ? "ontime" : "late" } });
+      setDelivered(res.onTime ? "Delivered on time." : "Delivered, but past the turnaround window; it counts on your record.");
       setExisting(await getBreakdownForJob(job!.id));
       setJob({ ...job!, status: "delivered" });
     } catch (e) {
@@ -116,6 +117,8 @@ export default function JobScreen() {
           <Body style={{ color: colors.muted }}>The film shows here as soon as the parent's upload finishes processing.</Body>
         )}
       </Card>
+
+      {delivered ? <Body style={{ color: colors.ok }}>{delivered}</Body> : null}
 
       {existing ? (
         <Card>

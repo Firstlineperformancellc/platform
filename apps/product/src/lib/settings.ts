@@ -143,7 +143,8 @@ export function useSettings() {
 }
 
 export function money(cents: number, currency = "usd") {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase(), maximumFractionDigits: 0 }).format(
+  const whole = cents % 100 === 0;
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase(), minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: whole ? 0 : 2 }).format(
     cents / 100,
   );
 }

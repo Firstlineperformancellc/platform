@@ -47,7 +47,7 @@ export default function Marketplace() {
         <H1>Pick the athlete who's already done it</H1>
         <Body style={{ color: colors.muted }}>
           Every FLP Mentor played at the level your youth athlete is chasing. Choose one, upload the film, and get a
-          recorded breakdown and development worksheet back within 72 hours of acceptance.
+          recorded breakdown and development worksheet back within {settings?.rules.turnaround_hours ?? 72} hours of acceptance.
         </Body>
       </View>
       {settings ? (

@@ -10,7 +10,7 @@ import { Pill } from "@/components/ui/Pill";
 import { Body, H3, Small } from "@/components/ui/Text";
 import { assignJob, extendJob, listJobs, refundOrder, type AdminJob } from "@/lib/admin";
 import { Loading } from "@/lib/auth";
-import { listMentors, type MarketplaceMentor } from "@/lib/mentors";
+import { listMentors, type AdminMentor } from "@/lib/admin";
 import { money, TIER_LABEL, type Tier } from "@/lib/settings";
 import { colors, space } from "@/theme/tokens";
 
@@ -20,7 +20,7 @@ const left = (iso: string | null) => (iso ? Math.round((new Date(iso).getTime() 
 // The metered view Alex asked for: every job, who has it, how long they've had it, what's late.
 export default function AdminJobs() {
   const [jobs, setJobs] = useState<AdminJob[] | null>(null);
-  const [mentors, setMentors] = useState<MarketplaceMentor[]>([]);
+  const [mentors, setMentors] = useState<AdminMentor[]>([]);
   const [filter, setFilter] = useState("attention");
   const [assign, setAssign] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
@@ -32,7 +32,7 @@ export default function AdminJobs() {
 
   const load = useCallback(() => {
     listJobs().then(setJobs).catch((e) => setError(e.message));
-    listMentors().then(setMentors);
+    listMentors().then((ms) => setMentors(ms.filter((m) => m.status === "approved" && m.offers_mentoring !== false)));
   }, []);
   useFocusEffect(
     useCallback(() => {
@@ -75,7 +75,7 @@ export default function AdminJobs() {
         const hoursLeft = left(j.due_at);
         const openOffer = j.job_offers.find((x) => x.response == null);
         const tone = j.status === "unassigned" ? "danger" : j.status === "waiting" ? "warn" : j.status === "accepted" && (hoursLeft ?? 99) < 12 ? "danger" : j.status === "delivered" ? "ok" : "gold";
-        const candidates = mentors.filter((m) => !o || m.positions.includes(o.position as MarketplaceMentor["positions"][number]));
+        const candidates = mentors.filter((m) => !o || m.positions.includes(o.position as AdminMentor["positions"][number]));
         return (
           <Card key={j.id}>
             <View style={s.head}>
@@ -105,7 +105,7 @@ export default function AdminJobs() {
               <View style={s.actions}>
                 <Choice
                   label={j.status === "accepted" ? "Reassign to" : "Assign to"}
-                  options={candidates.map((m) => ({ key: m.user_id, label: m.display_name, hint: m.available ? "available" : "at capacity" }))}
+                  options={candidates.map((m) => ({ key: m.user_id, label: m.display_name, hint: (m.stats?.jobs_on_deck ?? 0) < m.capacity_on_deck ? "available" : "at capacity" }))}
                   value={assign[j.id] ?? null}
                   onChange={(v) => setAssign({ ...assign, [j.id]: v as string })}
                 />

@@ -10,7 +10,7 @@ import { TextField } from "@/components/ui/TextField";
 import { Body, H2, H3, Small } from "@/components/ui/Text";
 import { closeAudit, listAudits, listPendingReviews, moderateReview, noteAudit, type AdminAudit, type PendingReview } from "@/lib/admin";
 import { Loading } from "@/lib/auth";
-import { listMentors, type MarketplaceMentor } from "@/lib/mentors";
+import { listMentors, type AdminMentor } from "@/lib/admin";
 import { money } from "@/lib/settings";
 import { useSettings } from "@/lib/settings";
 import { colors, space } from "@/theme/tokens";
@@ -19,7 +19,7 @@ export default function AdminAudits() {
   const { settings } = useSettings();
   const [audits, setAudits] = useState<AdminAudit[] | null>(null);
   const [reviews, setReviews] = useState<PendingReview[]>([]);
-  const [mentors, setMentors] = useState<MarketplaceMentor[]>([]);
+  const [mentors, setMentors] = useState<AdminMentor[]>([]);
   const [draft, setDraft] = useState<Record<string, { outcome: string; note: string; refund: string; reassignTo: string | null }>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +27,7 @@ export default function AdminAudits() {
   const load = useCallback(() => {
     listAudits().then(setAudits).catch((e) => setError(e.message));
     listPendingReviews().then(setReviews);
-    listMentors().then(setMentors);
+    listMentors().then((ms) => setMentors(ms.filter((m) => m.status === "approved" && m.offers_mentoring !== false)));
   }, []);
   useFocusEffect(
     useCallback(() => {
@@ -97,12 +97,12 @@ export default function AdminAudits() {
                 />
                 {dd.outcome === "refund_partial" ? <TextField label="Refund amount (dollars)" value={dd.refund} onChangeText={(t) => setD(a.id, { refund: t })} keyboardType="decimal-pad" style={{ maxWidth: 160 }} /> : null}
                 {dd.outcome === "reassigned" ? (
-                  <Choice label="New mentor" options={mentors.map((m) => ({ key: m.user_id, label: m.display_name, hint: m.available ? "available" : "at capacity" }))} value={dd.reassignTo} onChange={(v) => setD(a.id, { reassignTo: v as string })} />
+                  <Choice label="New mentor" options={mentors.map((m) => ({ key: m.user_id, label: m.display_name, hint: (m.stats?.jobs_on_deck ?? 0) < m.capacity_on_deck ? "available" : "at capacity" }))} value={dd.reassignTo} onChange={(v) => setD(a.id, { reassignTo: v as string })} />
                 ) : null}
                 <Button
                   title="Close audit"
                   small
-                  disabled={!dd.outcome || (dd.outcome === "reassigned" && !dd.reassignTo)}
+                  disabled={!dd.outcome || (dd.outcome === "reassigned" && !dd.reassignTo) || (dd.outcome === "refund_partial" && !(Number(dd.refund) > 0))}
                   loading={busy === a.id}
                   onPress={() =>
                     run(a.id, () =>

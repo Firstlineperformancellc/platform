@@ -18,10 +18,10 @@ import { firstName, type Athlete } from "@/lib/types";
 import { colors, space } from "@/theme/tokens";
 import { MANUAL, openManual } from "@/lib/legal";
 
-function who(o: { players: { first_name: string; last_name: string } | null; age_group: string; position: string; skill_level: string } | null) {
+function who(o: { players: { first_name: string; last_initial: string | null } | null; age_group: string; position: string; skill_level: string } | null) {
   if (!o) return "Youth athlete";
   const p = o.players;
-  const name = p ? `${p.first_name}${p.last_name ? ` ${p.last_name[0]}.` : ""}` : "Youth athlete";
+  const name = p ? `${p.first_name}${p.last_initial ? ` ${p.last_initial}.` : ""}` : "Youth athlete";
   return `${name} · ${o.age_group} ${o.position} · ${o.skill_level}`;
 }
 

@@ -41,7 +41,7 @@ export type Session = {
   review_status: string | null;
   cancel_reason: string | null;
   created_at: string;
-  players: { first_name: string; last_name: string; age_group: string; position: string } | null;
+  players: { first_name: string; last_initial: string | null; age_group: string; position: string } | null;
   athletes: { display_name: string; slug: string } | null;
 };
 
@@ -59,7 +59,7 @@ export type Pack = {
 };
 
 const COLS =
-  "id, athlete_id, parent_id, player_id, status, format, tier, scheduled_at, duration_minutes, price_cents, mentor_share_cents, parent_note, parent_present, breakdown_id, pack_id, accept_by, paid_at, daily_room_url, recording_status, recordings, recap, recap_due_at, recap_at, rating, review, review_status, cancel_reason, created_at, players(first_name, last_name, age_group, position), athletes(display_name, slug)";
+  "id, athlete_id, parent_id, player_id, status, format, tier, scheduled_at, duration_minutes, price_cents, mentor_share_cents, parent_note, parent_present, breakdown_id, pack_id, accept_by, paid_at, daily_room_url, recording_status, recordings, recap, recap_due_at, recap_at, rating, review, review_status, cancel_reason, created_at, players(first_name, last_initial, age_group, position), athletes(display_name, slug)";
 
 export const FORMAT_LABEL: Record<SessionFormat, string> = {
   film_room_30: "Film Room · 30 min",
@@ -154,5 +154,5 @@ export function minutesUntil(iso: string) {
 }
 export function playerName(s: Session) {
   const p = s.players;
-  return p ? `${p.first_name}${p.last_name ? ` ${p.last_name[0]}.` : ""}` : "Youth athlete";
+  return p ? `${p.first_name}${p.last_initial ? ` ${p.last_initial}.` : ""}` : "Youth athlete";
 }

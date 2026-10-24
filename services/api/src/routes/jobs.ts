@@ -38,8 +38,8 @@ export const internal = new Hono();
 internal.get("/tick", async (c) => {
   const secret = process.env.TICK_SECRET;
   if (!secret || c.req.header("x-tick-secret") !== secret) return c.json({ error: "forbidden" }, 403);
-  const report = await tick();
-  const sessionReport = await sessionsTick();
+  const report = await tick().catch((e) => ({ error: (e as Error).message }));
+  const sessionReport = await sessionsTick().catch((e) => ({ error: (e as Error).message }));
   const healthReport = await healthTick().catch((e) => ({ ran: false, error: (e as Error).message }));
   const released = await releaseUnpaidSessions().catch(() => 0);
   const payouts = await autoPayoutsTick().catch((e) => ({ mode: "error", paid: 0, failed: 0, error: (e as Error).message }));

@@ -242,7 +242,7 @@ export default function AdminSettings() {
             </View>
           ))}
         </View>
-        <Button title="Save rules" small loading={busy === "rules"} onPress={() => save("rules", { rules: Object.fromEntries(RULES.map((r) => [r.key, Number(rules[r.key])])) })} />
+        <Button title="Save rules" small loading={busy === "rules"} onPress={() => save("rules", { rules: Object.fromEntries(RULES.filter((r) => (rules[r.key] ?? "").trim() !== "").map((r) => [r.key, Number(rules[r.key])])) })} />
       </Card>
 
       <Card>

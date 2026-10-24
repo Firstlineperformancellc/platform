@@ -46,11 +46,14 @@ export async function notifyAdmins(type: AlertType, template: string, subject: s
   for (const a of await adminIds(type)) await notify(a, template, subject, html, { targetId });
 }
 
+// Anything typed by a person is escaped before it goes into email HTML.
+export const esc = (t: unknown) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
+
 function shell(title: string, body: string) {
   return `<!doctype html><body style="margin:0;background:#000;color:#f2f2f2;font-family:Helvetica,Arial,sans-serif">
   <div style="max-width:560px;margin:0 auto;padding:32px 24px">
     <div style="font-weight:800;font-style:italic;letter-spacing:.06em;text-transform:uppercase;color:#d4a32c;font-size:14px">First Line Performance</div>
-    <h1 style="font-size:22px;margin:16px 0 12px;color:#fff">${title}</h1>
+    <h1 style="font-size:22px;margin:16px 0 12px;color:#fff">${esc(title)}</h1>
     <div style="font-size:15px;line-height:1.5;color:#dcdcdc">${body}</div>
     <p style="margin-top:28px;font-size:12px;color:#777">Questions? team@firstlineperform.com</p>
   </div></body>`;

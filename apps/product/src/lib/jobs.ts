@@ -25,14 +25,14 @@ export type Offer = {
       mentor_share_cents: number | null;
       film_media_id: string | null;
       film_youtube_url: string | null;
-      players: { first_name: string; last_name: string } | null;
+      players: { first_name: string; last_initial: string | null } | null;
       media: { status: string; mux_playback_id: string | null } | null;
     };
   };
 };
 
 const OFFER_COLS =
-  "id, job_id, rank, offered_at, expires_at, response, jobs(id, status, accepted_at, due_at, orders(id, position, age_group, skill_level, focus_areas, notes, tier, mentor_share_cents, film_media_id, film_youtube_url, players(first_name, last_name), media:film_media_id(status, mux_playback_id)))";
+  "id, job_id, rank, offered_at, expires_at, response, jobs(id, status, accepted_at, due_at, orders(id, position, age_group, skill_level, focus_areas, notes, tier, mentor_share_cents, film_media_id, film_youtube_url, players(first_name, last_initial), media:film_media_id(status, mux_playback_id)))";
 
 export async function listOpenOffers(): Promise<Offer[]> {
   const { data, error } = await supabase.from("job_offers").select(OFFER_COLS).is("response", null).order("offered_at");
@@ -55,7 +55,7 @@ export async function listMyJobs(): Promise<MyJob[]> {
   if (!auth.user) return [];
   const { data, error } = await supabase
     .from("jobs")
-    .select("id, status, accepted_at, due_at, delivered_at, orders(id, position, age_group, skill_level, focus_areas, notes, tier, mentor_share_cents, film_media_id, film_youtube_url, players(first_name, last_name), media:film_media_id(status, mux_playback_id))")
+    .select("id, status, accepted_at, due_at, delivered_at, orders(id, position, age_group, skill_level, focus_areas, notes, tier, mentor_share_cents, film_media_id, film_youtube_url, players(first_name, last_initial), media:film_media_id(status, mux_playback_id))")
     .eq("athlete_id", auth.user.id)
     .order("due_at", { ascending: true, nullsFirst: false });
   if (error) throw new Error(error.message);

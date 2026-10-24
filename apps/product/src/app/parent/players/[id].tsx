@@ -28,7 +28,7 @@ export default function PlayerForm() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isNew && id) getPlayer(id).then((p) => setForm(p ? { ...EMPTY, ...p } : EMPTY));
+    if (!isNew && id) getPlayer(id).then((p) => (p ? setForm({ ...EMPTY, ...p }) : router.replace("/parent/players")));
   }, [id, isNew]);
 
   // Offer team names other families already typed, so one program is spelled one way. Asked 300 ms

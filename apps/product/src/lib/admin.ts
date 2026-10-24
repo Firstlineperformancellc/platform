@@ -1,5 +1,5 @@
 import { Platform } from "react-native";
-import { api } from "./api";
+import { api, apiBase } from "./api";
 import { supabase } from "./supabase";
 
 // Admin reads go straight to Supabase (the admin role passes every policy); writes go through /admin on the API.
@@ -249,7 +249,7 @@ export type ProgramRow = { team: string; players: number; parents: number; order
 export const listPrograms = () => api<{ programs: ProgramRow[] }>("/admin/programs").then((r) => r.programs);
 
 // The CSV needs the bearer token, so it cannot be a plain link: fetch it and hand the browser a file.
-export const programsCsvUrl = `${process.env.EXPO_PUBLIC_API_URL ?? "https://api-dev.firstlineperform.com"}/admin/programs.csv`;
+export const programsCsvUrl = `${apiBase}/admin/programs.csv`;
 export async function downloadProgramsCsv(): Promise<string> {
   if (Platform.OS !== "web" || typeof document === "undefined") throw new Error("Export the CSV from a web browser.");
   const { data } = await supabase.auth.getSession();
@@ -307,7 +307,7 @@ export class BroadcastRepeat extends Error {}
 export async function sendBroadcast(input: BroadcastInput): Promise<BroadcastResult> {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
-  const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL ?? "https://api-dev.firstlineperform.com"}/admin/announcements/send`, {
+  const res = await fetch(`${apiBase}/admin/announcements/send`, {
     method: "POST",
     headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify(input),

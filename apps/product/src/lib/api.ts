@@ -1,6 +1,8 @@
 import { supabase } from "./supabase";
 
-const base = process.env.EXPO_PUBLIC_API_URL ?? "https://api-dev.firstlineperform.com";
+export const apiBase = process.env.EXPO_PUBLIC_API_URL;
+if (!apiBase) throw new Error("EXPO_PUBLIC_API_URL is not set");
+const base = apiBase;
 
 // Calls the FLP API as the signed-in user. The API verifies the bearer token with Supabase.
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {

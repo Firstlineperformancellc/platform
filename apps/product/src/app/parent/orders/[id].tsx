@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { Brand } from "@/components/Brand";
@@ -25,6 +25,13 @@ export default function OrderPage() {
       if (id) getOrder(id).then(setOrder);
     }, [id]),
   );
+  // Back from Stripe before the webhook landed: ask again every few seconds, for up to a minute.
+  const [confirmTries, setConfirmTries] = useState(0);
+  useEffect(() => {
+    if (!paid || !id || !order || order.paid_at || confirmTries >= 20) return;
+    const t = setTimeout(() => { getOrder(id).then(setOrder); setConfirmTries((n) => n + 1); }, 3000);
+    return () => clearTimeout(t);
+  }, [paid, id, order, confirmTries]);
 
   if (order === undefined || !settings) return <Loading />;
   if (!order)
@@ -61,7 +68,8 @@ export default function OrderPage() {
         </View>
       </View>
 
-      {paid && !hasFilm ? <Body style={{ color: colors.ok }}>{settings.rules.payments_mode === "free_preview" ? "Order placed (preview, no charge)." : "Payment received."} One more step: upload the game film.</Body> : null}
+      {paid && !order.paid_at ? <Body style={{ color: colors.muted }}>Confirming your payment with Stripe. This page updates on its own in a few seconds.</Body> : null}
+      {paid && order.paid_at && !hasFilm ? <Body style={{ color: colors.ok }}>{settings.rules.payments_mode === "free_preview" ? "Order placed (preview, no charge)." : "Payment received."} One more step: upload the game film.</Body> : null}
 
       {!hasFilm ? (
         <Card>

@@ -188,7 +188,7 @@ adminRoutes.post("/audits/:id/close", async (c) => {
   if (!body.outcome || !outcomes.includes(body.outcome)) return c.json({ error: "outcome required" }, 400);
   const { data: qa } = await admin
     .from("quality_audits")
-    .select("id, status, actions, breakdown_id, session_id, filed_by, breakdowns(job_id, jobs(order_id, athlete_id, orders(price_cents, stripe_payment_intent_id)))")
+    .select("id, status, actions, breakdown_id, session_id, filed_by, breakdowns(job_id, jobs(order_id, athlete_id, orders(price_cents, stripe_payment_intent_id, refunded_cents)))")
     .eq("id", id)
     .maybeSingle();
   const q = qa as unknown as { id: string; status: string; actions: unknown[]; breakdown_id: string | null; filed_by: string; breakdowns: { job_id: string; jobs: { order_id: string; athlete_id: string | null; orders: { price_cents: number; stripe_payment_intent_id: string | null } } } | null } | null;
@@ -200,15 +200,17 @@ adminRoutes.post("/audits/:id/close", async (c) => {
   let refundId: string | null = null;
   const order = q.breakdowns?.jobs.orders;
   if (body.outcome === "refund_full" || body.outcome === "refund_partial") {
-    refundCents = body.outcome === "refund_full" ? order?.price_cents ?? 0 : Math.round(Number(body.refundCents ?? 0));
+    const left = (order?.price_cents ?? 0) - ((order as { refunded_cents?: number } | undefined)?.refunded_cents ?? 0);
+    refundCents = body.outcome === "refund_full" ? left : Math.round(Number(body.refundCents ?? 0));
     if (!(refundCents > 0)) return c.json({ error: "refund amount required" }, 400);
+    if (refundCents > left) return c.json({ error: `only $${(left / 100).toFixed(2)} is left to refund on this order` }, 400);
     if (stripe && order?.stripe_payment_intent_id) {
       const r = await refundPayment(order.stripe_payment_intent_id, refundCents, `qca_${id}`);
       if (!r.ok) return c.json({ error: `Stripe refused the refund: ${r.error}` }, 502);
       refundId = r.refundId;
     }
     if (q.breakdowns) {
-      await admin.from("orders").update({ status: body.outcome === "refund_full" ? "refunded" : "delivered", refunded_at: now }).eq("id", q.breakdowns.jobs.order_id);
+      await admin.from("orders").update({ status: body.outcome === "refund_full" ? "refunded" : "delivered", refunded_at: now, refunded_cents: ((order as { refunded_cents?: number } | undefined)?.refunded_cents ?? 0) + refundCents }).eq("id", q.breakdowns.jobs.order_id);
       // Full refund voids the mentor's payout; partial leaves it to admin judgment (recorded in note).
       if (body.outcome === "refund_full") await admin.from("payouts").update({ status: "voided", note: `QCA ${id} full refund` }).eq("job_id", q.breakdowns.job_id).in("status", ["owed", "held"]);
     }
@@ -540,7 +542,7 @@ adminRoutes.post("/deleted/:recordId/restore", async (c) => {
   if (rec.restored_at) return c.json({ error: "already restored" }, 400);
   if (!rec.user_id) return c.json({ error: "the original account no longer exists; this record is read-only" }, 400);
 
-  const { data: clash } = await admin.from("profiles").select("id, created_at").ilike("email", rec.email).neq("id", rec.user_id).maybeSingle();
+  const { data: clash } = await admin.from("profiles").select("id, created_at").eq("email", rec.email.toLowerCase()).neq("id", rec.user_id).maybeSingle();
   if (clash) {
     const when = new Date(clash.created_at).toLocaleDateString("en-US", { timeZone: "America/Detroit", month: "short", day: "numeric" });
     return c.json({ error: `${rec.email} signed up again on ${when}, so the old account can't take it back. Keep the new account, or delete it first and then restore this one.` }, 409);
@@ -580,6 +582,7 @@ adminRoutes.patch("/settings", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
   const current = await getSettings();
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (body.rules && typeof body.rules === "object") delete (body.rules as Record<string, unknown>).payout_last_run_at; // written by the payout run itself, never by hand
   for (const key of ["rules", "taxonomy", "marketplace"] as const) {
     if (body[key] && typeof body[key] === "object") patch[key] = { ...(current[key] as object), ...(body[key] as object) };
   }
@@ -587,7 +590,6 @@ adminRoutes.patch("/settings", async (c) => {
   if (pr?.payout_mode !== undefined && !["manual", "auto", "scheduled"].includes(pr.payout_mode as string)) return c.json({ error: "payout_mode must be manual, auto or scheduled" }, 400);
   if (pr?.payout_anchor !== undefined && (typeof pr.payout_anchor !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(pr.payout_anchor) || Number.isNaN(Date.parse(pr.payout_anchor)))) return c.json({ error: "payout_anchor must be a date like 2026-10-30 (the first payday)" }, 400);
   if (pr?.payout_hour !== undefined && (!Number.isInteger(pr.payout_hour) || (pr.payout_hour as number) < 0 || (pr.payout_hour as number) > 23)) return c.json({ error: "payout_hour must be 0 to 23 (Eastern)" }, 400);
-  if (pr?.payout_last_run_at !== undefined) delete pr.payout_last_run_at; // written by the payout run itself, never by hand
   if (pr) {
     // Video slots: a public Mux playback id, or blank to hide the slot.
     for (const k of ["explainer_parent_playback_id", "explainer_mentor_playback_id", "upload_help_playback_id"]) {

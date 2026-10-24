@@ -177,7 +177,12 @@ async function onChargeRefunded(charge: Stripe.Charge) {
       await admin.from("payouts").update({ status: "voided", note: "Presents request refunded in full" }).eq("presents_request_id", target.id).in("status", ["owed", "held"]);
     }
   } else {
-    await admin.from("session_packs").update({ refunded_cents: refunded }).eq("id", target.id);
+    // A Season Arc refunded in full is spent: no more bookings on it, and its mentor payouts are voided.
+    await admin.from("session_packs").update({ refunded_cents: refunded, ...(full ? { expires_at: new Date().toISOString() } : {}) }).eq("id", target.id);
+    if (full) {
+      const { data: ps } = await admin.from("sessions").select("id").eq("pack_id", target.id);
+      for (const ps1 of ps ?? []) await admin.from("payouts").update({ status: "voided", note: "Season Arc refunded in full" }).eq("session_id", ps1.id).in("status", ["owed", "held"]);
+    }
   }
   await admin.from("audit_log").insert({ actor_id: null, action: "stripe.refund", target_type: target.kind, target_id: target.id, meta: { refunded_cents: refunded, full, charge: charge.id } });
 }
@@ -193,6 +198,9 @@ async function onDispute(dispute: Stripe.Dispute) {
     await admin.from("payouts").update({ status: "held", held_reason: "card dispute" }).eq("session_id", target.id).eq("status", "owed");
   } else if (target.kind === "presents") {
     await admin.from("payouts").update({ status: "held", held_reason: "card dispute" }).eq("presents_request_id", target.id).eq("status", "owed");
+  } else if (target.kind === "pack") {
+    const { data: ps } = await admin.from("sessions").select("id").eq("pack_id", target.id);
+    for (const ps1 of ps ?? []) await admin.from("payouts").update({ status: "held", held_reason: "card dispute" }).eq("session_id", ps1.id).eq("status", "owed");
   }
   await admin.from("audit_log").insert({ actor_id: null, action: "stripe.dispute", target_type: target.kind, target_id: target.id, meta: { dispute: dispute.id, amount: dispute.amount, reason: dispute.reason } });
   await notifyAdmins("stripe.dispute", "A card payment is being disputed",

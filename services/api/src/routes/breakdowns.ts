@@ -3,7 +3,7 @@ import { admin, userFromBearer } from "../supabase.js";
 import { getSettings } from "../settings.js";
 import { renderWorksheetPdf, validateWorksheet } from "../worksheet.js";
 import { putWorksheetPdf, signedWorksheetUrl } from "../storage.js";
-import { appUrl, notify } from "../notify.js";
+import { appUrl, notify, esc } from "../notify.js";
 
 export const breakdowns = new Hono();
 
@@ -157,7 +157,7 @@ breakdowns.post("/:id/audit", async (c) => {
   const { data: admins } = await admin.from("profiles").select("id").eq("role", "admin");
   for (const a of admins ?? []) {
     await notify(a.id, "qca.filed", "Quality Control Audit filed",
-      `<p>A parent filed an audit on a breakdown.</p><p>${reason}</p><p><a href="${appUrl("/admin")}" style="color:#d4a32c">Open admin</a></p>`,
+      `<p>A parent filed an audit on a breakdown.</p><p>${esc(reason)}</p><p><a href="${appUrl("/admin")}" style="color:#d4a32c">Open admin</a></p>`,
       { targetId: qa.id });
   }
   return c.json({ ok: true, auditId: qa.id });
