@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # beta.firstlineperform.com used to carry the marketing site before launch. Since 2026-10-24 it serves one
 # page, site/moved/index.html, which says the site has moved and sends the visitor to the same path at
-# firstlineperform.com after five seconds. Every path on beta gets that page; search engines are told
+# firstlineperform.com after seven seconds. Every path on beta gets that page; search engines are told
 # not to index it. Usage: site/deploy/deploy-site-moved.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
